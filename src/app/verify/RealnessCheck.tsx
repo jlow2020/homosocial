@@ -163,7 +163,8 @@ export default function RealnessCheck({ firstName }: { firstName: string }) {
 
       const moves = shuffle(Object.keys(MOVES) as Move[]);
       const frames: Blob[] = [];
-      const matches: number[] = [];
+      const matches: number[] = []; // during moves (turned, smiling): kept for the record
+      const neutralMatches: number[] = []; // straight-on, plain face: what decides the match
       const reals: number[] = [];
       const lives: number[] = [];
       const ages: number[] = [];
@@ -199,6 +200,7 @@ export default function RealnessCheck({ firstName }: { firstName: string }) {
           if (!ready) {
             if (neutral(face, result)) {
               ready = true;
+              if (face.embedding?.length) neutralMatches.push(human.match.similarity(refEmbedding, face.embedding));
               setPhase({ kind: "moving", step, prompt: MOVES[move] });
             }
             continue;
@@ -226,7 +228,9 @@ export default function RealnessCheck({ firstName }: { firstName: string }) {
       const avg = (a: number[]) => (a.length ? a.reduce((s, x) => s + x, 0) / a.length : 0);
       const result: RealnessResult = {
         moves,
-        match: avg(matches),
+        // Profile photos are straight-on, so match on the straight-on frames.
+        match: neutralMatches.length ? Math.max(...neutralMatches) : avg(matches),
+        moveMatch: avg(matches),
         real: avg(reals),
         live: avg(lives),
         minAge: ages.length ? Math.min(...ages) : 0,

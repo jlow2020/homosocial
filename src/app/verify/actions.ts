@@ -42,6 +42,7 @@ export async function completeVerification(form: FormData): Promise<VerifyOutcom
   const result: RealnessResult = {
     moves: Array.isArray(raw.moves) ? raw.moves.filter((m) => validMoves.includes(m)).slice(0, 3) : [],
     match: num(raw.match),
+    moveMatch: num(raw.moveMatch),
     real: num(raw.real),
     live: num(raw.live),
     minAge: num(raw.minAge),
