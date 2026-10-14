@@ -23,6 +23,7 @@ export const THRESHOLDS = {
 export type RealnessResult = {
   moves: Move[];
   match: number;
+  moveMatch?: number;
   real: number;
   live: number;
   minAge: number;
