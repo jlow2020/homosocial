@@ -133,6 +133,7 @@ $$;
 
 revoke all on function public.place_member(uuid, text, text, int) from public, anon, authenticated;
 revoke all on function public.check_reports() from public, anon, authenticated;
+grant execute on function public.place_member(uuid, text, text, int) to service_role;
 
 -- Private photo storage --------------------------------------------------
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
