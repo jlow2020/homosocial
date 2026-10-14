@@ -624,3 +624,265 @@ p {
     transition: none;
   }
 }
+
+/* Members area */
+.stack {
+  display: grid;
+  gap: 20px;
+}
+.btn-full {
+  width: 100%;
+  text-align: center;
+}
+.btn-outline {
+  background: var(--white);
+  color: var(--mangrove);
+  border: 2px solid var(--mangrove);
+}
+.btn-outline:hover {
+  background: var(--blush-2);
+}
+.btn-danger {
+  background: var(--flamingo-deep);
+  color: var(--white);
+}
+.btn-small {
+  font-size: 15px;
+  padding: 10px 18px;
+}
+.or {
+  text-align: center;
+  color: var(--mangrove-2);
+  font-size: 15px;
+}
+.fine {
+  font-size: 15px;
+  color: var(--mangrove-2);
+}
+.fine a,
+.prose a,
+.footer a {
+  color: var(--flamingo-deep);
+  font-weight: 700;
+}
+.link-button {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  font-weight: 700;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+.apply-head .link-button {
+  border-bottom: 2px solid var(--flamingo);
+  padding-bottom: 2px;
+}
+.quiet {
+  color: var(--mangrove-2);
+  font-weight: 600;
+}
+.notice {
+  background: var(--white);
+  border: 2px solid var(--mangrove);
+  border-radius: 16px;
+  padding: 24px;
+}
+.notice-title {
+  font-size: 28px;
+  margin-bottom: 10px;
+}
+.status {
+  font-weight: 700;
+  font-size: 19px;
+}
+.lede-dark {
+  font-size: 19px;
+}
+.facts {
+  margin: 0;
+  padding-left: 20px;
+  display: grid;
+  gap: 6px;
+}
+.danger {
+  max-width: 680px;
+  padding-bottom: 80px;
+}
+.danger summary {
+  cursor: pointer;
+  font-weight: 700;
+  color: var(--flamingo-deep);
+}
+.danger p {
+  margin: 12px 0 16px;
+  max-width: 34em;
+}
+
+/* Realness Check */
+.realness {
+  max-width: 560px;
+  padding-top: 40px;
+  padding-bottom: 96px;
+  display: grid;
+  gap: 24px;
+}
+.cam {
+  display: none;
+  position: relative;
+  border-radius: 24px;
+  overflow: hidden;
+  background: var(--mangrove);
+  aspect-ratio: 3 / 4;
+}
+.cam-on {
+  display: block;
+}
+.cam-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scaleX(-1);
+}
+.cam-overlay {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 20px;
+  display: grid;
+  gap: 4px;
+  background: linear-gradient(to top, rgba(20, 58, 54, 0.92), rgba(20, 58, 54, 0));
+  color: var(--white);
+}
+.cam-step {
+  font-size: 15px;
+  color: var(--flamingo);
+  font-weight: 700;
+}
+.cam-prompt {
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 26px;
+  line-height: 1.1;
+  font-variation-settings: "wdth" 115;
+  font-stretch: 115%;
+}
+.cam-hint {
+  font-size: 16px;
+  color: #d9e8e5;
+}
+
+/* Circle */
+.members {
+  padding-top: 48px;
+  padding-bottom: 96px;
+}
+.members-title {
+  font-size: 32px;
+}
+.member-list {
+  list-style: none;
+  margin: 28px 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+.member {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  background: var(--white);
+  border-radius: 16px;
+  padding: 16px;
+}
+.member-photo {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex: none;
+  background: var(--blush-2);
+  border: 3px solid var(--flamingo);
+}
+.member-body {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+.member-name {
+  font-weight: 800;
+  font-size: 19px;
+}
+.member-you {
+  font-weight: 600;
+  color: var(--mangrove-2);
+}
+.member-into {
+  color: var(--mangrove-2);
+  font-size: 16px;
+}
+.member-take {
+  font-size: 16px;
+}
+.member-more {
+  justify-self: start;
+  margin-top: 6px;
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--mangrove-2);
+  cursor: pointer;
+  text-decoration: underline;
+}
+.member-menu {
+  margin-top: 8px;
+  display: grid;
+  gap: 10px;
+  font-size: 16px;
+}
+.choice-small {
+  padding: 8px 12px;
+  font-size: 15px;
+}
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+}
+.empty {
+  margin-top: 24px;
+  font-weight: 600;
+}
+
+/* Rules */
+.prose {
+  max-width: 720px;
+  padding-top: 48px;
+  padding-bottom: 96px;
+}
+.prose h2 {
+  font-size: 28px;
+  margin: 40px 0 12px;
+}
+.prose h2:first-child {
+  margin-top: 0;
+}
+.prose ol,
+.prose ul {
+  padding-left: 22px;
+  display: grid;
+  gap: 8px;
+}
+
+@media (max-width: 860px) {
+  .member-list {
+    grid-template-columns: 1fr;
+  }
+}

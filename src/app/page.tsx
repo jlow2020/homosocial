@@ -1,15 +1,16 @@
 import Link from "next/link";
 import CircleRing from "@/components/CircleRing";
 import { SEASON } from "@/lib/season";
-import { getTakenSpots } from "@/lib/supabase-server";
+import { getOpenCircle } from "@/lib/supabase-server";
 
 export const revalidate = 60;
+
 
 const weeks = [1, 2, 3, 4, 5, 6, 7, 8];
 
 const faq = [
   {
-    q: "Who can apply?",
+    q: "Who can join?",
     a: `Gay, bi, and queer men, 18 and up, who live in or around ${SEASON.area}.`,
   },
   {
@@ -22,7 +23,7 @@ const faq = [
   },
   {
     q: "How do you keep it safe?",
-    a: "Every applicant gets a quick video call before he's in, so everyone is a real person and over 18. Nobody's exact location is ever shown. Anyone who makes it weird is out.",
+    a: "Every member passes a Realness Check: a 20-second camera check that he's a real, live person who matches his photo. Nobody's location is ever shown. Block or report anyone from his profile, and three reports pauses an account automatically.",
   },
   {
     q: "Is this a dating app?",
@@ -35,15 +36,15 @@ const faq = [
 ];
 
 export default async function Home() {
-  const taken = await getTakenSpots();
+  const open = await getOpenCircle();
 
   return (
     <main>
       <section className="hero">
         <header className="topbar wrap">
           <span className="wordmark">homosocial</span>
-          <Link href="/apply" className="topbar-link">
-            Apply
+          <Link href="/me" className="topbar-link">
+            Sign in
           </Link>
         </header>
 
@@ -58,19 +59,19 @@ export default async function Home() {
               Same faces every week. At the end, you find out who wants more.
             </p>
             <div className="hero-actions">
-              <Link href="/apply" className="btn btn-pink">
-                Apply for {SEASON.name}
+              <Link href="/join" className="btn btn-pink">
+                Join {SEASON.name}
               </Link>
               <p className="hero-meta">
-                Starts {SEASON.starts}. Apply by {SEASON.applyBy}.
+                Free. Starts {SEASON.starts}.
               </p>
             </div>
           </div>
           <CircleRing
             spots={SEASON.spots}
-            taken={taken}
-            label={SEASON.name}
-            sublabel={SEASON.areaShort}
+            taken={open.taken}
+            label={`Circle ${open.number}`}
+            sublabel={`${SEASON.name}, ${SEASON.areaShort}`}
           />
         </div>
       </section>
@@ -169,8 +170,8 @@ export default async function Home() {
           <h2>
             {SEASON.spots} spots. Eight weeks. Starts {SEASON.starts}.
           </h2>
-            <Link href="/apply" className="btn btn-pink">
-              Apply for {SEASON.name}
+            <Link href="/join" className="btn btn-pink">
+              Join {SEASON.name}
             </Link>
           </div>
         </div>
@@ -178,7 +179,10 @@ export default async function Home() {
 
       <footer className="footer wrap">
         <span className="wordmark wordmark-small">homosocial</span>
-        <span>Good company. Questionable behavior. Made in Sarasota.</span>
+        <span>
+          Good company. Questionable behavior. Made in Sarasota.{" "}
+          <Link href="/rules">House rules</Link>
+        </span>
       </footer>
     </main>
   );
