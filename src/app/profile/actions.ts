@@ -3,7 +3,7 @@
 import { randomUUID } from "crypto";
 import { redirect } from "next/navigation";
 import { getMe, getSupabaseAdmin } from "@/lib/supabase-server";
-import { ageFrom, regionForZip } from "@/lib/season";
+import { SEASON, ageFrom, regionForZip } from "@/lib/season";
 
 export type ProfileState = { error?: string };
 
@@ -32,7 +32,7 @@ export async function saveProfile(_prev: ProfileState, form: FormData): Promise<
   if (!firstName) return { error: "Add your first name." };
   if (!/^\d{4}-\d{2}-\d{2}$/.test(birthdate)) return { error: "Add your birthday." };
   const age = ageFrom(birthdate);
-  if (!Number.isFinite(age) || age < 18) return { error: "Homosocial is for guys 18 and up." };
+  if (!Number.isFinite(age) || age < SEASON.minAge) return { error: `Homosocial is for guys ${SEASON.minAge} and up.` };
   if (age > 99) return { error: "Check your birthday." };
   if (!/^\d{5}$/.test(zip)) return { error: "Add your five-digit zip code." };
   if (!interests) return { error: "Tell us three things you're into." };

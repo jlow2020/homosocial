@@ -3,6 +3,7 @@
 import { useActionState, useRef, useState } from "react";
 import { saveProfile, type ProfileState } from "./actions";
 import { shrinkImage } from "@/lib/image";
+import { SEASON } from "@/lib/season";
 
 type Initial = {
   first_name: string;
@@ -104,14 +105,14 @@ export default function ProfileForm({ initial, photoUrl }: { initial: Initial; p
           <input type="radio" name="looking_for" value="friends" required defaultChecked={initial?.looking_for === "friends"} />
           <span>
             Friends
-            <small>Last Call only asks who you want to keep as friends.</small>
+            <small>The Finale only asks who you want to keep as friends.</small>
           </span>
         </label>
         <label className="choice">
           <input type="radio" name="looking_for" value="friends_dating" defaultChecked={initial?.looking_for === "friends_dating"} />
           <span>
             Friends, and open to dating
-            <small>Last Call also asks who you&apos;d want to date. Only mutual picks are shown.</small>
+            <small>The Finale also asks who you&apos;d want to date. Only mutual picks are shown.</small>
           </span>
         </label>
       </fieldset>
@@ -126,7 +127,7 @@ export default function ProfileForm({ initial, photoUrl }: { initial: Initial; p
         <label className="choice">
           <input type="checkbox" name="agree" required />
           <span>
-            I&apos;m 18 or older and I agree to the <a href="/rules" target="_blank">house rules</a>.
+            I&apos;m {SEASON.minAge} or older and I agree to the <a href="/rules" target="_blank">house rules</a>.
           </span>
         </label>
       )}

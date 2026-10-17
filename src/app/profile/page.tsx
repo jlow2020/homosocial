@@ -26,6 +26,7 @@ export default async function ProfilePage() {
     <main className="apply-page">
       <PageHead
         title={p ? "Your profile" : "Make your profile"}
+        tag={p ? undefined : <><span className="chy-hot">Step 1 of 2</span><span className="chy-light">Your profile</span></>}
         right={
           <form action={signOut}>
             <button className="topbar-link link-button" type="submit">Sign out</button>
