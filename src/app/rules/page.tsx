@@ -16,7 +16,7 @@ export default function Rules() {
       <div className="wrap prose">
         <h2>The rules</h2>
         <ol>
-          <li>You&apos;re 21 or older. No exceptions.</li>
+          <li>You&apos;re 18 or older, and you prove it once with an ID check. No exceptions.</li>
           <li>You&apos;re you. Your face, your name, your photos.</li>
           <li>No nudes or explicit photos. Flirting is fine. Porn is not.</li>
           <li>No harassment, hate, or threats, toward anyone, for any reason.</li>
@@ -35,13 +35,19 @@ export default function Rules() {
 
         <h2>What we keep, and what we don&apos;t</h2>
         <ul>
-          <li>Your profile: first name, birthday, zip, interests, hot take, and photo.</li>
+          <li>Your profile: first name, birthday (from your ID), zip, interests, hot take, and photo.</li>
           <li>Your Circle sees your first name, age, interests, hot take, and photo. Never your birthday, zip, or email.</li>
           <li>Whether you&apos;re open to dating is never shown to anyone. It only changes what the Finale asks you.</li>
           <li>
             The Realness Check analyzes your face on your own phone. We save
             three photos from it and the pass or fail result. We never save
             face measurements or face templates.
+          </li>
+          <li>
+            Your ID check runs on our server. We read your ID&apos;s barcode or passport lines and
+            match its photo to your Realness Check. We keep that you passed, your birthday, which
+            state or country issued it, and a scrambled fingerprint of the ID number so one ID
+            can&apos;t open two accounts. We never keep photos of your ID or the ID number itself.
           </li>
           <li>Your photos are stored privately. They aren&apos;t public links and aren&apos;t indexed by search engines.</li>
           <li>Delete your account any time from your profile. That removes your profile and every photo.</li>
