@@ -43,8 +43,9 @@ export default async function CirclePage() {
     return (
       <main className="apply-page">
         <PageHead title="You're on the list" right={nav}>
-          You passed your Realness Check. We couldn&apos;t place you from zip {p.zip}.
-          Check it on your profile, or sit tight and we&apos;ll cast you soon.
+          You passed your Realness Check. Season 1 is Florida only, and zip {p.zip} isn&apos;t
+          in Florida. You&apos;re on the list for when we open near you. Typo? Fix your zip on
+          your profile.
         </PageHead>
       </main>
     );
