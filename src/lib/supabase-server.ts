@@ -36,6 +36,19 @@ export async function getSupabaseAuth() {
   });
 }
 
+// Sends email sign-in links that work in any browser. The SSR client always
+// uses PKCE, which only works if the link opens in the same browser that asked
+// for it. This plain client uses the implicit flow instead: the link lands on
+// /auth/finish with the session in the URL fragment.
+export function getSupabaseMailer(): SupabaseClient | null {
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_PUBLISHABLE_KEY;
+  if (!url || !key) return null;
+  return createClient(url, key, {
+    auth: { flowType: "implicit", persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+  });
+}
+
 export type Profile = {
   id: string;
   email: string | null;
@@ -56,6 +69,7 @@ export type Profile = {
 export async function getMe(): Promise<{
   userId: string;
   email: string | null;
+  username: string | null;
   profile: Profile | null;
 } | null> {
   const auth = await getSupabaseAuth();
@@ -63,16 +77,21 @@ export async function getMe(): Promise<{
   if (!auth || !db) return null;
   const { data } = await auth.auth.getUser();
   if (!data.user) return null;
-  const { data: profile } = await db
-    .from("profiles")
-    .select("*")
-    .eq("id", data.user.id)
-    .maybeSingle();
-  return { userId: data.user.id, email: data.user.email ?? null, profile: profile as Profile | null };
+  const [{ data: profile }, { data: login }] = await Promise.all([
+    db.from("profiles").select("*").eq("id", data.user.id).maybeSingle(),
+    db.from("logins").select("username").eq("user_id", data.user.id).maybeSingle(),
+  ]);
+  return {
+    userId: data.user.id,
+    email: data.user.email ?? null,
+    username: (login?.username as string | undefined) ?? null,
+    profile: profile as Profile | null,
+  };
 }
 
 // Where a signed-in member belongs right now.
-export function nextPath(profile: Profile | null): string {
+export function nextPath(profile: Profile | null, username: string | null): string {
+  if (!username) return "/account";
   if (!profile) return "/profile";
   if (profile.status === "paused" || profile.status === "banned") return "/circle";
   if (!profile.verified_at) return "/verify";
