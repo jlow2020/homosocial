@@ -163,6 +163,7 @@ export default function RealnessCheck({ firstName }: { firstName: string }) {
 
       const moves = shuffle(Object.keys(MOVES) as Move[]);
       const frames: Blob[] = [];
+      const neutralFrames: Blob[] = []; // straight-on: the server matches these to the profile photo
       const matches: number[] = []; // during moves (turned, smiling): kept for the record
       const neutralMatches: number[] = []; // straight-on, plain face: what decides the match
       const reals: number[] = [];
@@ -200,6 +201,10 @@ export default function RealnessCheck({ firstName }: { firstName: string }) {
           if (!ready) {
             if (neutral(face, result)) {
               ready = true;
+              grab.width = video.videoWidth;
+              grab.height = video.videoHeight;
+              grab.getContext("2d")!.drawImage(video, 0, 0);
+              neutralFrames.push(await canvasToJpeg(grab, 0.85));
               if (face.embedding?.length) neutralMatches.push(human.match.similarity(refEmbedding, face.embedding));
               setPhase({ kind: "moving", step, prompt: MOVES[move] });
             }
@@ -240,6 +245,7 @@ export default function RealnessCheck({ firstName }: { firstName: string }) {
       setPhase({ kind: "saving" });
       const form = new FormData();
       frames.forEach((f, i) => form.append(`frame${i}`, new File([f], `frame${i}.jpg`, { type: "image/jpeg" })));
+      neutralFrames.forEach((f, i) => form.append(`neutral${i}`, new File([f], `neutral${i}.jpg`, { type: "image/jpeg" })));
       form.append("result", JSON.stringify(result));
       const outcome = await completeVerification(form);
       if (outcome.passed) {

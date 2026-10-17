@@ -3,6 +3,7 @@
 import { getMe, getSupabaseAdmin } from "@/lib/supabase-server";
 import { passes, type RealnessResult, MOVES } from "@/lib/realness";
 import { SEASON } from "@/lib/season";
+import { bestMatch, facesIn } from "@/lib/server/vision";
 
 export type VerifyOutcome = { passed: boolean; message: string; retry: boolean };
 
@@ -55,6 +56,12 @@ export async function completeVerification(form: FormData): Promise<VerifyOutcom
     if (f instanceof File && f.type === "image/jpeg" && f.size > 0 && f.size <= MAX_FRAME_BYTES) frames.push(f);
   }
 
+  const neutralFrames: File[] = [];
+  for (let i = 0; i < 3; i++) {
+    const f = form.get(`neutral${i}`);
+    if (f instanceof File && f.type === "image/jpeg" && f.size > 0 && f.size <= MAX_FRAME_BYTES) neutralFrames.push(f);
+  }
+
   const attempt = p.verification_attempts + 1;
   const stamp = Date.now();
   const paths: string[] = [];
@@ -63,9 +70,44 @@ export async function completeVerification(form: FormData): Promise<VerifyOutcom
     const up = await db.storage.from("verifications").upload(path, frames[i], { contentType: "image/jpeg" });
     if (!up.error) paths.push(path);
   }
+  const neutralPaths: string[] = [];
+  for (let i = 0; i < neutralFrames.length; i++) {
+    const path = `${p.id}/${stamp}-n${i}.jpg`;
+    const up = await db.storage.from("verifications").upload(path, neutralFrames[i], { contentType: "image/jpeg" });
+    if (!up.error) neutralPaths.push(path);
+  }
 
-  const passed = frames.length === 3 && paths.length === 3 && passes(result);
-  const record = { ...result, passed, attempt, frames: paths, at: new Date(stamp).toISOString() };
+  // Don't trust the phone's face match. Redo it here against the profile photo.
+  let serverMatch: number | null = null;
+  try {
+    const { data: photo } = await db.storage.from("photos").download(p.photo_path);
+    const ref = photo ? (await facesIn(Buffer.from(await photo.arrayBuffer()), 1024))[0] : undefined;
+    if (ref) {
+      const live: number[][] = [];
+      for (const f of neutralFrames.length ? neutralFrames : frames) {
+        const face = (await facesIn(Buffer.from(await f.arrayBuffer()), 1024))[0];
+        if (face) live.push(face.embedding);
+      }
+      serverMatch = live.length ? await bestMatch(ref.embedding, live) : 0;
+    }
+  } catch (e) {
+    console.error("realness server match failed", e);
+  }
+  // If the server check couldn't run at all, fall back to the phone's number
+  // rather than lock everyone out. The ID check is the hard gate.
+  const checked: RealnessResult = serverMatch === null ? result : { ...result, match: serverMatch };
+
+  const passed = frames.length === 3 && paths.length === 3 && passes(checked);
+  const record = {
+    ...result,
+    clientMatch: result.match,
+    serverMatch,
+    passed,
+    attempt,
+    frames: paths,
+    neutralFrames: neutralPaths,
+    at: new Date(stamp).toISOString(),
+  };
 
   const update: Record<string, unknown> = {
     verification: record,
@@ -86,7 +128,7 @@ export async function completeVerification(form: FormData): Promise<VerifyOutcom
   if (passed) return { passed: true, message: "", retry: false };
 
   // Don't explain which check failed. It only helps people game it.
-  const lowMatch = result.match < 0.5;
+  const lowMatch = checked.match < 0.5;
   return {
     passed: false,
     message: lowMatch
