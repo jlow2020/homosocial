@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import PageHead from "@/components/PageHead";
 import MemberActions from "./MemberActions";
 import { getMe, getSupabaseAdmin, nextPath } from "@/lib/supabase-server";
-import { SEASON, ageFrom, regionName } from "@/lib/season";
+import { SEASON, ageFrom } from "@/lib/season";
 
 export const metadata: Metadata = { title: "Your Circle | Homosocial" };
 export const dynamic = "force-dynamic";
@@ -43,8 +43,8 @@ export default async function CirclePage() {
     return (
       <main className="apply-page">
         <PageHead title="You're on the list" right={nav}>
-          You passed your Realness Check. Homosocial isn&apos;t open near {p.zip} yet. When
-          a Circle opens in your area, you&apos;re first in.
+          You passed your Realness Check. We couldn&apos;t place you from zip {p.zip}.
+          Check it on your profile, or sit tight and we&apos;ll cast you soon.
         </PageHead>
       </main>
     );
@@ -76,13 +76,49 @@ export default async function CirclePage() {
 
   const total = (members ?? []).length;
   const capacity = circle?.capacity ?? SEASON.spots;
+  const need = Math.max(SEASON.minToOpen - total, 0);
 
   return (
     <main className="apply-page">
-      <PageHead title={`Circle ${circle?.number ?? ""}, ${regionName(circle?.region)}`} right={nav}>
-        {SEASON.name} starts {SEASON.starts}. Your Circle is filling up: {total} of {capacity} guys
-        so far. The Monday drop and the group thread open on day one.
+      <PageHead
+        title={`Circle ${circle?.number ?? ""}`}
+        right={nav}
+        tag={
+          <>
+            <span className={need > 0 ? "chy-hot" : "chy-gold"}>
+              {need > 0 ? "Casting" : "Cast"}
+            </span>
+            <span className="chy-light">{SEASON.name}</span>
+          </>
+        }
+      >
+        {need > 0
+          ? "You're in. Your Circle premieres as soon as enough guys are cast. Episode 1 drops the Monday after."
+          : "Your Circle has its cast. Episode 1 drops on Monday, and guys can still join late."}
       </PageHead>
+
+      <section className="wrap">
+        <div className="casting">
+          <span className="casting-count">
+            <em>{total}</em> of {capacity} cast
+          </span>
+          <div className="seats" aria-hidden="true">
+            {Array.from({ length: capacity }, (_, i) => (
+              <span
+                key={i}
+                className={
+                  i < total ? "seat seat-taken" : i < SEASON.minToOpen ? "seat seat-min" : "seat"
+                }
+              />
+            ))}
+          </div>
+          <p>
+            {need > 0
+              ? `${need} more ${need === 1 ? "guy" : "guys"} to premiere. Know someone who needs this? Send him homosocial.net.`
+              : `${capacity - total} open ${capacity - total === 1 ? "seat" : "seats"} left for late arrivals.`}
+          </p>
+        </div>
+      </section>
 
       <section className="wrap members">
         <h2 className="members-title">Who&apos;s in</h2>
@@ -109,7 +145,7 @@ export default async function CirclePage() {
         </ul>
         {others.length === 0 && (
           <p className="empty">
-            You&apos;re the first one here. Send homosocial.net to a guy who needs it.
+            You&apos;re the first one here. Everyone else is still on the way.
           </p>
         )}
       </section>

@@ -6,7 +6,7 @@ import { blockMember, reportMember } from "./actions";
 const reasons = [
   { value: "fake", label: "Fake profile or not who he says he is" },
   { value: "harassment", label: "Harassment or hate" },
-  { value: "underage", label: "Might be under 18" },
+  { value: "underage", label: "Might be under 21" },
   { value: "scam", label: "Scam, spam, or selling something" },
   { value: "other", label: "Something else" },
 ];
