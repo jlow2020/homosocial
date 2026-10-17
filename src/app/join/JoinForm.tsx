@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { joinWithEmail, joinWithGoogle, type JoinState } from "./actions";
+import { SEASON } from "@/lib/season";
 
 export default function JoinForm({ google }: { google: boolean }) {
   const [state, action, pending] = useActionState<JoinState, FormData>(joinWithEmail, {});
@@ -49,7 +50,7 @@ export default function JoinForm({ google }: { google: boolean }) {
       </form>
       <p className="fine">
         By joining you agree to the <a href="/rules">house rules</a>. Homosocial
-        is for gay, bi, and queer men 18 and up.
+        is for gay, bi, trans and queer men {SEASON.minAge} and up.
       </p>
     </div>
   );

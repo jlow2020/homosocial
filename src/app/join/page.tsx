@@ -5,7 +5,7 @@ import JoinForm from "./JoinForm";
 import { getMe, nextPath } from "@/lib/supabase-server";
 import { SEASON } from "@/lib/season";
 
-export const metadata: Metadata = { title: `Join ${SEASON.name} | Homosocial` };
+export const metadata: Metadata = { title: "Get cast | Homosocial" };
 export const dynamic = "force-dynamic";
 
 const errors: Record<string, string> = {
@@ -25,12 +25,20 @@ export default async function Join({
 
   return (
     <main className="apply-page">
-      <PageHead title={`Join ${SEASON.name}`}>
+      <PageHead
+        title="Get cast"
+        tag={
+          <>
+            <span className="chy-hot">Now casting</span>
+            <span className="chy-light">{SEASON.name}</span>
+          </>
+        }
+      >
         Free. Takes about three minutes: sign in, make your profile, and do a
         quick Realness Check with your camera. Then you&apos;re in a Circle.
       </PageHead>
       {error && errors[error] && (
-        <div className="wrap" style={{ maxWidth: 680, paddingTop: 32 }}>
+        <div className="wrap" style={{ paddingBottom: 24 }}>
           <p className="error" role="alert">
             {errors[error]}
           </p>
