@@ -5,7 +5,7 @@ const nextConfig: NextConfig = {
   experimental: {
     // Profile photos and Realness Check frames are shrunk in the browser,
     // but leave room for the occasional big one.
-    serverActions: { bodySizeLimit: "4mb" },
+    serverActions: { bodySizeLimit: "8mb" },
   },
   webpack: (config) => {
     // The face library's package.json points bundlers at its Node build.

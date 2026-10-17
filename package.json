@@ -15,11 +15,18 @@
     "@fontsource-variable/instrument-sans": "^5.3.0",
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.117.2",
+    "@tensorflow/tfjs-backend-wasm": "^4.22.0",
+    "@tensorflow/tfjs-converter": "^4.22.0",
+    "@tensorflow/tfjs-core": "^4.22.0",
+    "@tesseract.js-data/eng": "^1.0.0",
     "@vladmandic/human": "^3.3.6",
+    "mrz": "^5.0.2",
     "next": "^15.5.27",
     "react": "^19.1.9",
     "react-dom": "^19.1.9",
-    "server-only": "^0.0.1"
+    "server-only": "^0.0.1",
+    "tesseract.js": "^7.0.0",
+    "zxing-wasm": "^3.1.5"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
