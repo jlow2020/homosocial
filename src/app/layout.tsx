@@ -6,11 +6,11 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "Homosocial",
   description:
-    "A reality show where you're the cast and there's no audience. Thirty gay, bi, trans and queer guys near you, eight weekly episodes, one Finale.",
+    "A reality show-style game for gay, bi, trans and queer men, with no cameras and no audience. Thirty guys near you, eight weekly episodes, one Finale.",
   metadataBase: new URL("https://homosocial.net"),
   openGraph: {
     title: "Homosocial",
-    description: "Your favorite people are still strangers.",
+    description: "A reality show-style game with no cameras and no audience. Make friends, do fun stuff, maybe find a boyfriend.",
     url: "https://homosocial.net",
     siteName: "Homosocial",
     type: "website",

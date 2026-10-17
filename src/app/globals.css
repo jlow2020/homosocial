@@ -275,6 +275,45 @@ img {
   color: var(--muted);
 }
 
+/* Landing: what you'll actually do */
+.plays {
+  padding-bottom: 96px;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+.play-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+}
+.play {
+  background: var(--studio);
+  border-top: 6px solid var(--hot);
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.play-gold {
+  border-color: var(--gold);
+}
+.play-mint {
+  border-color: var(--mint);
+}
+.play h3 {
+  font-size: 36px;
+  line-height: 1;
+}
+.play p {
+  font-size: 17px;
+  line-height: 1.45;
+  color: var(--soft);
+}
+
 /* Landing: episode guide */
 .guide {
   background: var(--spot);

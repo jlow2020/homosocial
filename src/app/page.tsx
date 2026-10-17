@@ -3,7 +3,20 @@ import TopBar from "@/components/TopBar";
 import Countdown from "@/components/Countdown";
 import { EPISODES, SEASON } from "@/lib/season";
 
+const plays = [
+  { title: "Monday drops", tone: "hot", body: "A new prompt every week. Hot takes, show us your fridge, rank the Spice Girls. Answer to see everyone else's." },
+  { title: "The Lounge", tone: "gold", body: "Your Circle's group chat. It gets chaotic by week three. That's the point." },
+  { title: "Plans", tone: "mint", body: "Trivia night, beach day, a terrible movie. Anyone can post a plan and see who's in." },
+  { title: "DMs", tone: "hot", body: "Slide in, but only inside your Circle. Photos unlock when you both say yes." },
+  { title: "Roses", tone: "gold", body: "Week seven, everyone says something kind about someone, out loud, by name. It hits harder than you think." },
+  { title: "The Finale", tone: "mint", body: "Sunday, 8pm. Private picks, only mutuals revealed. Your phone will be in your hand at 7:59." },
+];
+
 const faq = [
+  {
+    q: "Is this a real TV show?",
+    a: "No. Nothing is filmed, recorded or posted anywhere. It just plays like one: a cast, weekly episodes, a Finale. Everything stays inside your Circle.",
+  },
   {
     q: "Who can join?",
     a: `Gay, bi, trans and queer men, ${SEASON.minAge} and up, anywhere in the US.`,
@@ -49,9 +62,10 @@ export default function Home() {
         <h1>Your favorite people are still strangers.</h1>
         <div className="hero-row">
           <p className="lede">
-            Homosocial is a reality show where you are the cast and there is no
-            audience. {SEASON.spots} guys near you. Eight weekly episodes. One
-            Finale where everyone finds out who wants more.
+            A reality show-style game with no cameras and no audience. Just
+            you and {SEASON.spots} guys near you, one episode a week, for eight
+            weeks. It&apos;s a game for making friends, doing fun stuff
+            together, and maybe finding a boyfriend.
           </p>
           <div className="cta">
             <Link href="/join" className="btn btn-pink btn-big">
@@ -62,6 +76,18 @@ export default function Home() {
             </span>
           </div>
         </div>
+      </section>
+
+      <section className="wrap plays">
+        <h2 className="big-h2">What you&apos;ll actually do</h2>
+        <ul className="play-grid">
+          {plays.map((x) => (
+            <li key={x.title} className={`play play-${x.tone}`}>
+              <h3>{x.title}</h3>
+              <p>{x.body}</p>
+            </li>
+          ))}
+        </ul>
       </section>
 
       <section className="guide">
