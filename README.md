@@ -1,17 +1,15 @@
 # homosocial.net
 
-Season 0 site: landing page and application form. Next.js on Railway, applications and selfies stored in Supabase.
+A reality show where you're the cast and there's no audience. Next.js on Railway, Supabase for auth, data and private photo storage.
 
-## Change Season details
-Edit `src/lib/season.ts` (dates, spot count, area).
+## Flow
+Sign in (email link) > profile > Realness Check (in-browser face match and liveness) > placed in a Circle.
 
-## Review applications
-- Supabase > Table Editor > `applications`
-- Selfies: Supabase > Storage > `selfies` (private)
-- Set `status` to `approved` and that guy fills a seat in the homepage ring within a minute.
+## Season settings
+`src/lib/season.ts`: season name, cast size (30), minimum to premiere (9), minimum age (21), episode list, and how zips group into regions.
 
 ## Environment variables
 See `.env.example`. `SUPABASE_SERVICE_ROLE_KEY` is secret and server-only.
 
 ## Database
-Run `supabase/schema.sql` once in Supabase > SQL Editor.
+`supabase/members.sql` creates circles, profiles, blocks, reports, the auto-pause trigger and the `place_member` placement function. `supabase/schema.sql` is the old application table and is no longer used.
