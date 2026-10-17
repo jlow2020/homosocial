@@ -20,7 +20,7 @@ export default async function Join({
   searchParams: Promise<{ error?: string }>;
 }) {
   const me = await getMe();
-  if (me) redirect(nextPath(me.profile));
+  if (me) redirect(nextPath(me.profile, me.username));
   const { error } = await searchParams;
 
   return (
@@ -34,8 +34,9 @@ export default async function Join({
           </>
         }
       >
-        Free. Takes about three minutes: sign in, make your profile, and do a
-        quick Realness Check with your camera. Then you&apos;re in a Circle.
+        Free. Takes about three minutes: confirm your email, pick a username
+        and password, make your profile, and do a quick Realness Check with
+        your camera. Then you&apos;re in a Circle.
       </PageHead>
       {error && errors[error] && (
         <div className="wrap" style={{ paddingBottom: 24 }}>

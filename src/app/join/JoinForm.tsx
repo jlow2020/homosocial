@@ -42,12 +42,21 @@ export default function JoinForm({ google }: { google: boolean }) {
         {state.error && (
           <p className="error" role="alert">
             {state.error}
+            {state.hasAccount && (
+              <>
+                {" "}
+                <a href="/signin">Sign in</a>
+              </>
+            )}
           </p>
         )}
         <button className="btn btn-pink btn-full" type="submit" disabled={pending}>
-          {pending ? "Sending your link" : "Email me a sign-in link"}
+          {pending ? "Sending your link" : "Email me my signup link"}
         </button>
       </form>
+      <p className="fine">
+        Already cast? <a href="/signin">Sign in</a>.
+      </p>
       <p className="fine">
         By joining you agree to the <a href="/rules">house rules</a>. Homosocial
         is for gay, bi, trans and queer men {SEASON.minAge} and up.

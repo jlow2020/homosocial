@@ -2,22 +2,27 @@
 
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { getSupabaseAuth, siteOrigin } from "@/lib/supabase-server";
+import { getSupabaseAdmin, getSupabaseAuth, getSupabaseMailer, siteOrigin } from "@/lib/supabase-server";
 
-export type JoinState = { sent?: string; error?: string };
+export type JoinState = { sent?: string; error?: string; hasAccount?: boolean };
 
 export async function joinWithEmail(_prev: JoinState, form: FormData): Promise<JoinState> {
   const email = String(form.get("email") ?? "").trim().toLowerCase();
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return { error: "That email doesn't look right." };
   }
-  const auth = await getSupabaseAuth();
-  if (!auth) return { error: "Sign-in isn't connected yet. Add the Supabase keys." };
+  const mailer = getSupabaseMailer();
+  const db = getSupabaseAdmin();
+  if (!mailer || !db) return { error: "Sign-in isn't connected yet. Add the Supabase keys." };
+
+  // Email links are for signing up only. Existing guys use their password.
+  const { data: existing } = await db.from("logins").select("user_id").eq("email", email).maybeSingle();
+  if (existing) return { error: "That email already has an account. Sign in with your username and password.", hasAccount: true };
 
   const origin = siteOrigin(await headers());
-  const { error } = await auth.auth.signInWithOtp({
+  const { error } = await mailer.auth.signInWithOtp({
     email,
-    options: { emailRedirectTo: `${origin}/auth/callback`, shouldCreateUser: true },
+    options: { emailRedirectTo: `${origin}/auth/finish`, shouldCreateUser: true },
   });
   if (error) {
     if (error.status === 429) {
