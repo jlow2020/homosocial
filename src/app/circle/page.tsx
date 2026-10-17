@@ -60,6 +60,8 @@ export default async function CirclePage() {
       .eq("circle_id", p.circle_id)
       .eq("status", "active")
       .not("verified_at", "is", null)
+      // Only ID-checked guys are on the show. He always sees himself.
+      .or(`id_verified_at.not.is.null,id.eq.${p.id}`)
       .order("verified_at", { ascending: true }),
     db.from("blocks").select("blocker, blocked").or(`blocker.eq.${p.id},blocked.eq.${p.id}`),
   ]);
@@ -70,12 +72,15 @@ export default async function CirclePage() {
   const self = visible.find((m) => m.id === p.id);
   const ordered = self ? [self, ...others] : others;
 
-  const { data: signed } = await db.storage
-    .from("photos")
-    .createSignedUrls(ordered.map((m) => m.photo_path), 3600);
+  // Green room: before his ID check he sees who's cast, not their faces.
+  const greenRoom = !p.id_verified_at;
+  const showPhotos = greenRoom ? ordered.filter((m) => m.id === p.id) : ordered;
+  const { data: signed } = showPhotos.length
+    ? await db.storage.from("photos").createSignedUrls(showPhotos.map((m) => m.photo_path), 3600)
+    : { data: [] };
   const photo = new Map((signed ?? []).map((s) => [s.path, s.signedUrl]));
 
-  const total = (members ?? []).length;
+  const total = others.length + (p.id_verified_at ? 1 : 0);
   const capacity = circle?.capacity ?? SEASON.spots;
   const need = Math.max(SEASON.minToOpen - total, 0);
 
@@ -93,10 +98,28 @@ export default async function CirclePage() {
           </>
         }
       >
-        {need > 0
-          ? "You're in. Your Circle premieres as soon as enough guys are cast. Episode 1 drops the Monday after."
-          : "Your Circle has its cast. Episode 1 drops on Monday, and guys can still join late."}
+        {greenRoom
+          ? "You're in the green room. Look around. When you're ready to be on the show, do your one-time ID check and you're cast."
+          : need > 0
+            ? "You're cast. Your Circle premieres as soon as enough guys are cast. Episode 1 drops the Monday after."
+            : "Your Circle has its cast. Episode 1 drops on Monday, and guys can still join late."}
       </PageHead>
+
+      {greenRoom && (
+        <section className="wrap" style={{ paddingBottom: 24 }}>
+          <div className="greenroom">
+            <h2>Get cast</h2>
+            <p>
+              Faces, the group chat and DMs unlock once you&apos;re cast. It&apos;s a one-time ID check
+              that takes about a minute. Every guy on the show did it, so everyone you meet is a real,
+              verified adult.
+            </p>
+            <Link href="/verify/id" className="btn btn-gold">
+              Do my ID check
+            </Link>
+          </div>
+        </section>
+      )}
 
       <section className="wrap">
         <div className="casting">
@@ -125,7 +148,7 @@ export default async function CirclePage() {
         <h2 className="members-title">Who&apos;s in</h2>
         <ul className="member-list">
           {ordered.map((m) => (
-            <li key={m.id} className="member">
+            <li key={m.id} className={greenRoom && m.id !== p.id ? "member member-hidden" : "member"}>
               {photo.get(m.photo_path) ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={photo.get(m.photo_path)!} alt={m.first_name} className="member-photo" />
@@ -138,8 +161,12 @@ export default async function CirclePage() {
                   {m.id === p.id && <span className="member-you"> (you)</span>}
                 </p>
                 <p className="member-into">Into {m.interests}</p>
-                <p className="member-take">&ldquo;{m.hot_take}&rdquo;</p>
-                {m.id !== p.id && <MemberActions id={m.id} name={m.first_name} />}
+                {greenRoom && m.id !== p.id ? (
+                  <p className="member-take">Get cast to see his face and his hot take.</p>
+                ) : (
+                  <p className="member-take">&ldquo;{m.hot_take}&rdquo;</p>
+                )}
+                {m.id !== p.id && !greenRoom && <MemberActions id={m.id} name={m.first_name} />}
               </div>
             </li>
           ))}
