@@ -20,7 +20,7 @@ type Member = {
 
 export default async function CirclePage() {
   const me = await getMe();
-  if (!me) redirect("/join");
+  if (!me) redirect("/signin");
   const p = me.profile;
   if (!p) redirect("/profile");
 
@@ -37,7 +37,7 @@ export default async function CirclePage() {
       </main>
     );
   }
-  if (nextPath(p) !== "/circle") redirect(nextPath(p));
+  if (nextPath(p, me.username) !== "/circle") redirect(nextPath(p, me.username));
 
   if (p.status === "waitlist" || !p.circle_id) {
     return (
