@@ -1,8 +1,9 @@
 "use client";
 
-import { useActionState, useRef, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { saveProfile, type ProfileState } from "./actions";
-import { shrinkImage } from "@/lib/image";
+import PhotoCropper from "@/components/PhotoCropper";
+import { preloadFaceDetector } from "@/lib/faceDetect";
 import { SEASON } from "@/lib/season";
 
 type Initial = {
@@ -18,10 +19,16 @@ export default function ProfileForm({ initial, photoUrl }: { initial: Initial; p
   const [state, action, pending] = useActionState<ProfileState, FormData>(saveProfile, {});
   const [preview, setPreview] = useState<string | null>(photoUrl);
   const [photoError, setPhotoError] = useState<string | null>(null);
+  const [cropping, setCropping] = useState<File | null>(null);
+  const lastCropped = useRef<File | null>(null);
   const photoRef = useRef<HTMLInputElement>(null);
   const isNew = !initial;
 
-  async function onPhoto(e: React.ChangeEvent<HTMLInputElement>) {
+  useEffect(() => {
+    preloadFaceDetector();
+  }, []);
+
+  function onPhoto(e: React.ChangeEvent<HTMLInputElement>) {
     setPhotoError(null);
     const file = e.target.files?.[0];
     if (!file) return;
@@ -30,16 +37,31 @@ export default function ProfileForm({ initial, photoUrl }: { initial: Initial; p
       e.target.value = "";
       return;
     }
-    try {
-      const small = await shrinkImage(file);
-      const dt = new DataTransfer();
-      dt.items.add(small);
-      if (photoRef.current) photoRef.current.files = dt.files;
-      setPreview(URL.createObjectURL(small));
-    } catch {
-      setPhotoError("That photo didn't load. Try a different one.");
-      e.target.value = "";
+    setCropping(file);
+  }
+
+  function onCropped(photo: Blob) {
+    const cropped = new File([photo], "photo.jpg", { type: "image/jpeg" });
+    const dt = new DataTransfer();
+    dt.items.add(cropped);
+    if (photoRef.current) photoRef.current.files = dt.files;
+    lastCropped.current = cropped;
+    setPreview(URL.createObjectURL(cropped));
+    setCropping(null);
+  }
+
+  function onCropCancel() {
+    // Put the input back the way it was before this pick.
+    if (photoRef.current) {
+      if (lastCropped.current) {
+        const dt = new DataTransfer();
+        dt.items.add(lastCropped.current);
+        photoRef.current.files = dt.files;
+      } else {
+        photoRef.current.value = "";
+      }
     }
+    setCropping(null);
   }
 
   return (
@@ -47,7 +69,8 @@ export default function ProfileForm({ initial, photoUrl }: { initial: Initial; p
       <div className="field">
         <span className="label" id="photo-label">Profile photo</span>
         <span className="hint">
-          Just you, face clearly visible. Your Realness Check matches against this photo.
+          Face first. Just you, front and center: no sunglasses, no group shots, and no
+          torso standing in for your face. Your Realness Check has to match it.
         </span>
         <div className="selfie">
           {preview ? (
@@ -70,6 +93,7 @@ export default function ProfileForm({ initial, photoUrl }: { initial: Initial; p
             />
           </label>
         </div>
+        {cropping && <PhotoCropper file={cropping} onDone={onCropped} onCancel={onCropCancel} />}
         {photoError && <p className="error">{photoError}</p>}
         {!isNew && (
           <span className="hint">Changing your photo means doing a new Realness Check.</span>
@@ -89,7 +113,7 @@ export default function ProfileForm({ initial, photoUrl }: { initial: Initial; p
 
       <label className="field">
         <span className="label">Zip code</span>
-        <span className="hint">Puts you in a Circle near you. Nobody sees your zip.</span>
+        <span className="hint">Puts you in a Circle near you. Season 1 is Florida only. Nobody sees your zip.</span>
         <input className="input" name="zip" inputMode="numeric" pattern="\d{5}" maxLength={5} required autoComplete="postal-code" defaultValue={initial?.zip} />
       </label>
 
@@ -139,7 +163,7 @@ export default function ProfileForm({ initial, photoUrl }: { initial: Initial; p
       )}
 
       <div className="submit-row">
-        <button className="btn btn-pink" type="submit" disabled={pending}>
+        <button className="btn btn-pink" type="submit" disabled={pending || !!cropping}>
           {pending ? "Saving" : isNew ? "Save and keep going" : "Save changes"}
         </button>
       </div>
