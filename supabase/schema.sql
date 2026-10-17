@@ -1,4 +1,4 @@
--- Homosocial: Season 0 applications
+-- Homosocial: old application table (unused)
 -- Paste this whole file into Supabase > SQL Editor > New query, then click Run.
 
 create table if not exists public.applications (
