@@ -19,10 +19,17 @@ export const EPISODES = [
   { n: 8, title: "The Finale", blurb: "Sunday, 8pm. Private picks. Only mutuals revealed." },
 ];
 
-// Open everywhere in the US. Until matchmaking placement is built, guys are
-// grouped by the first three digits of their zip, which is roughly one metro.
+// Season 1 is Florida only. Florida zips run 320xx to 349xx, except 340xx,
+// which is military mail. Until matchmaking placement is built, guys are
+// grouped by the first three digits of their zip, roughly one metro.
+// A zip outside Florida gets no region, which puts him on the waitlist.
+export const LAUNCH_AREA = "Florida";
+
 export function regionForZip(zip: string): string | null {
-  return /^\d{5}$/.test(zip) ? zip.slice(0, 3) : null;
+  if (!/^\d{5}$/.test(zip)) return null;
+  const prefix = Number(zip.slice(0, 3));
+  if (prefix < 320 || prefix > 349 || prefix === 340) return null;
+  return zip.slice(0, 3);
 }
 
 export function ageFrom(birthdate: string): number {
