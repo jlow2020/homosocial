@@ -18,6 +18,7 @@ export default async function Verify() {
     <main className="apply-page">
       <PageHead
         title="Realness Check"
+        tag={<><span className="chy-hot">Step 2 of 2</span><span className="chy-light">20 seconds</span></>}
         right={<Link href="/profile" className="topbar-link">Profile</Link>}
       >
         Everyone in your Circle is a real person who looks like his photo.
