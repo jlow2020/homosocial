@@ -61,6 +61,8 @@ export type Profile = {
   hot_take: string;
   photo_path: string;
   verified_at: string | null;
+  id_verified_at: string | null;
+  id_attempts: number;
   verification_attempts: number;
   status: "active" | "waitlist" | "paused" | "banned";
   circle_id: string | null;

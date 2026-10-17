@@ -5,7 +5,7 @@ export const SEASON = {
   name: "Season 1",
   spots: 30, // cast size of a full Circle
   minToOpen: 9, // a Circle premieres once this many guys are in
-  minAge: 21,
+  minAge: 18,
 };
 
 export const EPISODES = [
