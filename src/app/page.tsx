@@ -35,7 +35,7 @@ const faq = [
   },
   {
     q: "How do you keep it safe?",
-    a: "Every guy passes a Realness Check: a 20-second camera check that he's a real, live person who matches his photo. Nobody's location is ever shown. Block or report anyone, and three reports pauses an account automatically.",
+    a: "Every guy passes a Realness Check, a 20-second camera check that he's a real, live person who matches his photo, and a one-time ID check before he's cast. We delete the ID photos right after. Nobody's location is ever shown. Block or report anyone, and three reports pauses an account automatically.",
   },
   {
     q: "What happens after the Finale?",
@@ -173,9 +173,9 @@ export default function Home() {
           You&apos;re in the cast.
         </h2>
         <p>
-          Sign up, answer a few questions so we can cast you well, and pass a
-          20-second Realness Check so everyone in your Circle is who he says he
-          is.
+          Sign up, pass a 20-second Realness Check, and look around the green
+          room. One quick ID check and you&apos;re cast, with a Circle full of
+          guys who are exactly who they say they are.
         </p>
         <Link href="/join" className="btn btn-pink btn-big">
           Get cast

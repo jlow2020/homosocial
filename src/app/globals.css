@@ -1128,3 +1128,82 @@ img {
   flex: 1;
   accent-color: var(--hot);
 }
+
+/* ID check */
+.choice-button {
+  font: inherit;
+  color: var(--spot);
+  text-align: left;
+  width: 100%;
+}
+.choice-button:hover {
+  border-color: var(--hot);
+}
+.shots {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 14px;
+}
+.shot {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  cursor: pointer;
+}
+.shot-img,
+.shot-empty {
+  width: 100%;
+  aspect-ratio: 1.586;
+  object-fit: cover;
+  background: var(--studio);
+  border: 2px dashed var(--muted);
+}
+.shot-img {
+  border-style: solid;
+  border-color: var(--hot);
+}
+.shot-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--display);
+  font-weight: 900;
+  font-size: 44px;
+  color: var(--muted);
+}
+.shot-label {
+  font-family: var(--display);
+  font-weight: 900;
+  font-size: 22px;
+  text-transform: uppercase;
+}
+.shot:focus-within .shot-empty,
+.shot:focus-within .shot-img {
+  outline: 3px solid var(--gold);
+  outline-offset: 3px;
+}
+
+/* Green room */
+.greenroom {
+  border: 2px solid var(--gold);
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  align-items: flex-start;
+  max-width: 760px;
+}
+.greenroom h2 {
+  font-size: 40px;
+  color: var(--gold);
+}
+.greenroom p {
+  color: var(--soft);
+}
+.member-hidden .member-photo {
+  filter: blur(0);
+  background:
+    radial-gradient(circle at 50% 38%, #4a3566 0 22%, transparent 23%),
+    radial-gradient(circle at 50% 100%, #4a3566 0 45%, transparent 46%),
+    var(--line);
+}
