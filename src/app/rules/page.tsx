@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import PageHead from "@/components/PageHead";
 
 export const metadata: Metadata = { title: "House rules | Homosocial" };
@@ -6,13 +7,16 @@ export const metadata: Metadata = { title: "House rules | Homosocial" };
 export default function Rules() {
   return (
     <main className="apply-page">
-      <PageHead title="House rules">
+      <PageHead
+        title="House rules"
+        right={<Link href="/me" className="topbar-link">Sign in</Link>}
+      >
         Short version: be real, be decent, and keep it out of the gutter in the group.
       </PageHead>
       <div className="wrap prose">
         <h2>The rules</h2>
         <ol>
-          <li>You&apos;re 18 or older. No exceptions.</li>
+          <li>You&apos;re 21 or older. No exceptions.</li>
           <li>You&apos;re you. Your face, your name, your photos.</li>
           <li>No nudes or explicit photos. Flirting is fine. Porn is not.</li>
           <li>No harassment, hate, or threats, toward anyone, for any reason.</li>
@@ -33,7 +37,7 @@ export default function Rules() {
         <ul>
           <li>Your profile: first name, birthday, zip, interests, hot take, and photo.</li>
           <li>Your Circle sees your first name, age, interests, hot take, and photo. Never your birthday, zip, or email.</li>
-          <li>Whether you&apos;re open to dating is never shown to anyone. It only changes what Last Call asks you.</li>
+          <li>Whether you&apos;re open to dating is never shown to anyone. It only changes what the Finale asks you.</li>
           <li>
             The Realness Check analyzes your face on your own phone. We save
             three photos from it and the pass or fail result. We never save
