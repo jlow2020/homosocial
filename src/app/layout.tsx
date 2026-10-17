@@ -1,12 +1,12 @@
 import type { Metadata, Viewport } from "next";
-import "@fontsource-variable/anybody/standard.css";
-import "@fontsource-variable/figtree/wght.css";
+import "@fontsource-variable/big-shoulders-display/wght";
+import "@fontsource-variable/instrument-sans/wght.css";
 import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Homosocial",
   description:
-    "Your favorite people are still strangers. Homosocial puts 40 gay, bi, and queer guys from the same corner of Sarasota into one group for eight weeks.",
+    "A reality show where you're the cast and there's no audience. Thirty gay, bi, trans and queer guys near you, eight weekly episodes, one Finale.",
   metadataBase: new URL("https://homosocial.net"),
   openGraph: {
     title: "Homosocial",
@@ -18,7 +18,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#143A36",
+  themeColor: "#160C24",
 };
 
 export default function RootLayout({
