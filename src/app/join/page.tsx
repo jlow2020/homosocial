@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 
 const errors: Record<string, string> = {
   google: "Google sign-in didn't work. Try again or use your email.",
-  link: "That sign-in link expired or was already used. Get a new one below.",
+  link: "That sign-in link expired or was already used. Links last an hour and work once. Get a fresh one below.",
   setup: "Sign-in isn't connected yet.",
 };
 
