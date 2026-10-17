@@ -19,7 +19,7 @@ const faq = [
   },
   {
     q: "Who can join?",
-    a: `Gay, bi, trans and queer men, ${SEASON.minAge} and up, anywhere in the US.`,
+    a: `Gay, bi, trans and queer men, ${SEASON.minAge} and up, anywhere in Florida. More states after Season 1.`,
   },
   {
     q: "What does it cost?",
@@ -57,7 +57,7 @@ export default function Home() {
       <section className="wrap hero">
         <div className="chyron">
           <span className="chy-hot">Now casting</span>
-          <span className="chy-light">{SEASON.name}, everywhere in the US</span>
+          <span className="chy-light">{SEASON.name}, Florida</span>
         </div>
         <h1>Your favorite people are still strangers.</h1>
         <div className="hero-row">

@@ -1061,3 +1061,70 @@ img {
     transition: none !important;
   }
 }
+
+/* Photo cropper */
+.cropper {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  align-items: flex-start;
+  background: var(--studio);
+  border: 2px solid var(--hot);
+  padding: 18px;
+  max-width: 560px;
+}
+.cropper-title {
+  font-family: var(--display);
+  font-weight: 900;
+  font-size: 26px;
+  text-transform: uppercase;
+}
+.cropper-frame {
+  position: relative;
+  overflow: hidden;
+  touch-action: none;
+  user-select: none;
+  cursor: grab;
+  background: var(--prime);
+  max-width: 100%;
+}
+.cropper-frame:active {
+  cursor: grabbing;
+}
+.cropper-frame canvas {
+  display: block;
+}
+.cropper-mask {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: 50%;
+  box-shadow: 0 0 0 999px rgba(22, 12, 36, 0.6);
+  outline: 2px solid var(--spot);
+  outline-offset: -2px;
+}
+.cropper-loading {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--display);
+  font-weight: 900;
+  font-size: 22px;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+.cropper-zoom {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 300px;
+  max-width: 100%;
+  font-weight: 700;
+  font-size: 20px;
+}
+.cropper-zoom input {
+  flex: 1;
+  accent-color: var(--hot);
+}
