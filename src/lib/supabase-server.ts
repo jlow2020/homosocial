@@ -2,7 +2,6 @@ import "server-only";
 import { cookies } from "next/headers";
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import { createServerClient } from "@supabase/ssr";
-import { SEASON } from "@/lib/season";
 
 let admin: SupabaseClient | null = null;
 
@@ -78,26 +77,6 @@ export function nextPath(profile: Profile | null): string {
   if (profile.status === "paused" || profile.status === "banned") return "/circle";
   if (!profile.verified_at) return "/verify";
   return "/circle";
-}
-
-export async function getOpenCircle(): Promise<{ number: number; taken: number }> {
-  const db = getSupabaseAdmin();
-  if (!db) return { number: 1, taken: 0 };
-  const { data: circles } = await db
-    .from("circles")
-    .select("id, number, capacity")
-    .eq("season", SEASON.id)
-    .eq("region", "sarasota")
-    .order("number", { ascending: true });
-  if (!circles || circles.length === 0) return { number: 1, taken: 0 };
-  for (const c of circles) {
-    const { count } = await db
-      .from("profiles")
-      .select("id", { count: "exact", head: true })
-      .eq("circle_id", c.id);
-    if ((count ?? 0) < c.capacity) return { number: c.number, taken: count ?? 0 };
-  }
-  return { number: circles[circles.length - 1].number + 1, taken: 0 };
 }
 
 export function siteOrigin(h: Headers): string {

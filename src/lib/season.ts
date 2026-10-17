@@ -1,27 +1,28 @@
-// Edit these when a new Season is announced.
+// The show. Seasons run per Circle: a Circle premieres once it has enough
+// cast, then runs 8 weekly episodes and ends with the Finale.
 export const SEASON = {
-  id: "s0",
-  name: "Season 0",
-  area: "Sarasota, Bradenton & Lakewood Ranch",
-  areaShort: "Sarasota",
-  spots: 40,
-  starts: "November 2",
-  lastCall: "December 21",
-  next: "Season 1 starts in January",
+  id: "s1",
+  name: "Season 1",
+  spots: 30, // cast size of a full Circle
+  minToOpen: 9, // a Circle premieres once this many guys are in
+  minAge: 21,
 };
 
-// Where Circles are open right now. A zip outside these goes on the waitlist.
-const REGIONS: { id: string; name: string; zipPrefixes: string[] }[] = [
-  { id: "sarasota", name: "Sarasota", zipPrefixes: ["342"] },
+export const EPISODES = [
+  { n: 1, title: "Arrivals", blurb: "Who walked in, and what did they bring." },
+  { n: 2, title: "Hot Takes", blurb: "Food, music, movies. Pick a side." },
+  { n: 3, title: "Show and Tell", blurb: "Your fridge, your view, your worst tattoo." },
+  { n: 4, title: "Confessions", blurb: "The things you only say on night four." },
+  { n: 5, title: "Type", blurb: "What makes you stupid for a guy." },
+  { n: 6, title: "Out", blurb: "Log off. Make a plan. Show up." },
+  { n: 7, title: "Roses", blurb: "Everyone says something kind, out loud, by name." },
+  { n: 8, title: "The Finale", blurb: "Sunday, 8pm. Private picks. Only mutuals revealed." },
 ];
 
+// Open everywhere in the US. Until matchmaking placement is built, guys are
+// grouped by the first three digits of their zip, which is roughly one metro.
 export function regionForZip(zip: string): string | null {
-  const r = REGIONS.find((r) => r.zipPrefixes.some((p) => zip.startsWith(p)));
-  return r ? r.id : null;
-}
-
-export function regionName(id: string | null | undefined): string {
-  return REGIONS.find((r) => r.id === id)?.name ?? "";
+  return /^\d{5}$/.test(zip) ? zip.slice(0, 3) : null;
 }
 
 export function ageFrom(birthdate: string): number {
