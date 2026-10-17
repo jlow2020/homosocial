@@ -765,6 +765,25 @@ img {
   border: 0;
 }
 
+.username-show {
+  font-family: var(--display);
+  font-weight: 900;
+  font-size: 30px;
+  color: var(--gold);
+}
+.notice-inline {
+  border-left: 4px solid var(--gold);
+  background: rgba(245, 196, 81, 0.12);
+  padding: 12px 16px;
+  font-weight: 600;
+}
+.account-link {
+  padding-bottom: 32px;
+}
+.account-link > p {
+  max-width: 760px;
+  color: var(--soft);
+}
 .danger {
   padding-bottom: 80px;
 }

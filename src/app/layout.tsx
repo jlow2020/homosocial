@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "@fontsource-variable/big-shoulders-display/wght";
 import "@fontsource-variable/instrument-sans/wght.css";
 import "./globals.css";
+import HashSignIn from "@/components/HashSignIn";
 
 export const metadata: Metadata = {
   title: "Homosocial",
@@ -26,7 +27,10 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <HashSignIn />
+        {children}
+      </body>
     </html>
   );
 }
