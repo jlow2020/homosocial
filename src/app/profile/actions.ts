@@ -17,7 +17,8 @@ function text(form: FormData, key: string, max = 500): string {
 export async function saveProfile(_prev: ProfileState, form: FormData): Promise<ProfileState> {
   const me = await getMe();
   const db = getSupabaseAdmin();
-  if (!me || !db) redirect("/join");
+  if (!me || !db) redirect("/signin");
+  if (!me.username) redirect("/account");
   const existing = me.profile;
 
   const firstName = text(form, "first_name", 60);

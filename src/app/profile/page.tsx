@@ -11,7 +11,8 @@ export const dynamic = "force-dynamic";
 
 export default async function ProfilePage() {
   const me = await getMe();
-  if (!me) redirect("/join");
+  if (!me) redirect("/signin");
+  if (!me.username) redirect("/account");
   const p = me.profile;
 
   let photoUrl: string | null = null;
@@ -26,7 +27,7 @@ export default async function ProfilePage() {
     <main className="apply-page">
       <PageHead
         title={p ? "Your profile" : "Make your profile"}
-        tag={p ? undefined : <><span className="chy-hot">Step 1 of 2</span><span className="chy-light">Your profile</span></>}
+        tag={p ? undefined : <><span className="chy-hot">Step 2 of 3</span><span className="chy-light">Your profile</span></>}
         right={
           <form action={signOut}>
             <button className="topbar-link link-button" type="submit">Sign out</button>
@@ -50,6 +51,13 @@ export default async function ProfilePage() {
           }
         }
       />
+      {p && (
+        <div className="wrap account-link">
+          <p>
+            Signed in as <strong>@{me.username}</strong>. <a href="/account">Change your password</a>
+          </p>
+        </div>
+      )}
       {p && (
         <div className="wrap danger">
           <details>
