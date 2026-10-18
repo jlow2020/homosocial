@@ -60,7 +60,7 @@ export default async function CirclePage() {
       .eq("circle_id", p.circle_id)
       .eq("status", "active")
       .not("verified_at", "is", null)
-      // Only ID-checked guys are on the show. He always sees himself.
+      // Only ID-checked guys have seats. He always sees himself.
       .or(`id_verified_at.not.is.null,id.eq.${p.id}`)
       .order("verified_at", { ascending: true }),
     db.from("blocks").select("blocker, blocked").or(`blocker.eq.${p.id},blocked.eq.${p.id}`),
@@ -72,7 +72,7 @@ export default async function CirclePage() {
   const self = visible.find((m) => m.id === p.id);
   const ordered = self ? [self, ...others] : others;
 
-  // Green room: before his ID check he sees who's cast, not their faces.
+  // Lobby: before his ID check he sees who has a seat, not their faces.
   const greenRoom = !p.id_verified_at;
   const showPhotos = greenRoom ? ordered.filter((m) => m.id === p.id) : ordered;
   const { data: signed } = showPhotos.length
@@ -92,26 +92,26 @@ export default async function CirclePage() {
         tag={
           <>
             <span className={need > 0 ? "chy-hot" : "chy-gold"}>
-              {need > 0 ? "Casting" : "Cast"}
+              {need > 0 ? "Filling up" : "Kicking off"}
             </span>
             <span className="chy-light">{SEASON.name}</span>
           </>
         }
       >
         {greenRoom
-          ? "You're in the green room. Look around. When you're ready to be on the show, do your one-time ID check and you're cast."
+          ? "You're in the lobby. Look around. When you're ready to jump in, do your one-time ID check and the seat is yours."
           : need > 0
-            ? "You're cast. Your Circle premieres as soon as enough guys are cast. Episode 1 drops the Monday after."
-            : "Your Circle has its cast. Episode 1 drops on Monday, and guys can still join late."}
+            ? "Your seat is yours. Your Circle kicks off once 9 seats are taken. Week 1 drops the Monday after."
+            : "Your Circle is set. Week 1 drops on Monday, and guys can still join late."}
       </PageHead>
 
       {greenRoom && (
         <section className="wrap" style={{ paddingBottom: 24 }}>
           <div className="greenroom">
-            <h2>Get cast</h2>
+            <h2>Grab your seat</h2>
             <p>
-              Faces, the group chat and DMs unlock once you&apos;re cast. It&apos;s a one-time ID check
-              that takes about a minute. Every guy on the show did it, so everyone you meet is a real,
+              Faces, the group chat and DMs unlock once you have a seat. It&apos;s a one-time ID check
+              that takes about a minute. Every guy in your Circle did it, so everyone you meet is a real,
               verified adult.
             </p>
             <Link href="/verify/id" className="btn btn-gold">
@@ -124,7 +124,7 @@ export default async function CirclePage() {
       <section className="wrap">
         <div className="casting">
           <span className="casting-count">
-            <em>{total}</em> of {capacity} cast
+            <em>{total}</em> of {capacity} seats taken
           </span>
           <div className="seats" aria-hidden="true">
             {Array.from({ length: capacity }, (_, i) => (
@@ -138,7 +138,7 @@ export default async function CirclePage() {
           </div>
           <p>
             {need > 0
-              ? `${need} more ${need === 1 ? "guy" : "guys"} to premiere. Know someone who needs this? Send him homosocial.net.`
+              ? `${need} more ${need === 1 ? "guy" : "guys"} to kick off. Know someone who needs this? Send him homosocial.net.`
               : `${capacity - total} open ${capacity - total === 1 ? "seat" : "seats"} left for late arrivals.`}
           </p>
         </div>
@@ -162,7 +162,7 @@ export default async function CirclePage() {
                 </p>
                 <p className="member-into">Into {m.interests}</p>
                 {greenRoom && m.id !== p.id ? (
-                  <p className="member-take">Get cast to see his face and his hot take.</p>
+                  <p className="member-take">Grab your seat to see his face and his hot take.</p>
                 ) : (
                   <p className="member-take">&ldquo;{m.hot_take}&rdquo;</p>
                 )}
