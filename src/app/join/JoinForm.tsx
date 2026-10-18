@@ -55,7 +55,7 @@ export default function JoinForm({ google }: { google: boolean }) {
         </button>
       </form>
       <p className="fine">
-        Already cast? <a href="/signin">Sign in</a>.
+        Already have a seat? <a href="/signin">Sign in</a>.
       </p>
       <p className="fine">
         By joining you agree to the <a href="/rules">house rules</a>. Homosocial

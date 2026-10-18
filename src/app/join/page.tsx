@@ -5,7 +5,7 @@ import JoinForm from "./JoinForm";
 import { getMe, nextPath } from "@/lib/supabase-server";
 import { SEASON } from "@/lib/season";
 
-export const metadata: Metadata = { title: "Get cast | Homosocial" };
+export const metadata: Metadata = { title: "Grab a seat | Homosocial" };
 export const dynamic = "force-dynamic";
 
 const errors: Record<string, string> = {
@@ -26,10 +26,10 @@ export default async function Join({
   return (
     <main className="apply-page">
       <PageHead
-        title="Get cast"
+        title="Grab a seat"
         tag={
           <>
-            <span className="chy-hot">Now casting</span>
+            <span className="chy-hot">Doors open</span>
             <span className="chy-light">{SEASON.name}</span>
           </>
         }
