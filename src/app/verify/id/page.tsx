@@ -5,7 +5,7 @@ import PageHead from "@/components/PageHead";
 import IdCheck from "./IdCheck";
 import { getMe } from "@/lib/supabase-server";
 
-export const metadata: Metadata = { title: "Get cast | Homosocial" };
+export const metadata: Metadata = { title: "ID check | Homosocial" };
 export const dynamic = "force-dynamic";
 
 export default async function VerifyId() {
@@ -22,13 +22,13 @@ export default async function VerifyId() {
         title="One last thing"
         tag={
           <>
-            <span className="chy-gold">Get cast</span>
+            <span className="chy-gold">Grab your seat</span>
             <span className="chy-light">One-time ID check</span>
           </>
         }
         right={<Link href="/circle" className="topbar-link">Back</Link>}
       >
-        Everyone on the show is a real adult, checked once. We read your ID and match its photo to your
+        Everyone in your Circle is a real adult, checked once. We read your ID and match its photo to your
         Realness Check, then delete the photos. We keep your birthday and that you passed. Nothing else.
       </PageHead>
       <IdCheck />
