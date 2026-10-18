@@ -1,14 +1,14 @@
-// The show. Seasons run per Circle: a Circle premieres once it has enough
-// cast, then runs 8 weekly episodes and ends with the Finale.
+// The game. Seasons run per Circle: a Circle kicks off once enough seats are
+// taken, then runs 8 weeks and ends with the Finale.
 export const SEASON = {
   id: "s1",
   name: "Season 1",
-  spots: 30, // cast size of a full Circle
-  minToOpen: 9, // a Circle premieres once this many guys are in
+  spots: 30, // seats in a full Circle
+  minToOpen: 9, // a Circle kicks off once this many seats are taken
   minAge: 18,
 };
 
-export const EPISODES = [
+export const WEEKS = [
   { n: 1, title: "Arrivals", blurb: "Who walked in, and what did they bring." },
   { n: 2, title: "Hot Takes", blurb: "Food, music, movies. Pick a side." },
   { n: 3, title: "Show and Tell", blurb: "Your fridge, your view, your worst tattoo." },
