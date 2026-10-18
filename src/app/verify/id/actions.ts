@@ -3,16 +3,16 @@
 import { createHmac } from "node:crypto";
 import { getMe, getSupabaseAdmin } from "@/lib/supabase-server";
 import { readDocument } from "@/lib/server/idread";
-import { bestMatch, facesIn } from "@/lib/server/vision";
+import { closestIdentity, identitiesIn, type Identity } from "@/lib/server/vision";
 import { ageFrom, SEASON } from "@/lib/season";
 
 export type IdOutcome = { passed: boolean; message: string; retry: boolean };
 
 const MAX_ATTEMPTS = 10;
 const MAX_BYTES = 6 * 1024 * 1024;
-// Face on the ID vs. the live Realness Check frames. ID photos are small and
-// glossy, so this sits a little under the selfie threshold. Tune with data.
-const ID_MATCH = 0.45;
+// Face on the ID vs. the live Realness Check frames, as a distance (lower is
+// more alike). See identityDistance for how this number was picked.
+const ID_MAX_DISTANCE = 0.52;
 
 function file(form: FormData, key: string): File | null {
   const f = form.get(key);
@@ -83,9 +83,9 @@ export async function checkId(form: FormData): Promise<IdOutcome> {
   if (age > 110) return fail("We couldn't read the birthday on that ID. Try a clearer photo.", "bad_birthdate");
 
   // 3. Face on the ID vs. the live Realness Check and the profile photo.
-  let idFaces;
+  let idFaces: Identity[];
   try {
-    idFaces = await facesIn(frontBuf, 1600);
+    idFaces = await identitiesIn(frontBuf, 1600);
   } catch (e) {
     console.error("id-check face error", e);
     return fail("Something went wrong reading your ID photo. Try again.", "face_error");
@@ -93,29 +93,32 @@ export async function checkId(form: FormData): Promise<IdOutcome> {
   if (idFaces.length === 0) {
     return fail("We couldn't find the photo on your ID. Retake the front in good light with no glare on the picture.", "no_id_face");
   }
-  const idFace = idFaces[0].embedding;
+  const idFace = idFaces[0];
 
   const record = (p as unknown as { verification?: { frames?: string[]; neutralFrames?: string[] } }).verification;
   const livePaths = [...(record?.neutralFrames ?? []), ...(record?.frames ?? [])];
-  const references: number[][] = [];
+  const references: Identity[] = [];
   for (const path of livePaths.slice(0, 6)) {
     const { data } = await db.storage.from("verifications").download(path);
     if (!data) continue;
-    const faces = await facesIn(Buffer.from(await data.arrayBuffer()), 1024).catch(() => []);
-    if (faces[0]) references.push(faces[0].embedding);
+    const faces = await identitiesIn(Buffer.from(await data.arrayBuffer()), 1024).catch(() => []);
+    if (faces[0]) references.push(faces[0]);
   }
   if (p.photo_path) {
     const { data } = await db.storage.from("photos").download(p.photo_path);
     if (data) {
-      const faces = await facesIn(Buffer.from(await data.arrayBuffer()), 1024).catch(() => []);
-      if (faces[0]) references.push(faces[0].embedding);
+      const faces = await identitiesIn(Buffer.from(await data.arrayBuffer()), 1024).catch(() => []);
+      if (faces[0]) references.push(faces[0]);
     }
   }
   if (references.length === 0) {
     return fail("We need a fresh Realness Check before your ID. Redo it, then come back.", "no_reference", false);
   }
-  const match = await bestMatch(idFace, references);
-  if (match < ID_MATCH) {
+  const distance = await closestIdentity(idFace, references);
+  // Stored and logged as a 0-1 score where higher is better: 1 - distance.
+  const match = 1 - distance;
+  console.log("id-check face", p.id, "distance", distance.toFixed(3));
+  if (distance > ID_MAX_DISTANCE) {
     return fail(
       "The photo on your ID doesn't match your Realness Check. Retake the front of your ID in good light, filling the frame.",
       `face_mismatch ${match.toFixed(2)}`,
