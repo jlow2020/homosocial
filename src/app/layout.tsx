@@ -7,11 +7,11 @@ import HashSignIn from "@/components/HashSignIn";
 export const metadata: Metadata = {
   title: "Homosocial",
   description:
-    "A reality show-style game for gay, bi, trans and queer men, with no cameras and no audience. Thirty guys near you, eight weekly episodes, one Finale.",
+    "A social game for gay, bi, trans and queer men, played in seasons, like your favorite reality show, minus the cameras. Thirty guys near you, eight weeks, one Finale.",
   metadataBase: new URL("https://homosocial.net"),
   openGraph: {
     title: "Homosocial",
-    description: "A reality show-style game with no cameras and no audience. Make friends, do fun stuff, maybe find a boyfriend.",
+    description: "A social game played in seasons, like your favorite reality show, minus the cameras. Make friends, do fun stuff, maybe find a boyfriend.",
     url: "https://homosocial.net",
     siteName: "Homosocial",
     type: "website",

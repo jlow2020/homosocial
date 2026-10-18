@@ -1,7 +1,7 @@
 import Link from "next/link";
 import TopBar from "@/components/TopBar";
 import Countdown from "@/components/Countdown";
-import { EPISODES, SEASON } from "@/lib/season";
+import { WEEKS, SEASON } from "@/lib/season";
 
 const plays = [
   { title: "Monday drops", tone: "hot", body: "A new prompt every week. Hot takes, show us your fridge, rank the Spice Girls. Answer to see everyone else's." },
@@ -14,8 +14,8 @@ const plays = [
 
 const faq = [
   {
-    q: "Is this a real TV show?",
-    a: "No. Nothing is filmed, recorded or posted anywhere. It just plays like one: a cast, weekly episodes, a Finale. Everything stays inside your Circle.",
+    q: "Is this a TV show?",
+    a: "No. Nothing is filmed, recorded or posted anywhere. It's a game played in seasons, like one: your Circle, a new drop every week, a Finale. Everything stays inside your Circle.",
   },
   {
     q: "Who can join?",
@@ -27,7 +27,7 @@ const faq = [
   },
   {
     q: "Who's in my Circle?",
-    a: `Up to ${SEASON.spots} guys who live near you. Your Circle premieres once ${SEASON.minToOpen} are in, and guys can still join late.`,
+    a: `Up to ${SEASON.spots} guys who live near you. Your Circle kicks off once ${SEASON.minToOpen} are in, and guys can still join late.`,
   },
   {
     q: "Do I have to meet anyone in person?",
@@ -35,11 +35,11 @@ const faq = [
   },
   {
     q: "How do you keep it safe?",
-    a: "Every guy passes a Realness Check, a 20-second camera check that he's a real, live person who matches his photo, and a one-time ID check before he's cast. We delete the ID photos right after. Nobody's location is ever shown. Block or report anyone, and three reports pauses an account automatically.",
+    a: "Every guy passes a Realness Check, a 20-second camera check that he's a real, live person who matches his photo, and a one-time ID check before he gets his seat. We delete the ID photos right after. Nobody's location is ever shown. Block or report anyone, and three reports pauses an account automatically.",
   },
   {
     q: "What happens after the Finale?",
-    a: "Your Circle can run it back for another season, or you get mixed into a new cast. Everyone you matched with stays yours either way.",
+    a: "Your Circle can run it back for another season, or you get mixed into a new Circle. Everyone you matched with stays yours either way.",
   },
 ];
 
@@ -56,20 +56,20 @@ export default function Home() {
 
       <section className="wrap hero">
         <div className="chyron">
-          <span className="chy-hot">Now casting</span>
+          <span className="chy-hot">Doors open</span>
           <span className="chy-light">{SEASON.name}, Florida</span>
         </div>
         <h1>Your favorite people are still strangers.</h1>
         <div className="hero-row">
           <p className="lede">
-            A reality show-style game with no cameras and no audience. Just
-            you and {SEASON.spots} guys near you, one episode a week, for eight
-            weeks. It&apos;s a game for making friends, doing fun stuff
+            A social game played in seasons, like your favorite reality show,
+            minus the cameras. Just you and {SEASON.spots} guys near you, one new
+            drop a week, for eight weeks. It&apos;s a game for making friends, doing fun stuff
             together, and maybe finding a boyfriend.
           </p>
           <div className="cta">
             <Link href="/join" className="btn btn-pink btn-big">
-              Get cast
+              Grab a seat
             </Link>
             <span className="cta-meta">
               Free. {SEASON.minAge} and up. Gay, bi, trans and queer men.
@@ -94,15 +94,15 @@ export default function Home() {
         <div className="wrap guide-inner">
           <div className="section-head">
             <h2>The season</h2>
-            <p>A new episode every Monday. Every episode gets a little closer.</p>
+            <p>A new drop every Monday. Every week gets a little closer.</p>
           </div>
           <ol className="episodes">
-            {EPISODES.map((e) => (
+            {WEEKS.map((e) => (
               <li
                 key={e.n}
                 className={e.n === 8 ? "episode episode-finale" : "episode"}
               >
-                <span className="ep-num">Episode {e.n}</span>
+                <span className="ep-num">Week {e.n}</span>
                 <span className="ep-title">{e.title}</span>
                 <span className="ep-blurb">{e.blurb}</span>
               </li>
@@ -126,8 +126,8 @@ export default function Home() {
             <h3>Nobody gets voted off</h3>
             <p>
               No eliminations, no polls about each other, no drama for
-              drama&apos;s sake. It&apos;s the fun of being on the show without
-              the cruelty.
+              drama&apos;s sake. It&apos;s the fun of a reality show without the
+              cruelty.
             </p>
           </div>
           <div className="rule rule-gold">
@@ -170,15 +170,15 @@ export default function Home() {
       <section className="wrap closer">
         <h2>
           {SEASON.spots === 30 ? "Thirty" : SEASON.spots} guys. Eight weeks.
-          You&apos;re in the cast.
+          Grab a seat.
         </h2>
         <p>
-          Sign up, pass a 20-second Realness Check, and look around the green
-          room. One quick ID check and you&apos;re cast, with a Circle full of
-          guys who are exactly who they say they are.
+          Sign up, pass a 20-second Realness Check, and look around the lobby.
+          One quick ID check and the seat is yours, in a Circle full of guys
+          who are exactly who they say they are.
         </p>
         <Link href="/join" className="btn btn-pink btn-big">
-          Get cast
+          Grab a seat
         </Link>
       </section>
 
