@@ -8,6 +8,10 @@ import Reactions from "./Reactions";
 import ReplyBox from "./ReplyBox";
 import GuessWho from "./GuessWho";
 import WriteDrop from "./WriteDrop";
+import PlayForm from "./PlayForm";
+import LieVote from "./LieVote";
+import { compile } from "@/lib/game/playcheck";
+import { PLAY_MODES } from "@/lib/game/plays";
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +20,8 @@ type AnswerRow = {
   user_id: string;
   body: string | null;
   photo_path: string | null;
+  media_type: "photo" | "video" | null;
+  data: Record<string, unknown> | null;
   passed: boolean;
   created_at: string;
   reactions: { user_id: string; emoji: string }[];
@@ -34,7 +40,7 @@ export default async function WeekPage({ params }: { params: Promise<{ n: string
   const prompt = promptOf(drop);
   const { data } = await db
     .from("answers")
-    .select("id, user_id, body, photo_path, passed, created_at, reactions(user_id, emoji), replies(id, user_id, body, created_at)")
+    .select("id, user_id, body, photo_path, media_type, data, passed, created_at, reactions(user_id, emoji), replies(id, user_id, body, created_at)")
     .eq("drop_id", drop.id)
     .order("created_at", { ascending: true });
   const memberIds = new Set(pl.members.map((m) => m.id));
@@ -68,8 +74,43 @@ export default async function WeekPage({ params }: { params: Promise<{ n: string
     .eq("author_id", pl.profile.id)
     .gte("created_at", new Date(Date.now() - 60 * 864e5).toISOString());
 
+  // Two Truths: votes, and the reveal when the week ends.
+  const isPlay = (PLAY_MODES as string[]).includes(prompt.mode);
+  const twoTruths = prompt.mode === "twotruths";
+  const lieRevealed = twoTruths && (week < current || clock.phase === "revealed");
+  const { data: voteRows } = twoTruths ? await db.from("votes").select("voter, answer_id, choice").eq("drop_id", drop.id) : { data: [] };
+  const myVotes = new Map((voteRows ?? []).filter((v) => v.voter === pl.profile.id).map((v) => [v.answer_id as string, v.choice as number]));
+  const lieRight = lieRevealed ? [...myVotes].filter(([aid, c]) => (rows.find((a) => a.id === aid)?.data?.lie as number | undefined) === c).length : 0;
+
+  // Circle Census: the totals, once he's answered.
+  const spec = prompt.spec;
+  const answeredPlays = rows.filter((a) => !a.passed && a.data);
+  const census =
+    mine && spec?.kind === "survey" && spec.census && answeredPlays.length >= 3
+      ? spec.questions.map((q, i) => ({ q, pct: Math.round((100 * answeredPlays.filter((a) => (a.data!.answers as boolean[])[i]).length) / answeredPlays.length) }))
+      : null;
+  const splits =
+    mine && spec?.kind === "thisorthat" && answeredPlays.length >= 3
+      ? spec.pairs.map(([a, b], i) => {
+          const left = answeredPlays.filter((x) => (x.data!.picks as number[])[i] === 0).length;
+          return { a, b, left: Math.round((100 * left) / answeredPlays.length) };
+        })
+      : null;
+  const agree =
+    mine?.data && spec?.kind === "thisorthat"
+      ? answeredPlays
+          .filter((a) => a.user_id !== pl.profile.id)
+          .map((a) => ({ name: byId.get(a.user_id)?.first_name ?? "?", n: spec.pairs.filter((_, i) => (a.data!.picks as number[])[i] === (mine.data!.picks as number[])[i]).length }))
+          .sort((x, y) => y.n - x.n)
+          .slice(0, 3)
+      : [];
+
+  const clipPaths = rows.filter((a) => a.media_type === "video" && a.photo_path).map((a) => a.photo_path as string);
+  const clips = mine && clipPaths.length
+    ? new Map(((await db.storage.from("clips").createSignedUrls(clipPaths, 3600)).data ?? []).map((x) => [x.path as string, x.signedUrl as string]))
+    : new Map<string, string>();
   const urls = mine
-    ? await photoUrls(db, [...pl.members.map((m) => m.photo_path), ...rows.map((a) => a.photo_path)])
+    ? await photoUrls(db, [...pl.members.map((m) => m.photo_path), ...rows.filter((a) => a.media_type !== "video").map((a) => a.photo_path)])
     : await photoUrls(db, [pl.profile.photo_path]);
 
   return (
@@ -93,7 +134,14 @@ export default async function WeekPage({ params }: { params: Promise<{ n: string
           </p>
         )}
         {prompt.mode === "dare" && <p className="anon-note">🏁 Dare. Do it, then post what happened. Photo optional.</p>}
-        {!mine && <AnswerForm week={week} kind={prompt.mode === "dare" ? "photo" : prompt.kind} canPass={(passes ?? 0) < 1} />}
+        {twoTruths && !lieRevealed && <p className="anon-note">🎭 Two Truths and a Lie. Names hidden. Vote on everyone&apos;s lie. Reveal when the week ends.</p>}
+        {twoTruths && lieRevealed && (
+          <p className="anon-note">
+            🎭 Lies revealed. You caught {lieRight} of {myVotes.size}.
+          </p>
+        )}
+        {!mine && isPlay && spec && <PlayForm week={week} spec={spec} />}
+        {!mine && !isPlay && <AnswerForm week={week} kind={prompt.mode === "dare" ? "photo" : prompt.kind} canPass={(passes ?? 0) < 1} />}
         {mine?.passed && <p className="fine">You used your Pass on this one. Everyone&apos;s answers are unlocked.</p>}
       </section>
 
@@ -119,13 +167,52 @@ export default async function WeekPage({ params }: { params: Promise<{ n: string
         </section>
       ) : (
         <section className="answers">
+          {census && (
+            <div className="census">
+              <p className="eyebrow">Circle Census · {answeredPlays.length} answered</p>
+              <ul>
+                {census.map((c) => (
+                  <li key={c.q}>
+                    <span className="census-bar" style={{ width: `${c.pct}%` }} />
+                    <span className="census-pct">{c.pct}%</span>
+                    <span>{c.q}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {splits && (
+            <div className="census">
+              <p className="eyebrow">How the Circle split · {answeredPlays.length} answered</p>
+              <ul className="splits">
+                {splits.map((s) => (
+                  <li key={s.a}>
+                    <span className={s.left >= 50 ? "win" : ""}>
+                      {s.a} {s.left}%
+                    </span>
+                    <span className="split-bar">
+                      <span style={{ width: `${s.left}%` }} />
+                    </span>
+                    <span className={s.left < 50 ? "win" : ""}>
+                      {100 - s.left}% {s.b}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              {agree.length > 0 && (
+                <p className="fine">
+                  Most like you: {agree.map((g) => `${g.name} (${g.n} of ${spec!.kind === "thisorthat" ? spec!.pairs.length : 0})`).join(", ")}.
+                </p>
+              )}
+            </div>
+          )}
           <ul className="answer-list">
             {[...rows.filter((a) => a.user_id === pl.profile.id && !a.passed), ...others].map((a) => {
               const m = byId.get(a.user_id);
               return (
                 <li key={a.id} className={a.user_id === pl.profile.id ? "answer answer-mine" : "answer"}>
                   <div className="answer-head">
-                    {anon && !revealed ? (
+                    {(anon && !revealed && !lieRevealed) ? (
                       <>
                         <span className="avatar anon-mask" style={{ width: 40, height: 40 }} aria-hidden="true">
                           🎭
@@ -145,6 +232,23 @@ export default async function WeekPage({ params }: { params: Promise<{ n: string
                     <img src={urls.get(a.photo_path)} alt="" className="answer-photo" />
                   )}
                   {a.body && <p className="answer-body">{a.body}</p>}
+                  {a.media_type === "video" && a.photo_path && clips.get(a.photo_path) && (
+                    <video src={clips.get(a.photo_path)} controls playsInline preload="metadata" className="answer-photo" />
+                  )}
+                  {a.data && spec && spec.kind !== "twotruths" && <PlayCard spec={spec} data={a.data} />}
+                  {a.data && twoTruths && !lieRevealed && a.user_id !== pl.profile.id && (
+                    <LieVote dropId={drop.id} answerId={a.id} statements={a.data.statements as string[]} current={myVotes.get(a.id) ?? null} />
+                  )}
+                  {a.data && twoTruths && (lieRevealed || a.user_id === pl.profile.id) && (
+                    <ol className="tt-vote">
+                      {(a.data.statements as string[]).map((s, i) => (
+                        <li key={i} className={i === (a.data!.lie as number) ? "tt-opt lie" : "tt-opt truth"}>
+                          <span className="tt-num">{i + 1}</span> {s} {i === (a.data!.lie as number) && <b>the lie</b>}
+                          {lieRevealed && myVotes.get(a.id) === i && a.user_id !== pl.profile.id && <span className="fine"> · your vote</span>}
+                        </li>
+                      ))}
+                    </ol>
+                  )}
                   {guessing && !revealed && a.user_id !== pl.profile.id && (
                     <GuessWho
                       dropId={drop.id}
@@ -182,3 +286,34 @@ export default async function WeekPage({ params }: { params: Promise<{ n: string
     </Shell>
   );
 }
+
+function PlayCard({ spec, data }: { spec: NonNullable<ReturnType<typeof promptOf>["spec"]>; data: Record<string, unknown> }) {
+  const c = compile(spec, data);
+  if (spec.kind === "madlibs") return <p className="answer-body madlib">{c.lines[0]}</p>;
+  if (spec.kind === "thisorthat") {
+    return (
+      <ul className="chips">
+        {c.lines.map((l, i) => (
+          <li key={i}>{l}</li>
+        ))}
+      </ul>
+    );
+  }
+  return (
+    <div className="playcard">
+      {c.title && (
+        <p className="playcard-title">
+          {c.title} {c.score && <b>{c.score}</b>}
+        </p>
+      )}
+      <ul>
+        {c.lines.map((l, i) => (
+          <li key={i} className={l.startsWith("✗") ? "dim" : ""}>
+            {l}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+

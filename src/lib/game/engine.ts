@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { PROMPTS, PROMPT_BY_ID, modeOf, type Mode } from "./prompts";
 import { FORMATS } from "./templates";
 import { DEMO_PROMPT } from "./demo";
+import { PLAYS, PLAY_BY_ID, type PlaySpec } from "./plays";
 
 // The drop engine. Each layer tries to produce a drop this Circle has never
 // seen, at this week's heat. If it can't, the next layer takes over, so there's
@@ -10,7 +11,9 @@ import { DEMO_PROMPT } from "./demo";
 //   0. Daddy's Pick: a pinned prompt for this week, every Circle gets it next.
 //   1. Member-written drops, approved in Admin. Credited by name.
 //   2. A follow-up on last week's most-reacted answer. New by definition.
-//   3. Formats with a slot: a working joke plus a plug-in with the heat.
+//   3. Mixed-media plays (surveys, This or That, Mad Libs, Speed Round, Two
+//      Truths, video) and text formats with a slot. These two alternate week
+//      to week so the game changes shape, not just its wording.
 //   4. The house bank in code.
 //   5. Re-skin: a seen confession prompt run as Guess Who.
 //   6. Last resort: the house prompt this Circle saw longest ago.
@@ -22,9 +25,10 @@ export type Chosen = {
   hint: string | null;
   mode: Mode;
   heat: number;
-  source: "daddy" | "member" | "followup" | "template" | "house" | "reskin" | "repeat";
+  source: "daddy" | "member" | "followup" | "template" | "play" | "house" | "reskin" | "repeat";
   credit: string | null;
   bankId?: string;
+  spec?: PlaySpec | null;
 };
 
 type CircleLike = { id: string; season_no: number; is_test: boolean; heat_boost?: number };
@@ -118,7 +122,7 @@ async function fromFollowup(db: SupabaseClient, circle: CircleLike, week: number
     .eq("season_no", circle.season_no)
     .eq("week", week - 1)
     .maybeSingle();
-  if (!prev || prev.mode === "anon" || prev.mode === "guesswho" || prev.mode === "photo") return null;
+  if (!prev || prev.mode !== "text") return null;
   const { data: answers } = await db
     .from("answers")
     .select("id, body, user_id, passed, reactions(user_id), profiles!answers_user_id_fkey(first_name, is_demo)")
@@ -154,6 +158,15 @@ function fromTemplate(circle: CircleLike, week: number, heat: number, seen: Set<
   if (!combos.length) return null;
   const c = pickFrom(onHeat(combos, heat), `${circle.id}:${circle.season_no}:${week}:tpl`);
   return { key: c.key, body: c.fmt.render(c.plug.text), hint: c.fmt.hint ?? null, mode: c.fmt.mode, heat: c.heat, source: "template", credit: null };
+}
+
+// Layer 3, media half: a play this Circle hasn't played.
+function fromPlay(circle: CircleLike, week: number, heat: number, seen: Set<string>, last: string | null): Chosen | null {
+  const lastMode = last?.startsWith("play:") ? PLAY_BY_ID.get(last.slice(5))?.mode : null;
+  const pool = PLAYS.filter((p) => p.weeks.includes(week) && !seen.has(`play:${p.id}`) && p.mode !== lastMode);
+  if (!pool.length) return null;
+  const p = pickFrom(onHeat(pool, heat), `${circle.id}:${circle.season_no}:${week}:play`);
+  return { key: `play:${p.id}`, body: p.body, hint: p.hint ?? null, mode: p.mode, heat: p.heat, source: "play", credit: null, spec: p.spec };
 }
 
 // Layer 4: the house bank.
@@ -193,13 +206,21 @@ export async function chooseDrop(db: SupabaseClient, circle: CircleLike, week: n
   if (circle.is_test && circle.season_no === 1) {
     const p = PROMPT_BY_ID.get(DEMO_PROMPT[week]);
     if (p) return { key: p.id, body: p.body, hint: p.hint ?? null, mode: modeOf(p), heat: p.heat ?? 3, source: "house", credit: null };
+    const pl = PLAY_BY_ID.get(DEMO_PROMPT[week]);
+    if (pl) return { key: `play:${pl.id}`, body: pl.body, hint: pl.hint ?? null, mode: pl.mode, heat: pl.heat, source: "play", credit: null, spec: pl.spec };
   }
   const heat = targetHeat(circle, week);
   const { seen, last } = await seenKeys(db, circle.id);
+  // Media and text take turns: a play after a text week, text after a play week.
+  const lastWasPlay = !!last?.startsWith("play:");
+  const mediaFirst = last ? !lastWasPlay : (week + circle.season_no) % 2 === 0;
+  const third = mediaFirst
+    ? (fromPlay(circle, week, heat, seen, last) ?? fromTemplate(circle, week, heat, seen, last))
+    : (fromTemplate(circle, week, heat, seen, last) ?? fromPlay(circle, week, heat, seen, last));
   return (
     (await fromBank(db, circle, week, heat, seen)) ??
     (await fromFollowup(db, circle, week, heat, seen)) ??
-    fromTemplate(circle, week, heat, seen, last) ??
+    third ??
     fromHouse(circle, week, heat, seen) ??
     fromReskin(circle, week, seen) ??
     fromRepeat(circle, week)

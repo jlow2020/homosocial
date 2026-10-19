@@ -193,7 +193,7 @@ async function Home({ pl }: { pl: Player }) {
           {prompt.anon && <p className="anon-note">🎭 Anonymous this week. Nobody sees who wrote what.</p>}
           <div className="row">
             <Link href={`/circle/week/${week}`} className={answered ? "btn btn-outline" : "btn btn-pink"}>
-              {answered ? "See everyone's answers" : prompt.kind === "photo" ? "Post your photo" : "Answer to unlock"}
+              {answered ? "See everyone's answers" : prompt.spec ? "Play to unlock" : prompt.kind === "photo" ? "Post your photo" : "Answer to unlock"}
             </Link>
             {!answered && <span className="fine">Answers stay blurred until you post yours.</span>}
           </div>

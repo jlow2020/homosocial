@@ -1,6 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { ensureDrop } from "./drops";
+import type { PlaySpec } from "./plays";
 import {
   DEMO_ANSWERS,
   DEMO_FIRST_DM,
@@ -79,16 +80,21 @@ export async function seedThrough(
 
     const drop = await ensureDrop(db, circle, w);
 
-    // Answers and a few reactions on each.
+    // Answers and a few reactions on each. Plays get made-up picks; text gets the script.
     const answers = (circle.season_no === 1 ? DEMO_ANSWERS[drop.prompt_id] : undefined) ?? [];
-    const rows = answers
-      .filter(([slug]) => ids.has(slug))
-      .map(([slug, body], i) => ({
-        drop_id: drop.id,
-        user_id: ids.get(slug)!,
-        body: fill(body),
-        created_at: new Date(now - (answers.length - i) * 37 * MIN).toISOString(),
-      }));
+    const rows: Record<string, unknown>[] = drop.spec
+      ? [...ids.entries()]
+          .filter(() => Math.random() < 0.8)
+          .map(([slug, id], i) => ({ drop_id: drop.id, user_id: id, data: demoPlay(drop.spec!, slug), created_at: new Date(now - (ids.size - i) * 31 * MIN).toISOString() }))
+          .filter((r) => r.data)
+      : answers
+          .filter(([slug]) => ids.has(slug))
+          .map(([slug, body], i) => ({
+            drop_id: drop.id,
+            user_id: ids.get(slug)!,
+            body: fill(body),
+            created_at: new Date(now - (answers.length - i) * 37 * MIN).toISOString(),
+          }));
     if (rows.length) {
       await db.from("answers").upsert(rows, { onConflict: "drop_id,user_id", ignoreDuplicates: true });
       const { data: saved } = await db.from("answers").select("id, user_id").eq("drop_id", drop.id);
@@ -211,3 +217,50 @@ export async function demoReplyInThread(db: SupabaseClient, threadId: string, de
   await db.from("dm_messages").insert({ thread_id: threadId, user_id: demoId, body, created_at: new Date(Date.now() + 1500).toISOString() });
   await db.from("dm_threads").update({ last_at: new Date().toISOString(), [readCol]: new Date(Date.now() + 2000).toISOString() }).eq("id", threadId);
 }
+
+// Made-up play answers for the fake guys. Video has none: they can't film.
+function demoPlay(spec: PlaySpec, slug: string): Record<string, unknown> | null {
+  const guy = CAST_BY_SLUG.get(slug);
+  const coin = () => Math.random() < 0.5;
+  switch (spec.kind) {
+    case "survey":
+      return { answers: spec.questions.map(() => Math.random() < 0.45) };
+    case "thisorthat":
+      return { picks: spec.pairs.map(() => (coin() ? 0 : 1)) };
+    case "madlibs": {
+      const banks: Record<string, string[]> = {
+        "a body part": ["forearms", "shoulders", "thighs", "hands", "neck", "calves"],
+        "something sold at Publix": ["a Pub Sub", "key lime pie", "Cuban bread", "a bag of ice", "chicken tenders", "a $4 bouquet"],
+        "an ex's first name": ["Brandon", "Tyler", "Marcus", "Kyle", "Diego", "Chase"],
+        "a verb ending in -ing": ["making out", "arguing", "dancing", "crying", "singing Cher", "hiding"],
+        "a place in Florida": ["Siesta Key", "a Wawa", "the Ringling", "Ybor City", "a Buc-ee's", "Key West"],
+        "an adjective": ["humid", "illegal", "romantic", "sticky", "unforgettable", "a mistake"],
+        "a number": ["four", "eleven", "two", "nine", "zero", "thirty"],
+        "a breakfast food": ["bacon", "a Pop-Tart", "cold pizza", "waffles", "cafecito", "an egg sandwich"],
+        "a celebrity": ["Pedro Pascal", "Jonathan Bailey", "Bad Bunny", "Chris Evans", "Lil Nas X", "Dolly Parton"],
+        "a verb": ["cook", "apologize", "dance", "lie", "cry", "text back"],
+        "an article of clothing": ["underwear", "left sock", "jockstrap", "cardigan", "swim trunks", "dignity"],
+        "a feeling": ["smug", "seen", "sunburned", "alive", "hungry", "in love, briefly"],
+        "a Florida town": ["Nokomis", "Osprey", "Palmetto", "Venice", "Englewood", "Bradenton"],
+      };
+      return { words: spec.slots.map((s) => { const b = banks[s] ?? ["something"]; return b[Math.floor(Math.random() * b.length)]; }) };
+    }
+    case "speed": {
+      const pool = ["forearms", "no comment", "a Kia Soul", "Tyler", "him, obviously", "vodka soda", "don't ask", "the beach", "yes", "my ex", "3am", "Publix", "ask Hollis", "once", "twice", "shoulders"];
+      return { answers: spec.questions.map((_, i) => (i < 3 + Math.floor(Math.random() * 7) ? pool[Math.floor(Math.random() * pool.length)] : "")) };
+    }
+    case "twotruths": {
+      const truths = guy ? [`I'm from ${guy.town}.`, `I'm into ${guy.interests.split(",")[0].trim()}.`, "I've hooked up in a car.", "I've been on a boat I didn't own.", "I've sent a nude to the wrong person."] : ["I've been to Key West.", "I own a boat.", "I've cried at a drag show."];
+      const lies = ["I've never been to Miami.", "I was a Chippendale for one summer.", "I have a twin.", "I've never sent a nude.", "I dated a Real Housewife."];
+      const t = truths.sort(() => Math.random() - 0.5).slice(0, 2);
+      const l = lies[Math.floor(Math.random() * lies.length)];
+      const lie = Math.floor(Math.random() * 3);
+      const statements = [...t];
+      statements.splice(lie, 0, l);
+      return { statements, lie };
+    }
+    case "video":
+      return null;
+  }
+}
+

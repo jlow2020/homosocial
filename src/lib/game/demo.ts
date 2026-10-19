@@ -107,10 +107,10 @@ export const CAST_BY_SLUG = new Map(CAST.map((g) => [g.slug, g]));
 // These are the juiciest prompt each week, since a test Circle is the demo.
 export const DEMO_PROMPT: Record<number, string> = {
   1: "w1-exes",
-  2: "w2-open",
+  2: "tot-bedroom",
   3: "w3-comeover",
   4: "w4-public",
-  5: "w5-position",
+  5: "survey-scandal",
   6: "w6-baddecisions",
   7: "w7-underrated",
   8: "w8-almostdm",

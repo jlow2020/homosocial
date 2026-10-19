@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { loadPlayer, isMember, type Player } from "@/lib/game/player";
 import { ensureDrop } from "@/lib/game/drops";
 import { demoReactToAnswer, demoReplyInThread } from "@/lib/game/seed";
+import { checkPlayAnswer } from "@/lib/game/playcheck";
 import { UUID } from "@/lib/admin";
 
 type Result = { ok: boolean; error?: string };
@@ -35,6 +36,18 @@ export async function answerDrop(form: FormData): Promise<Result> {
   const body = clean(form.get("body"), 1200);
   const file = form.get("photo");
   const hasPhoto = file instanceof File && file.size > 0;
+  const raw = form.get("data");
+  let data: unknown = null;
+  if (!pass && drop.spec) {
+    try {
+      data = raw ? JSON.parse(String(raw)) : null;
+    } catch {
+      return { ok: false, error: "That didn't come through. Try again." };
+    }
+    const problem = checkPlayAnswer(drop.spec, data);
+    if (problem) return { ok: false, error: problem };
+  }
+  const videoPath = String(form.get("video_path") ?? "");
 
   if (pass) {
     // One Pass per Season.
@@ -46,7 +59,7 @@ export async function answerDrop(form: FormData): Promise<Result> {
       .eq("passed", true)
       .in("drop_id", (drops ?? []).map((d) => d.id));
     if ((count ?? 0) >= 1) return { ok: false, error: "You already used your Pass this Season." };
-  } else if (!body && !hasPhoto) {
+  } else if (!body && !hasPhoto && !data && !videoPath) {
     return { ok: false, error: "Write something first." };
   }
 
@@ -58,9 +71,19 @@ export async function answerDrop(form: FormData): Promise<Result> {
     if (up.error) return { ok: false, error: "Your photo didn't upload. Try again." };
   }
 
+  let media_type: "photo" | "video" | null = photo_path ? "photo" : null;
+  if (videoPath && !pass) {
+    // Uploaded straight from the phone with a ticket from answerClipTicket.
+    const prefix = `answers/${pl.circle.id}/${drop.id}/${pl.profile.id}-`;
+    if (!videoPath.startsWith(prefix) || videoPath.includes("..")) return { ok: false, error: "That video didn't work." };
+    const { data: found } = await pl.db.storage.from("clips").list(`answers/${pl.circle.id}/${drop.id}`, { search: videoPath.slice(videoPath.lastIndexOf("/") + 1), limit: 1 });
+    if (!found?.length) return { ok: false, error: "The video didn't finish uploading. Try again." };
+    photo_path = videoPath;
+    media_type = "video";
+  }
   const { data: saved, error } = await pl.db
     .from("answers")
-    .insert({ drop_id: drop.id, user_id: pl.profile.id, body: pass ? null : body || null, photo_path, passed: pass })
+    .insert({ drop_id: drop.id, user_id: pl.profile.id, body: pass ? null : body || null, photo_path, media_type, data: pass ? null : data, passed: pass })
     .select("id")
     .single();
   if (error) return { ok: false, error: error.code === "23505" ? "You already answered this one." : "That didn't save. Try again." };
@@ -492,6 +515,39 @@ export async function guessWho(dropId: string, answerId: string, guessed: string
     if (!UUID.test(guessed) || !isMember(pl, guessed)) return { ok: false };
     await pl.db.from("guesses").upsert({ ...key, guessed }, { onConflict: "drop_id,guesser,answer_id" });
   }
+  return { ok: true };
+}
+
+// Video answers go straight from the phone to storage.
+export async function answerClipTicket(
+  week: number,
+  contentType: string,
+  size: number
+): Promise<{ ok: boolean; error?: string; signedUrl?: string; path?: string; apikey?: string }> {
+  const pl = await player();
+  const now = currentWeek(pl);
+  if (!now || !Number.isInteger(week) || week < 1 || week > now) return { ok: false, error: "That drop isn't open." };
+  const drop = await ensureDrop(pl.db, pl.circle, week);
+  if (drop.mode !== "video") return { ok: false, error: "This drop doesn't take video." };
+  if (!CLIP_TYPES.has(contentType)) return { ok: false, error: "That video type won't play. Try an .mp4 or .mov." };
+  if (!(size > 0 && size <= MAX_CLIP)) return { ok: false, error: "That clip is too big." };
+  const ext = contentType === "video/quicktime" ? "mov" : contentType === "video/webm" ? "webm" : "mp4";
+  const path = `answers/${pl.circle.id}/${drop.id}/${pl.profile.id}-${Date.now()}.${ext}`;
+  const { data, error } = await pl.db.storage.from("clips").createSignedUploadUrl(path);
+  if (error || !data) return { ok: false, error: "Couldn't start the upload. Try again." };
+  return { ok: true, signedUrl: data.signedUrl, path, apikey: process.env.SUPABASE_PUBLISHABLE_KEY };
+}
+
+// Two Truths and a Lie: vote on which one's the lie.
+export async function voteLie(dropId: string, answerId: string, choice: number): Promise<Result> {
+  const pl = await player();
+  if (!UUID.test(dropId) || !UUID.test(answerId) || ![0, 1, 2].includes(choice)) return { ok: false };
+  const { data: drop } = await pl.db.from("drops").select("circle_id, mode, week").eq("id", dropId).maybeSingle();
+  if (!drop || drop.circle_id !== pl.circle.id || drop.mode !== "twotruths") return { ok: false };
+  if (pl.clock.phase !== "season" || pl.clock.week !== drop.week) return { ok: false, error: "Voting is closed." };
+  const a = await answerInMyCircle(pl, answerId);
+  if (!a || a.user_id === pl.profile.id) return { ok: false };
+  await pl.db.from("votes").upsert({ drop_id: dropId, voter: pl.profile.id, answer_id: answerId, choice }, { onConflict: "drop_id,voter,answer_id" });
   return { ok: true };
 }
 

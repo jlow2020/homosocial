@@ -2,6 +2,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { PROMPT_BY_ID, modeOf, type Mode } from "./prompts";
 import { chooseDrop } from "./engine";
+import type { PlaySpec } from "./plays";
 
 export type Drop = {
   id: string;
@@ -15,6 +16,7 @@ export type Drop = {
   heat: number;
   source: string;
   credit: string | null;
+  spec: PlaySpec | null;
   created_at: string;
 };
 
@@ -28,6 +30,7 @@ export type DropView = {
   anon: boolean;
   heat: number;
   credit: string | null;
+  spec: PlaySpec | null;
 };
 
 type CircleLike = { id: string; season_no: number; is_test: boolean; heat_boost?: number };
@@ -53,6 +56,7 @@ export async function ensureDrop(db: SupabaseClient, circle: CircleLike, week: n
         heat: c.heat,
         source: c.source,
         credit: c.credit,
+        spec: c.spec ?? null,
       },
       { onConflict: "circle_id,season_no,week", ignoreDuplicates: true }
     )
@@ -75,8 +79,9 @@ export function promptOf(drop: Drop): DropView {
     hint: drop.hint ?? legacy?.hint ?? null,
     mode,
     kind: mode === "photo" ? "photo" : "text",
-    anon: mode === "anon" || mode === "guesswho",
+    anon: mode === "anon" || mode === "guesswho" || mode === "twotruths",
     heat: drop.heat ?? legacy?.heat ?? 2,
     credit: drop.credit ?? null,
+    spec: drop.spec ?? null,
   };
 }
