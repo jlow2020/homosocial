@@ -4,19 +4,14 @@ import "@fontsource-variable/instrument-sans/wght.css";
 import "./globals.css";
 import HashSignIn from "@/components/HashSignIn";
 import SiteFooter from "@/components/SiteFooter";
+import { shareMetadata } from "@/lib/og";
 
 export const metadata: Metadata = {
   title: "Homosocial",
   description:
     "A social game for gay, bi, trans and queer men, played in seasons, like your favorite reality show, minus the cameras. Thirty guys near you, eight weeks, one Finale.",
   metadataBase: new URL("https://homosocial.net"),
-  openGraph: {
-    title: "Homosocial",
-    description: "A social game played in seasons, like your favorite reality show, minus the cameras. Make friends, do fun stuff, maybe find a boyfriend.",
-    url: "https://homosocial.net",
-    siteName: "Homosocial",
-    type: "website",
-  },
+  ...shareMetadata("show"),
 };
 
 export const viewport: Viewport = {

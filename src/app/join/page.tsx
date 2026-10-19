@@ -1,11 +1,15 @@
 import type { Metadata } from "next";
+import { pickCard, shareMetadata } from "@/lib/og";
 import { redirect } from "next/navigation";
 import PageHead from "@/components/PageHead";
 import JoinForm from "./JoinForm";
 import { getMe, nextPath } from "@/lib/supabase-server";
 import { SEASON } from "@/lib/season";
 
-export const metadata: Metadata = { title: "Grab a seat | Homosocial" };
+export async function generateMetadata({ searchParams }: { searchParams: Promise<{ card?: string }> }): Promise<Metadata> {
+  const { card } = await searchParams;
+  return { title: "Grab a seat | Homosocial", ...shareMetadata(pickCard(card), "Grab a seat | Homosocial", undefined, "/join") };
+}
 export const dynamic = "force-dynamic";
 
 const errors: Record<string, string> = {

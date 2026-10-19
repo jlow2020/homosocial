@@ -3,9 +3,16 @@ import TopBar from "@/components/TopBar";
 import Countdown from "@/components/Countdown";
 import { WEEKS, SEASON, FOUNDER_CAP } from "@/lib/season";
 import { getSupabaseAdmin } from "@/lib/supabase-server";
+import type { Metadata } from "next";
+import { pickCard, shareMetadata } from "@/lib/og";
 
-// Founder spots left refreshes every minute.
-export const revalidate = 60;
+// Rendered per visit, so each share can pick a different preview card.
+export const dynamic = "force-dynamic";
+
+export async function generateMetadata({ searchParams }: { searchParams: Promise<{ card?: string }> }): Promise<Metadata> {
+  const { card } = await searchParams;
+  return shareMetadata(pickCard(card));
+}
 
 const plays = [
   { title: "Monday drops", tone: "hot", body: "A new prompt every week. Hot takes, thirst traps, anonymous confessions. Answer to see everyone else's." },
