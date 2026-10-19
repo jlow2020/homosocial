@@ -2,10 +2,11 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { answerClipTicket, answerDrop } from "../../game-actions";
+import { answerClipTicket, answerDrop, blindDateIn, takeHotSeat } from "../../game-actions";
+import Link from "next/link";
 import type { PlaySpec } from "@/lib/game/plays";
 
-type Props = { week: number; spec: PlaySpec };
+type Props = { week: number; spec: PlaySpec; guys?: { id: string; name: string; photo: string | null }[]; meId?: string; myRow?: Record<string, unknown> | null };
 
 function useSubmit(week: number) {
   const router = useRouter();
@@ -25,8 +26,26 @@ function useSubmit(week: number) {
   return { pending, error, submit };
 }
 
-export default function PlayForm({ week, spec }: Props) {
+export default function PlayForm({ week, spec, guys = [], meId = "", myRow = null }: Props) {
   switch (spec.kind) {
+    case "rank":
+      return <Rank week={week} spec={spec} guys={guys} meId={meId} />;
+    case "chain":
+      return <OneLine week={week} field="line" max={spec.maxLen} placeholder="Add the next line. Don't end it." button="Add my line" />;
+    case "hotseat":
+      return spec.seat ? (
+        <OneLine week={week} field="question" max={200} placeholder={`Ask ${spec.seatName} anything.`} button="Ask it" />
+      ) : (
+        <HotSeat week={week} />
+      );
+    case "caption":
+      return <OneLine week={week} field="caption" max={140} placeholder="Caption it." button="Post my caption" />;
+    case "voice":
+      return <Voice week={week} seconds={spec.seconds} />;
+    case "owner":
+      return null; // Photos go through the regular photo form.
+    case "blinddate":
+      return <BlindDate week={week} myRow={myRow} />;
     case "survey":
       return <Survey week={week} spec={spec} />;
     case "thisorthat":
@@ -306,3 +325,215 @@ function videoLength(f: File): Promise<number> {
     v.src = URL.createObjectURL(f);
   });
 }
+
+function OneLine({ week, field, max, placeholder, button }: { week: number; field: string; max: number; placeholder: string; button: string }) {
+  const [t, setT] = useState("");
+  const { pending, error, submit } = useSubmit(week);
+  return (
+    <div className="play">
+      <label className="visually-hidden" htmlFor="oneline">
+        {placeholder}
+      </label>
+      <textarea id="oneline" className="textarea" rows={2} maxLength={max} value={t} onChange={(e) => setT(e.target.value)} placeholder={placeholder} />
+      <span className="fine">
+        {t.length} / {max}
+      </span>
+      {error && <p className="error">{error}</p>}
+      <button className="btn btn-pink" disabled={pending || !t.trim()} onClick={() => submit({ [field]: t.trim() })}>
+        {pending ? "Posting..." : button}
+      </button>
+    </div>
+  );
+}
+
+function Rank({ week, spec, guys, meId }: { week: number; spec: Extract<PlaySpec, { kind: "rank" }>; guys: { id: string; name: string; photo: string | null }[]; meId: string }) {
+  const pool = spec.guys.filter((g) => g !== meId).map((id) => guys.find((g) => g.id === id)).filter(Boolean) as typeof guys;
+  const [order, setOrder] = useState<string[]>([]);
+  const { pending, error, submit } = useSubmit(week);
+  const left = pool.filter((g) => !order.includes(g.id));
+  return (
+    <div className="play">
+      <p className="fine">Tap them in order, best first. {spec.category}.</p>
+      <ol className="rank-list">
+        {order.map((id, i) => {
+          const g = pool.find((x) => x.id === id)!;
+          return (
+            <li key={id} className="rank-row on">
+              <span className="tt-num">{i + 1}</span>
+              {g.photo ? <img src={g.photo} alt="" className="avatar" style={{ width: 36, height: 36 }} /> : <span className="avatar avatar-empty" style={{ width: 36, height: 36 }} />}
+              <span>{g.name}</span>
+              <button type="button" className="link-button quiet" onClick={() => setOrder(order.filter((x) => x !== id))}>
+                undo
+              </button>
+            </li>
+          );
+        })}
+      </ol>
+      <ul className="rank-pool">
+        {left.map((g) => (
+          <li key={g.id}>
+            <button type="button" className="pick" onClick={() => setOrder([...order, g.id])}>
+              {g.photo ? <img src={g.photo} alt="" /> : <span className="pick-ph" />}
+              <span>{g.name}</span>
+            </button>
+          </li>
+        ))}
+      </ul>
+      {error && <p className="error">{error}</p>}
+      <button className="btn btn-pink" disabled={pending || left.length > 0} onClick={() => submit({ order })}>
+        {pending ? "Posting..." : left.length ? `${left.length} to go` : "Lock in my ranking"}
+      </button>
+    </div>
+  );
+}
+
+function HotSeat({ week }: { week: number }) {
+  const router = useRouter();
+  const [pending, start] = useTransition();
+  const [error, setError] = useState("");
+  return (
+    <div className="play">
+      <p className="fine">Nobody&apos;s in the seat yet. First to tap takes it. Everyone asks you one question, you answer the ones you want in the replies.</p>
+      {error && <p className="error">{error}</p>}
+      <button
+        className="btn btn-pink"
+        disabled={pending}
+        onClick={() =>
+          start(async () => {
+            const r = await takeHotSeat(week);
+            if (!r.ok) setError(r.error ?? "That didn't work.");
+            router.refresh();
+          })
+        }
+      >
+        🔥 Put me in the hot seat
+      </button>
+    </div>
+  );
+}
+
+function BlindDate({ week, myRow }: { week: number; myRow: Record<string, unknown> | null }) {
+  const router = useRouter();
+  const [pending, start] = useTransition();
+  const [error, setError] = useState("");
+  if (myRow?.status === "paired") {
+    return (
+      <div className="play">
+        <p className="anon-note">💘 You&apos;re paired. No names, no faces, until the week ends.</p>
+        <Link href={`/circle/dms/${myRow.thread}`} className="btn btn-pink">
+          Open your blind date
+        </Link>
+      </div>
+    );
+  }
+  if (myRow?.status === "waiting") return <p className="fine">You&apos;re in. You&apos;ll be paired with the next guy who taps in. Check back.</p>;
+  return (
+    <div className="play">
+      {error && <p className="error">{error}</p>}
+      <button
+        className="btn btn-pink"
+        disabled={pending}
+        onClick={() =>
+          start(async () => {
+            const r = await blindDateIn(week);
+            if (!r.ok) setError(r.error ?? "That didn't work.");
+            router.refresh();
+          })
+        }
+      >
+        💘 I&apos;m in
+      </button>
+    </div>
+  );
+}
+
+function Voice({ week, seconds }: { week: number; seconds: number }) {
+  const [rec, setRec] = useState<MediaRecorder | null>(null);
+  const [left, setLeft] = useState(seconds);
+  const [blob, setBlob] = useState<Blob | null>(null);
+  const [url, setUrl] = useState<string | null>(null);
+  const [path, setPath] = useState("");
+  const [busy, setBusy] = useState("");
+  const [localError, setLocalError] = useState("");
+  const { pending, error, submit } = useSubmit(week);
+  const chunks = useRef<Blob[]>([]);
+
+  useEffect(() => {
+    if (!rec) return;
+    const t = setInterval(() => setLeft((x) => x - 1), 1000);
+    return () => clearInterval(t);
+  }, [rec]);
+  useEffect(() => {
+    if (rec && left <= 0) rec.stop();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [left]);
+
+  const startRec = async () => {
+    setLocalError("");
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const type = MediaRecorder.isTypeSupported("audio/webm") ? "audio/webm" : MediaRecorder.isTypeSupported("audio/mp4") ? "audio/mp4" : "";
+      const r = new MediaRecorder(stream, type ? { mimeType: type } : undefined);
+      chunks.current = [];
+      r.ondataavailable = (e) => chunks.current.push(e.data);
+      r.onstop = () => {
+        stream.getTracks().forEach((t) => t.stop());
+        const b = new Blob(chunks.current, { type: r.mimeType || type || "audio/webm" });
+        setBlob(b);
+        setUrl(URL.createObjectURL(b));
+        setRec(null);
+      };
+      r.start();
+      setLeft(seconds);
+      setRec(r);
+    } catch {
+      setLocalError("Couldn't use the mic. Check your browser's permission for homosocial.net.");
+    }
+  };
+
+  const upload = async () => {
+    if (!blob) return;
+    setBusy("Uploading...");
+    try {
+      const type = blob.type.split(";")[0] || "audio/webm";
+      const t = await answerClipTicket(week, type, blob.size);
+      if (!t.ok || !t.signedUrl || !t.path) {
+        setLocalError(t.error ?? "That didn't upload.");
+        return;
+      }
+      const up = await fetch(t.signedUrl, { method: "PUT", headers: { "content-type": type, "x-upsert": "false", ...(t.apikey ? { apikey: t.apikey } : {}) }, body: blob });
+      if (!up.ok) {
+        setLocalError("The recording didn't upload. Try again.");
+        return;
+      }
+      setPath(t.path);
+      submit(null, { video_path: t.path });
+    } finally {
+      setBusy("");
+    }
+  };
+
+  return (
+    <div className="play">
+      {!url ? (
+        <button className={rec ? "btn btn-danger" : "btn btn-pink"} onClick={() => (rec ? rec.stop() : startRec())}>
+          {rec ? `● Recording, ${Math.max(0, left)}s. Tap to stop` : `🎙️ Record, up to ${seconds} seconds`}
+        </button>
+      ) : (
+        <>
+          <audio src={url} controls />
+          <div className="row">
+            <button className="btn btn-pink" disabled={pending || !!busy || !!path} onClick={upload}>
+              {busy || (pending ? "Posting..." : "Post it")}
+            </button>
+            <button className="link-button quiet" onClick={() => (setUrl(null), setBlob(null))} disabled={!!busy}>
+              Record again
+            </button>
+          </div>
+        </>
+      )}
+      {(localError || error) && <p className="error">{localError || error}</p>}
+    </div>
+  );
+}
+

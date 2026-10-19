@@ -35,7 +35,22 @@ export function checkPlayAnswer(spec: PlaySpec, data: unknown): string | null {
       return null;
     }
     case "video":
+    case "voice":
+    case "owner":
+    case "blinddate":
       return null;
+    case "rank": {
+      const o = d?.order;
+      const expected = spec.guys.filter((g) => g !== (d?.me as string));
+      if (!Array.isArray(o) || o.length !== expected.length || [...o].sort().join() !== [...expected].sort().join()) return "Put every guy in order.";
+      return null;
+    }
+    case "chain":
+      return str(d?.line, spec.maxLen) ? null : "One line, and keep it under the limit.";
+    case "hotseat":
+      return str(d?.question, 200) ? null : "Ask him something.";
+    case "caption":
+      return str(d?.caption, 140) ? null : "Give it a caption.";
   }
 }
 
@@ -68,7 +83,18 @@ export function compile(spec: PlaySpec, data: Record<string, unknown>): { title?
       const s = data.statements as string[];
       return { lines: s };
     }
+    case "chain":
+      return { lines: [data.line as string] };
+    case "hotseat":
+      return { lines: [data.question as string] };
+    case "caption":
+      return { lines: [data.caption as string] };
+    case "rank":
+      return { lines: ["Ranking's in. Only the winner gets announced."] };
     case "video":
+    case "voice":
+    case "owner":
+    case "blinddate":
       return { lines: [] };
   }
 }

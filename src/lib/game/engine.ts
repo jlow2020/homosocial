@@ -160,13 +160,53 @@ function fromTemplate(circle: CircleLike, week: number, heat: number, seen: Set<
   return { key: c.key, body: c.fmt.render(c.plug.text), hint: c.fmt.hint ?? null, mode: c.fmt.mode, heat: c.heat, source: "template", credit: null };
 }
 
+// Layer 2b: Caption This. The Circle's most-reacted photo so far, captioned by everyone.
+async function fromCaption(db: SupabaseClient, circle: CircleLike, week: number, seen: Set<string>): Promise<Chosen | null> {
+  if (week < 4 || week > 6) return null;
+  const { data: drops } = await db.from("drops").select("id").eq("circle_id", circle.id).eq("season_no", circle.season_no).in("mode", ["photo", "dare"]);
+  if (!drops?.length) return null;
+  const { data: answers } = await db
+    .from("answers")
+    .select("id, photo_path, media_type, reactions(user_id), profiles!answers_user_id_fkey(first_name)")
+    .in("drop_id", drops.map((d) => d.id))
+    .not("photo_path", "is", null);
+  type Row = { id: string; photo_path: string; media_type: string | null; reactions: unknown[]; profiles: { first_name: string } | null };
+  const top = ((answers ?? []) as unknown as Row[])
+    .filter((a) => a.media_type !== "video" && a.profiles && !seen.has(`cap:${a.id}`))
+    .sort((a, b) => b.reactions.length - a.reactions.length)[0];
+  if (!top || top.reactions.length < 4) return null;
+  return {
+    key: `cap:${top.id}`,
+    body: `Caption This. ${top.profiles!.first_name}'s photo was the most-reacted of the Season so far. Everyone writes a caption. Best one wins by reactions.`,
+    hint: null,
+    mode: "caption",
+    heat: 3,
+    source: "followup",
+    credit: null,
+    spec: { kind: "caption", photo_path: top.photo_path, by: top.profiles!.first_name },
+  };
+}
+
 // Layer 3, media half: a play this Circle hasn't played.
-function fromPlay(circle: CircleLike, week: number, heat: number, seen: Set<string>, last: string | null): Chosen | null {
+function fromPlay(circle: CircleLike, week: number, heat: number, seen: Set<string>, last: string | null, members: string[]): Chosen | null {
   const lastMode = last?.startsWith("play:") ? PLAY_BY_ID.get(last.slice(5))?.mode : null;
-  const pool = PLAYS.filter((p) => p.weeks.includes(week) && !seen.has(`play:${p.id}`) && p.mode !== lastMode);
+  const pool = PLAYS.filter(
+    (p) =>
+      p.weeks.includes(week) &&
+      !seen.has(`play:${p.id}`) &&
+      p.mode !== lastMode &&
+      // Rank and Blind Date need a room.
+      !((p.mode === "rank" && members.length < 6) || (p.mode === "blinddate" && members.length < 6))
+  );
   if (!pool.length) return null;
   const p = pickFrom(onHeat(pool, heat), `${circle.id}:${circle.season_no}:${week}:play`);
-  return { key: `play:${p.id}`, body: p.body, hint: p.hint ?? null, mode: p.mode, heat: p.heat, source: "play", credit: null, spec: p.spec };
+  let spec = p.spec;
+  if (spec.kind === "rank") {
+    // Five guys, picked by seed so every page load agrees.
+    const order = [...members].sort((a, b) => hash(`${p.id}:${circle.season_no}:${a}`) - hash(`${p.id}:${circle.season_no}:${b}`));
+    spec = { ...spec, guys: order.slice(0, 5) };
+  }
+  return { key: `play:${p.id}`, body: p.body, hint: p.hint ?? null, mode: p.mode, heat: p.heat, source: "play", credit: null, spec };
 }
 
 // Layer 4: the house bank.
@@ -211,15 +251,18 @@ export async function chooseDrop(db: SupabaseClient, circle: CircleLike, week: n
   }
   const heat = targetHeat(circle, week);
   const { seen, last } = await seenKeys(db, circle.id);
+  const { data: seated } = await db.from("profiles").select("id").eq("circle_id", circle.id).eq("status", "active").not("id_verified_at", "is", null);
+  const members = (seated ?? []).map((m) => m.id as string).sort();
   // Media and text take turns: a play after a text week, text after a play week.
   const lastWasPlay = !!last?.startsWith("play:");
   const mediaFirst = last ? !lastWasPlay : (week + circle.season_no) % 2 === 0;
   const third = mediaFirst
-    ? (fromPlay(circle, week, heat, seen, last) ?? fromTemplate(circle, week, heat, seen, last))
-    : (fromTemplate(circle, week, heat, seen, last) ?? fromPlay(circle, week, heat, seen, last));
+    ? (fromPlay(circle, week, heat, seen, last, members) ?? fromTemplate(circle, week, heat, seen, last))
+    : (fromTemplate(circle, week, heat, seen, last) ?? fromPlay(circle, week, heat, seen, last, members));
   return (
     (await fromBank(db, circle, week, heat, seen)) ??
     (await fromFollowup(db, circle, week, heat, seen)) ??
+    (mediaFirst ? await fromCaption(db, circle, week, seen) : null) ??
     third ??
     fromHouse(circle, week, heat, seen) ??
     fromReskin(circle, week, seen) ??

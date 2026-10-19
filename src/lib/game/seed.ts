@@ -85,7 +85,15 @@ export async function seedThrough(
     const rows: Record<string, unknown>[] = drop.spec
       ? [...ids.entries()]
           .filter(() => Math.random() < 0.8)
-          .map(([slug, id], i) => ({ drop_id: drop.id, user_id: id, data: demoPlay(drop.spec!, slug), created_at: new Date(now - (ids.size - i) * 31 * MIN).toISOString() }))
+          .map(([slug, id], i) => ({
+            drop_id: drop.id,
+            user_id: id,
+            data:
+              drop.spec!.kind === "rank"
+                ? { order: drop.spec!.guys.filter((g) => g !== id).sort(() => Math.random() - 0.5), me: id }
+                : demoPlay(drop.spec!, slug),
+            created_at: new Date(now - (ids.size - i) * 31 * MIN).toISOString(),
+          }))
           .filter((r) => r.data)
       : answers
           .filter(([slug]) => ids.has(slug))
@@ -259,7 +267,25 @@ function demoPlay(spec: PlaySpec, slug: string): Record<string, unknown> | null 
       statements.splice(lie, 0, l);
       return { statements, lie };
     }
+    case "rank": {
+      return null; // Filled in by demoRank, which knows the guys' ids.
+    }
+    case "chain": {
+      const lines = ["a man in a Speedo holding a casserole.", "Dante, shirtless, already arguing with someone.", "my ex. Of course it was my ex.", "the smell of Cuban bread and bad decisions.", "nobody I knew, and he winked.", "a parrot. The parrot was fine. The man was not.", "two guys from this Circle, and they weren't talking.", "Hollis, in velvet, saying 'places.'"];
+      return { line: lines[Math.floor(Math.random() * lines.length)] };
+    }
+    case "hotseat": {
+      const qs = ["Worst date you've ever been on?", "Who in this Circle would you take to dinner?", "Lights on or off?", "Biggest lie on your profile?", "What's your actual type?", "When did you last cry?", "Best kiss of your life, first name?", "What are you hiding in that nightstand?"];
+      return { question: qs[Math.floor(Math.random() * qs.length)] };
+    }
+    case "caption": {
+      const caps = ["Sir, this is a Publix.", "The audacity. The lighting. The man.", "He knows what he did.", "Florida man, but make it fashion.", "POV: you're about to get a DM.", "I'd let him make me breakfast."];
+      return { caption: caps[Math.floor(Math.random() * caps.length)] };
+    }
     case "video":
+    case "voice":
+    case "owner":
+    case "blinddate":
       return null;
   }
 }

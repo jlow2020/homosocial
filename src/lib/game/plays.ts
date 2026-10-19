@@ -2,7 +2,7 @@
 // game changes shape every week, not just its wording. Never rename an id:
 // used ones are remembered by id so nobody plays the same one twice.
 
-export type PlayMode = "survey" | "thisorthat" | "madlibs" | "speed" | "twotruths" | "video";
+export type PlayMode = "survey" | "thisorthat" | "madlibs" | "speed" | "twotruths" | "video" | "rank" | "owner" | "chain" | "hotseat" | "voice" | "blinddate";
 
 export type SurveySpec = { kind: "survey"; questions: string[]; title: string; census: boolean };
 export type ThisOrThatSpec = { kind: "thisorthat"; pairs: [string, string][]; reveal: boolean };
@@ -10,7 +10,22 @@ export type MadLibsSpec = { kind: "madlibs"; slots: string[]; template: string }
 export type SpeedSpec = { kind: "speed"; questions: string[]; seconds: number };
 export type TwoTruthsSpec = { kind: "twotruths" };
 export type VideoSpec = { kind: "video"; seconds: number };
-export type PlaySpec = SurveySpec | ThisOrThatSpec | MadLibsSpec | SpeedSpec | TwoTruthsSpec | VideoSpec;
+// Rank the Circle: five guys picked when the drop is made; you order the ones that aren't you. Winners only.
+export type RankSpec = { kind: "rank"; category: string; guys: string[] };
+// Guess the Owner and Whose Text: anonymous photo, the Circle guesses whose it is.
+export type OwnerSpec = { kind: "owner" };
+// The Chain: one line each, in order, everyone reads the story so far.
+export type ChainSpec = { kind: "chain"; opener: string; maxLen: number };
+// Hot Seat: first to tap takes the seat. Everyone else asks one question. He answers in the replies.
+export type HotSeatSpec = { kind: "hotseat"; seat: string | null; seatName: string | null };
+export type VoiceSpec = { kind: "voice"; seconds: number };
+// Blind Date: opt in, get paired with another guy in a thread with no names or faces until the week ends.
+export type BlindDateSpec = { kind: "blinddate" };
+// Caption This: the Circle's most-reacted photo, captioned by everyone. Made by the engine, not listed here.
+export type CaptionSpec = { kind: "caption"; photo_path: string; by: string };
+export type PlaySpec =
+  | SurveySpec | ThisOrThatSpec | MadLibsSpec | SpeedSpec | TwoTruthsSpec | VideoSpec
+  | RankSpec | OwnerSpec | ChainSpec | HotSeatSpec | VoiceSpec | BlindDateSpec | CaptionSpec;
 
 export type Play = {
   id: string;
@@ -338,7 +353,41 @@ export const PLAYS: Play[] = [
     hint: "Point it at the ceiling if you're shy.",
     spec: { kind: "video", seconds: 15 },
   },
+
+  // Rank the Circle. Five guys, you order them. Only the winners are announced.
+  { id: "rank-hands", weeks: [5, 7], heat: 3, mode: "rank", body: "Rank the Circle: best hands. Five guys, put them in order. Only the winner finds out.", hint: "Nobody ever sees where he landed. Only who won.", spec: { kind: "rank", category: "best hands", guys: [] } },
+  { id: "rank-breakfast", weeks: [3, 5, 7], heat: 2, mode: "rank", body: "Rank the Circle: most likely to make you breakfast. Put five guys in order.", hint: "Winners only. Nobody sees the rest.", spec: { kind: "rank", category: "most likely to make you breakfast", guys: [] } },
+  { id: "rank-trouble", weeks: [4, 5, 7], heat: 4, mode: "rank", body: "Rank the Circle: most likely to get you in trouble. Five guys, in order.", hint: "Winners only.", spec: { kind: "rank", category: "most likely to get you in trouble", guys: [] } },
+  { id: "rank-late", weeks: [2, 6, 7], heat: 1, mode: "rank", body: "Rank the Circle: most likely to be late to his own party. Five guys, in order.", hint: "Winners only.", spec: { kind: "rank", category: "most likely to be late", guys: [] } },
+  { id: "rank-kiss", weeks: [5, 7], heat: 4, mode: "rank", body: "Rank the Circle: who you'd kiss at midnight on New Year's. Five guys, in order.", hint: "Winners only. He'll never know you ranked him fourth.", spec: { kind: "rank", category: "midnight kiss", guys: [] } },
+
+  // Guess the Owner and Whose Text. Anonymous photo, then the Circle guesses.
+  { id: "owner-nightstand", weeks: [3, 4], heat: 4, mode: "owner", body: "Guess the Owner: your nightstand drawer. Photo, anonymous. Then the Circle guesses whose is whose.", hint: "Blur what you must. Names revealed when the week ends.", spec: { kind: "owner" } },
+  { id: "owner-fridge", weeks: [3, 6], heat: 1, mode: "owner", body: "Guess the Owner: your fridge, right now. Anonymous. The Circle guesses whose is whose.", hint: "Names revealed when the week ends.", spec: { kind: "owner" } },
+  { id: "owner-shoes", weeks: [1, 3], heat: 2, mode: "owner", body: "Guess the Owner: the shoes by your door. Anonymous. The Circle guesses.", spec: { kind: "owner" } },
+  { id: "owner-bed", weeks: [3, 4], heat: 3, mode: "owner", body: "Guess the Owner: your bed, unmade. Anonymous. The Circle guesses whose is whose.", hint: "Names revealed when the week ends.", spec: { kind: "owner" } },
+  { id: "whosetext-unhinged", weeks: [1, 2, 4], heat: 3, mode: "owner", body: "Whose Text? Screenshot the most unhinged message you've ever gotten. Name blurred. The Circle guesses who it was sent to.", hint: "The message, not the man. Names revealed when the week ends.", spec: { kind: "owner" } },
+  { id: "whosetext-mom", weeks: [2, 4, 6], heat: 2, mode: "owner", body: "Whose Text? Screenshot the last text from your mom. The Circle guesses whose mom.", hint: "Blur her number. Names revealed when the week ends.", spec: { kind: "owner" } },
+
+  // The Chain: a group story, one line each.
+  { id: "chain-villa", weeks: [1, 2], heat: 3, mode: "chain", body: "The Chain. One line each, in order. By Sunday it's a story.", hint: "Read what's there. Add one line. Don't end it.", spec: { kind: "chain", maxLen: 160, opener: "The villa doors opened and the first thing anyone noticed was" } },
+  { id: "chain-morning", weeks: [3, 4, 6], heat: 4, mode: "chain", body: "The Chain, morning-after edition. One line each. Keep it going.", hint: "Read what's there. Add one line.", spec: { kind: "chain", maxLen: 160, opener: "I woke up in a bed that wasn't mine, in a town I didn't recognize, and the man making coffee was" } },
+  { id: "chain-wedding", weeks: [5, 6], heat: 3, mode: "chain", body: "The Chain: the wedding. One line each. Make it messy.", spec: { kind: "chain", maxLen: 160, opener: "The officiant asked if anyone objected, and from the back of the room, holding a Pub Sub," } },
+
+  // Hot Seat: one guy, everyone's questions.
+  { id: "hotseat-1", weeks: [2, 4, 5], heat: 4, mode: "hotseat", body: "Hot Seat. First guy to tap takes it. Everyone else asks him one question. He picks what to answer.", hint: "Nothing is off limits. He's allowed to dodge.", spec: { kind: "hotseat", seat: null, seatName: null } },
+  { id: "hotseat-2", weeks: [3, 6], heat: 3, mode: "hotseat", body: "Hot Seat, round two. Someone new takes it. One question each.", spec: { kind: "hotseat", seat: null, seatName: null } },
+
+  // Voice memos.
+  { id: "voice-shakespeare", weeks: [2, 3], heat: 3, mode: "voice", body: "Voice memo: read your last sent text out loud like it's Shakespeare. Fifteen seconds.", spec: { kind: "voice", seconds: 15 } },
+  { id: "voice-sexy", weeks: [4, 5], heat: 4, mode: "voice", body: "Voice memo: your sexy voice. You have one. Fifteen seconds, say whatever you want.", hint: "Point it at the ceiling if you're shy.", spec: { kind: "voice", seconds: 15 } },
+  { id: "voice-mom", weeks: [1, 3, 6], heat: 2, mode: "voice", body: "Voice memo: your mom leaving you a voicemail. Impression only. Fifteen seconds.", spec: { kind: "voice", seconds: 15 } },
+  { id: "voice-sing", weeks: [2, 6], heat: 2, mode: "voice", body: "Sing It: eight seconds of a chorus. Nobody's good. That's the point.", spec: { kind: "voice", seconds: 15 } },
+  { id: "voice-comeover", weeks: [5], heat: 4, mode: "voice", body: "Voice memo: the voicemail you'd leave to get him to come over. Fifteen seconds.", spec: { kind: "voice", seconds: 15 } },
+
+  // Blind Date.
+  { id: "blinddate-1", weeks: [4, 5, 6], heat: 4, mode: "blinddate", body: "Blind Date. Tap in and get paired with another guy in this Circle. No names, no faces, one week to talk. Faces come out when the week ends.", hint: "Photos are off in the blind thread. Use your words.", spec: { kind: "blinddate" } },
 ];
 
 export const PLAY_BY_ID = new Map(PLAYS.map((p) => [p.id, p]));
-export const PLAY_MODES: PlayMode[] = ["survey", "thisorthat", "madlibs", "speed", "twotruths", "video"];
+export const PLAY_MODES: PlayMode[] = ["survey", "thisorthat", "madlibs", "speed", "twotruths", "video", "rank", "owner", "chain", "hotseat", "voice", "blinddate"];

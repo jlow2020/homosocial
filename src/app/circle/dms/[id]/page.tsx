@@ -69,8 +69,9 @@ export default async function Thread({ params }: { params: Promise<{ id: string 
     reactions: m.dm_reactions.map((r) => ({ emoji: r.emoji, mine: r.user_id === me })),
   }));
 
-  const mineOn = amA ? t.photos_a : t.photos_b;
-  const theirsOn = amA ? t.photos_b : t.photos_a;
+  const blind = !!t.blind_until && new Date(t.blind_until) > new Date();
+  const mineOn = !blind && (amA ? t.photos_a : t.photos_b);
+  const theirsOn = !blind && (amA ? t.photos_b : t.photos_a);
   const seenAt = (amA ? t.read_b : t.read_a) as string | null;
   const incoming = !t.accepted_at && t.requested_by !== me;
   const waiting = !t.accepted_at && t.requested_by === me;
@@ -83,10 +84,10 @@ export default async function Thread({ params }: { params: Promise<{ id: string 
           <Link href="/circle/dms" className="dm-back" aria-label="All DMs">
             ‹
           </Link>
-          <Avatar src={urls.get(other.photo_path)} name={other.first_name} size={44} />
+          {blind ? <span className="avatar anon-mask" style={{ width: 44, height: 44 }}>💘</span> : <Avatar src={urls.get(other.photo_path)} name={other.first_name} size={44} />}
           <div className="dm-top-name">
-            <GuyName pl={pl} m={other} age />
-            <span className="fine">{t.accepted_at ? (mineOn && theirsOn ? "Photos and videos on" : "In your Circle") : "Message request"}</span>
+            {blind ? <span className="guy-name">Your blind date</span> : <GuyName pl={pl} m={other} age />}
+            <span className="fine">{blind ? `Names and faces come out ${new Date(t.blind_until).toLocaleDateString("en-US", { weekday: "long" })}` : t.accepted_at ? (mineOn && theirsOn ? "Photos and videos on" : "In your Circle") : "Message request"}</span>
           </div>
         </div>
 
@@ -94,10 +95,10 @@ export default async function Thread({ params }: { params: Promise<{ id: string 
           threadId={id}
           otherId={otherId}
           messages={messages}
-          otherName={other.first_name}
-          otherPhoto={urls.get(other.photo_path) ?? null}
+          otherName={blind ? "your date" : other.first_name}
+          otherPhoto={blind ? null : (urls.get(other.photo_path) ?? null)}
           seenAt={seenAt}
-          media={!!t.accepted_at && mineOn && theirsOn}
+          media={!!t.accepted_at && !blind && mineOn && theirsOn}
           canSend={!incoming && !(waiting && messages.length > 0)}
           waiting={waiting}
           footer={
@@ -113,6 +114,8 @@ export default async function Thread({ params }: { params: Promise<{ id: string 
                   </form>
                 </div>
               </div>
+            ) : blind ? (
+              <p className="fine">💘 Blind Date. Photos and videos stay off until the reveal.</p>
             ) : t.accepted_at ? (
               <PhotoSwitch threadId={id} mine={mineOn} theirs={theirsOn} name={other.first_name} />
             ) : null

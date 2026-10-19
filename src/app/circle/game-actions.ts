@@ -44,8 +44,11 @@ export async function answerDrop(form: FormData): Promise<Result> {
     } catch {
       return { ok: false, error: "That didn't come through. Try again." };
     }
+    if (drop.spec.kind === "rank" && data && typeof data === "object") (data as Record<string, unknown>).me = pl.profile.id;
     const problem = checkPlayAnswer(drop.spec, data);
     if (problem) return { ok: false, error: problem };
+    // Blind Date and Hot Seat have their own doors.
+    if (drop.spec.kind === "blinddate" || (drop.spec.kind === "hotseat" && drop.spec.seat === pl.profile.id)) return { ok: false, error: "Use the button above." };
   }
   const videoPath = String(form.get("video_path") ?? "");
 
@@ -71,7 +74,7 @@ export async function answerDrop(form: FormData): Promise<Result> {
     if (up.error) return { ok: false, error: "Your photo didn't upload. Try again." };
   }
 
-  let media_type: "photo" | "video" | null = photo_path ? "photo" : null;
+  let media_type: "photo" | "video" | "audio" | null = photo_path ? "photo" : null;
   if (videoPath && !pass) {
     // Uploaded straight from the phone with a ticket from answerClipTicket.
     const prefix = `answers/${pl.circle.id}/${drop.id}/${pl.profile.id}-`;
@@ -79,7 +82,7 @@ export async function answerDrop(form: FormData): Promise<Result> {
     const { data: found } = await pl.db.storage.from("clips").list(`answers/${pl.circle.id}/${drop.id}`, { search: videoPath.slice(videoPath.lastIndexOf("/") + 1), limit: 1 });
     if (!found?.length) return { ok: false, error: "The video didn't finish uploading. Try again." };
     photo_path = videoPath;
-    media_type = "video";
+    media_type = drop.mode === "voice" ? "audio" : "video";
   }
   const { data: saved, error } = await pl.db
     .from("answers")
@@ -395,6 +398,7 @@ export async function reactDm(messageId: string, emoji: string): Promise<Result>
 }
 
 const CLIP_TYPES = new Set(["video/mp4", "video/quicktime", "video/webm"]);
+const AUDIO_TYPES = new Set(["audio/webm", "audio/mp4", "audio/mpeg", "audio/ogg", "audio/wav"]);
 const MAX_CLIP = 50 * 1024 * 1024;
 
 // Videos go straight from the phone to storage, too big for the server's front door.
@@ -528,10 +532,13 @@ export async function answerClipTicket(
   const now = currentWeek(pl);
   if (!now || !Number.isInteger(week) || week < 1 || week > now) return { ok: false, error: "That drop isn't open." };
   const drop = await ensureDrop(pl.db, pl.circle, week);
-  if (drop.mode !== "video") return { ok: false, error: "This drop doesn't take video." };
-  if (!CLIP_TYPES.has(contentType)) return { ok: false, error: "That video type won't play. Try an .mp4 or .mov." };
-  if (!(size > 0 && size <= MAX_CLIP)) return { ok: false, error: "That clip is too big." };
-  const ext = contentType === "video/quicktime" ? "mov" : contentType === "video/webm" ? "webm" : "mp4";
+  const audio = drop.mode === "voice";
+  if (drop.mode !== "video" && !audio) return { ok: false, error: "This drop doesn't take a recording." };
+  if (audio ? !AUDIO_TYPES.has(contentType) : !CLIP_TYPES.has(contentType)) return { ok: false, error: "That file type won't play." };
+  if (!(size > 0 && size <= (audio ? 10 * 1024 * 1024 : MAX_CLIP))) return { ok: false, error: "That clip is too big." };
+  const ext = audio
+    ? contentType === "audio/mp4" ? "m4a" : contentType === "audio/mpeg" ? "mp3" : contentType === "audio/wav" ? "wav" : contentType === "audio/ogg" ? "ogg" : "weba"
+    : contentType === "video/quicktime" ? "mov" : contentType === "video/webm" ? "webm" : "mp4";
   const path = `answers/${pl.circle.id}/${drop.id}/${pl.profile.id}-${Date.now()}.${ext}`;
   const { data, error } = await pl.db.storage.from("clips").createSignedUploadUrl(path);
   if (error || !data) return { ok: false, error: "Couldn't start the upload. Try again." };
@@ -548,6 +555,75 @@ export async function voteLie(dropId: string, answerId: string, choice: number):
   const a = await answerInMyCircle(pl, answerId);
   if (!a || a.user_id === pl.profile.id) return { ok: false };
   await pl.db.from("votes").upsert({ drop_id: dropId, voter: pl.profile.id, answer_id: answerId, choice }, { onConflict: "drop_id,voter,answer_id" });
+  return { ok: true };
+}
+
+// Hot Seat: first to tap takes it.
+export async function takeHotSeat(week: number): Promise<Result> {
+  const pl = await player();
+  if (currentWeek(pl) !== week) return { ok: false, error: "That drop isn't open." };
+  const drop = await ensureDrop(pl.db, pl.circle, week);
+  if (drop.spec?.kind !== "hotseat") return { ok: false };
+  if (drop.spec.seat) return { ok: false, error: `${drop.spec.seatName} beat you to it.` };
+  const { data: claimed } = await pl.db
+    .from("drops")
+    .update({ spec: { ...drop.spec, seat: pl.profile.id, seatName: pl.profile.first_name } })
+    .eq("id", drop.id)
+    .filter("spec->>seat", "is", null)
+    .select("id");
+  if (!claimed?.length) return { ok: false, error: "Someone just took it." };
+  await pl.db.from("answers").upsert(
+    { drop_id: drop.id, user_id: pl.profile.id, body: "I'm in the hot seat. Ask me anything. I'll answer in the replies.", data: { question: "(in the seat)" } },
+    { onConflict: "drop_id,user_id", ignoreDuplicates: true }
+  );
+  revalidatePath("/circle", "layout");
+  return { ok: true };
+}
+
+// Blind Date: tap in, get paired with the next guy who taps in.
+export async function blindDateIn(week: number): Promise<Result> {
+  const pl = await player();
+  if (currentWeek(pl) !== week || pl.clock.phase !== "season") return { ok: false, error: "That drop isn't open." };
+  const drop = await ensureDrop(pl.db, pl.circle, week);
+  if (drop.spec?.kind !== "blinddate") return { ok: false };
+  const { data: mine } = await pl.db.from("answers").select("id, data").eq("drop_id", drop.id).eq("user_id", pl.profile.id).maybeSingle();
+  if (mine) return { ok: true };
+  // Somebody waiting? Pair up.
+  const { data: waiting } = await pl.db
+    .from("answers")
+    .select("id, user_id")
+    .eq("drop_id", drop.id)
+    .filter("data->>status", "eq", "waiting")
+    .neq("user_id", pl.profile.id)
+    .order("created_at")
+    .limit(1)
+    .maybeSingle();
+  const until = (pl.clock.nextDrop ?? pl.clock.finaleAt).toISOString();
+  if (waiting && isMember(pl, waiting.user_id)) {
+    const [a, b] = [pl.profile.id, waiting.user_id as string].sort();
+    await pl.db.from("dm_threads").upsert({ a, b, requested_by: pl.profile.id, accepted_at: new Date().toISOString(), blind_until: until, blind_drop: drop.id }, { onConflict: "a,b" });
+    const { data: t } = await pl.db.from("dm_threads").select("id").eq("a", a).eq("b", b).single();
+    await pl.db.from("answers").update({ data: { status: "paired", thread: t!.id } }).eq("id", waiting.id);
+    await pl.db.from("answers").insert({ drop_id: drop.id, user_id: pl.profile.id, body: "Paired.", data: { status: "paired", thread: t!.id } });
+    // Fake guys open with a line.
+    const { data: other } = await pl.db.from("profiles").select("is_demo, email").eq("id", waiting.user_id).maybeSingle();
+    if (other?.is_demo) await demoReplyInThread(pl.db, t!.id, waiting.user_id as string, other.email as string | null);
+  } else {
+    await pl.db.from("answers").insert({ drop_id: drop.id, user_id: pl.profile.id, body: "Waiting for a date.", data: { status: "waiting" } });
+    if (pl.circle.is_test) {
+      // In a test Circle a fake guy taps in right behind him.
+      const demo = pl.members.find((m) => m.is_demo);
+      if (demo) {
+        const [a, b] = [pl.profile.id, demo.id].sort();
+        await pl.db.from("dm_threads").upsert({ a, b, requested_by: demo.id, accepted_at: new Date().toISOString(), blind_until: until, blind_drop: drop.id }, { onConflict: "a,b" });
+        const { data: t } = await pl.db.from("dm_threads").select("id").eq("a", a).eq("b", b).single();
+        await pl.db.from("answers").update({ data: { status: "paired", thread: t!.id }, body: "Paired." }).eq("drop_id", drop.id).eq("user_id", pl.profile.id);
+        await pl.db.from("answers").upsert({ drop_id: drop.id, user_id: demo.id, body: "Paired.", data: { status: "paired", thread: t!.id } }, { onConflict: "drop_id,user_id", ignoreDuplicates: true });
+        await demoReplyInThread(pl.db, t!.id, demo.id, demo.email);
+      }
+    }
+  }
+  revalidatePath("/circle", "layout");
   return { ok: true };
 }
 

@@ -8,7 +8,10 @@
 // nobody would sign with their real face.
 
 export type PromptKind = "text" | "photo";
-export type Mode = "text" | "photo" | "anon" | "guesswho" | "dare" | "survey" | "thisorthat" | "madlibs" | "speed" | "twotruths" | "video";
+export type Mode =
+  | "text" | "photo" | "anon" | "guesswho" | "dare"
+  | "survey" | "thisorthat" | "madlibs" | "speed" | "twotruths" | "video"
+  | "caption" | "rank" | "owner" | "chain" | "hotseat" | "voice" | "blinddate";
 
 export type Prompt = {
   id: string;

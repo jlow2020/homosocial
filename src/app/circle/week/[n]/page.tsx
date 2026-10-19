@@ -20,7 +20,7 @@ type AnswerRow = {
   user_id: string;
   body: string | null;
   photo_path: string | null;
-  media_type: "photo" | "video" | null;
+  media_type: "photo" | "video" | "audio" | null;
   data: Record<string, unknown> | null;
   passed: boolean;
   created_at: string;
@@ -62,8 +62,8 @@ export default async function WeekPage({ params }: { params: Promise<{ n: string
     .eq("passed", true)
     .in("drop_id", (seasonDrops ?? []).map((d) => d.id));
 
-  // Guess Who: the names come out when the week is over.
-  const guessing = prompt.mode === "guesswho";
+  // Guess Who and Guess the Owner: the names come out when the week is over.
+  const guessing = prompt.mode === "guesswho" || prompt.mode === "owner";
   const revealed = guessing && (week < current || clock.phase === "revealed");
   const { data: guessRows } = guessing ? await db.from("guesses").select("guesser, answer_id, guessed").eq("drop_id", drop.id) : { data: [] };
   const myGuesses = new Map((guessRows ?? []).filter((g) => g.guesser === pl.profile.id).map((g) => [g.answer_id as string, g.guessed as string]));
@@ -105,13 +105,27 @@ export default async function WeekPage({ params }: { params: Promise<{ n: string
           .slice(0, 3)
       : [];
 
-  const clipPaths = rows.filter((a) => a.media_type === "video" && a.photo_path).map((a) => a.photo_path as string);
-  const clips = mine && clipPaths.length
+  const chain = spec?.kind === "chain";
+  const open = !!mine || chain; // The Chain is readable before you add your line.
+  const rankResult =
+    spec?.kind === "rank" && answeredPlays.length >= 3
+      ? (() => {
+          const pts = new Map<string, number>();
+          for (const a of answeredPlays) (a.data!.order as string[]).forEach((id, i) => pts.set(id, (pts.get(id) ?? 0) + (5 - i)));
+          const top = [...pts.entries()].sort((x, y) => y[1] - x[1]).slice(0, 2).map(([id]) => byId.get(id)?.first_name ?? "?");
+          return top;
+        })()
+      : null;
+  const captionUrl = spec?.kind === "caption" ? (await photoUrls(db, [spec.photo_path])).get(spec.photo_path) : undefined;
+
+  const clipPaths = rows.filter((a) => (a.media_type === "video" || a.media_type === "audio") && a.photo_path).map((a) => a.photo_path as string);
+  const clips = open && clipPaths.length
     ? new Map(((await db.storage.from("clips").createSignedUrls(clipPaths, 3600)).data ?? []).map((x) => [x.path as string, x.signedUrl as string]))
     : new Map<string, string>();
-  const urls = mine
-    ? await photoUrls(db, [...pl.members.map((m) => m.photo_path), ...rows.filter((a) => a.media_type !== "video").map((a) => a.photo_path)])
+  const urls = open
+    ? await photoUrls(db, [...pl.members.map((m) => m.photo_path), ...rows.filter((a) => a.media_type === "photo" || (!a.media_type && a.photo_path)).map((a) => a.photo_path)])
     : await photoUrls(db, [pl.profile.photo_path]);
+  const guyList = pl.members.map((m) => ({ id: m.id, name: m.first_name, photo: urls.get(m.photo_path) ?? null }));
 
   return (
     <Shell pl={pl}>
@@ -140,12 +154,38 @@ export default async function WeekPage({ params }: { params: Promise<{ n: string
             🎭 Lies revealed. You caught {lieRight} of {myVotes.size}.
           </p>
         )}
-        {!mine && isPlay && spec && <PlayForm week={week} spec={spec} />}
-        {!mine && !isPlay && <AnswerForm week={week} kind={prompt.mode === "dare" ? "photo" : prompt.kind} canPass={(passes ?? 0) < 1} />}
+        {captionUrl && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={captionUrl} alt="" className="answer-photo" />
+        )}
+        {spec?.kind === "hotseat" && spec.seat && <p className="anon-note">🔥 {spec.seat === pl.profile.id ? "You're in the hot seat. Answer in the replies, or don't." : `${spec.seatName} is in the hot seat. Ask him one thing.`}</p>}
+        {rankResult && (
+          <p className="anon-note">
+            🏆 The Circle&apos;s pick for {spec!.kind === "rank" ? spec!.category : ""}: <b>{rankResult[0]}</b>
+            {rankResult[1] && <>, runner-up {rankResult[1]}</>}. {answeredPlays.length} ranked.
+          </p>
+        )}
+        {prompt.mode === "owner" && !revealed && <p className="anon-note">🎭 Guess the Owner. Post yours, then guess whose is whose. Names come out when the week ends.</p>}
+        {!mine && isPlay && spec && spec.kind !== "owner" && <PlayForm week={week} spec={spec} guys={guyList} meId={pl.profile.id} />}
+        {!mine && spec?.kind === "owner" && <AnswerForm week={week} kind="photo" canPass={(passes ?? 0) < 1} />}
+        {spec?.kind === "blinddate" && mine && <PlayForm week={week} spec={spec} myRow={mine.data} />}
+        {!mine && !isPlay && spec?.kind !== "caption" && <AnswerForm week={week} kind={prompt.mode === "dare" ? "photo" : prompt.kind} canPass={(passes ?? 0) < 1} />}
         {mine?.passed && <p className="fine">You used your Pass on this one. Everyone&apos;s answers are unlocked.</p>}
       </section>
 
-      {!mine ? (
+      {chain ? (
+        <section className="answers">
+          <div className="chain">
+            <p className="eyebrow">The story so far · {rows.length} lines</p>
+            <p className="chain-line opener">{spec!.kind === "chain" ? spec!.opener : ""}</p>
+            {[...rows].sort((x, y) => x.created_at.localeCompare(y.created_at)).map((a) => (
+              <p key={a.id} className={a.user_id === pl.profile.id ? "chain-line mine" : "chain-line"}>
+                {(a.data?.line as string) ?? a.body} <span className="fine">· {byId.get(a.user_id)?.first_name}</span>
+              </p>
+            ))}
+          </div>
+        </section>
+      ) : !mine ? (
         <section className="answers">
           <p className="locked-note">🔒 {others.length} {others.length === 1 ? "answer is" : "answers are"} blurred until you post yours.</p>
           <ul className="answer-list">
@@ -207,7 +247,7 @@ export default async function WeekPage({ params }: { params: Promise<{ n: string
             </div>
           )}
           <ul className="answer-list">
-            {[...rows.filter((a) => a.user_id === pl.profile.id && !a.passed), ...others].map((a) => {
+            {(spec?.kind === "blinddate" ? [] : [...rows.filter((a) => a.user_id === pl.profile.id && !a.passed), ...others]).map((a) => {
               const m = byId.get(a.user_id);
               return (
                 <li key={a.id} className={a.user_id === pl.profile.id ? "answer answer-mine" : "answer"}>
@@ -235,7 +275,9 @@ export default async function WeekPage({ params }: { params: Promise<{ n: string
                   {a.media_type === "video" && a.photo_path && clips.get(a.photo_path) && (
                     <video src={clips.get(a.photo_path)} controls playsInline preload="metadata" className="answer-photo" />
                   )}
-                  {a.data && spec && spec.kind !== "twotruths" && <PlayCard spec={spec} data={a.data} />}
+                  {a.media_type === "audio" && a.photo_path && clips.get(a.photo_path) && <audio src={clips.get(a.photo_path)} controls preload="metadata" />}
+                  {a.data && spec && !["twotruths", "rank", "blinddate", "hotseat"].includes(spec.kind) && <PlayCard spec={spec} data={a.data} />}
+                  {a.data && spec?.kind === "hotseat" && a.user_id !== spec.seat && <p className="answer-body">❓ {a.data.question as string}</p>}
                   {a.data && twoTruths && !lieRevealed && a.user_id !== pl.profile.id && (
                     <LieVote dropId={drop.id} answerId={a.id} statements={a.data.statements as string[]} current={myVotes.get(a.id) ?? null} />
                   )}

@@ -13,6 +13,7 @@ type Thread = {
   last_at: string;
   read_a: string | null;
   read_b: string | null;
+  blind_until: string | null;
   dm_messages: { body: string | null; user_id: string; created_at: string }[];
 };
 
@@ -21,7 +22,7 @@ export default async function Dms() {
   const me = pl.profile.id;
   const { data } = await pl.db
     .from("dm_threads")
-    .select("id, a, b, requested_by, accepted_at, last_at, read_a, read_b, dm_messages(body, user_id, created_at)")
+    .select("id, a, b, requested_by, accepted_at, last_at, read_a, read_b, blind_until, dm_messages(body, user_id, created_at)")
     .or(`a.eq.${me},b.eq.${me}`)
     .order("last_at", { ascending: false });
   const threads = (data ?? []) as Thread[];
@@ -36,14 +37,15 @@ export default async function Dms() {
   const rest = threads.filter((t) => !incoming.includes(t));
 
   const row = (t: Thread) => {
-    const other = who.get(t.a === me ? t.b : t.a);
+    const blind = !!t.blind_until && new Date(t.blind_until) > new Date();
+    const other = blind ? { first_name: "💘 Your blind date", photo_path: "" } : who.get(t.a === me ? t.b : t.a);
     const last = [...t.dm_messages].sort((x, y) => y.created_at.localeCompare(x.created_at))[0];
     const read = t.a === me ? t.read_a : t.read_b;
     const unread = !!last && last.user_id !== me && (!read || new Date(last.created_at) > new Date(read));
     return (
       <li key={t.id}>
         <Link href={`/circle/dms/${t.id}`} className={unread ? "thread unread" : "thread"}>
-          <Avatar src={other ? urls.get(other.photo_path) : undefined} name={other?.first_name ?? ""} size={48} />
+          {blind ? <span className="avatar anon-mask" style={{ width: 48, height: 48 }}>💘</span> : <Avatar src={other ? urls.get(other.photo_path) : undefined} name={other?.first_name ?? ""} size={48} />}
           <span className="thread-main">
             <span className="guy-name">{other?.first_name ?? "Someone"}</span>
             <span className="fine thread-last">
