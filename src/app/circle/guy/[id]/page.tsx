@@ -76,7 +76,8 @@ export default async function Guy({ params }: { params: Promise<{ id: string }> 
         <ul className="answer-list">
           {((drops ?? []) as Drop[]).map((d) => {
             const a = his.find((x) => x.drop_id === d.id);
-            if (!a) return null;
+            // Anonymous drops never show up on anyone's page.
+            if (!a || promptOf(d).anon) return null;
             const unlocked = mineDone.has(d.id);
             return (
               <li key={d.id} className={unlocked ? "answer" : "answer answer-locked"}>
@@ -101,7 +102,7 @@ export default async function Guy({ params }: { params: Promise<{ id: string }> 
             );
           })}
         </ul>
-        {his.length === 0 && <p className="fine">He hasn&apos;t answered a drop yet this Season.</p>}
+        {his.filter((a) => !promptOf((drops ?? []).find((d) => d.id === a.drop_id) as Drop).anon).length === 0 && <p className="fine">He hasn&apos;t answered a drop yet this Season.</p>}
       </section>
     </Shell>
   );

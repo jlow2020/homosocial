@@ -38,7 +38,11 @@ export default async function WeekPage({ params }: { params: Promise<{ n: string
   const memberIds = new Set(pl.members.map((m) => m.id));
   const rows = ((data ?? []) as AnswerRow[]).filter((a) => memberIds.has(a.user_id));
   const mine = rows.find((a) => a.user_id === pl.profile.id);
-  const others = rows.filter((a) => a.user_id !== pl.profile.id && !a.passed);
+  const anon = !!prompt.anon;
+  // Anonymous drops: no names, no faces, and no posting order to give anyone away.
+  const others = rows
+    .filter((a) => a.user_id !== pl.profile.id && !a.passed)
+    .sort((x, y) => (anon ? x.id.localeCompare(y.id) : 0));
   const byId = new Map(pl.members.map((m) => [m.id, m]));
 
   // One Pass per Season.
@@ -66,6 +70,7 @@ export default async function WeekPage({ params }: { params: Promise<{ n: string
         </p>
         <h1 className="drop-prompt">{prompt.body}</h1>
         {prompt.hint && <p className="drop-hint">{prompt.hint}</p>}
+        {anon && <p className="anon-note">🎭 Anonymous drop. Nobody in the Circle sees who wrote what.</p>}
         {!mine && <AnswerForm week={week} kind={prompt.kind} canPass={(passes ?? 0) < 1} />}
         {mine?.passed && <p className="fine">You used your Pass on this one. Everyone&apos;s answers are unlocked.</p>}
       </section>
@@ -80,7 +85,7 @@ export default async function WeekPage({ params }: { params: Promise<{ n: string
                 <li key={a.id} className="answer answer-locked">
                   <div className="answer-head">
                     <span className="avatar avatar-empty" style={{ width: 40, height: 40 }} />
-                    <span className="guy-name">{m?.first_name}</span>
+                    <span className="guy-name">{anon ? "Anonymous" : m?.first_name}</span>
                   </div>
                   <p className="blurred" aria-hidden="true">
                     {"something you'll want to read once you answer ".repeat(2)}
@@ -98,9 +103,20 @@ export default async function WeekPage({ params }: { params: Promise<{ n: string
               return (
                 <li key={a.id} className={a.user_id === pl.profile.id ? "answer answer-mine" : "answer"}>
                   <div className="answer-head">
-                    <Avatar src={m ? urls.get(m.photo_path) : undefined} name={m?.first_name ?? ""} size={40} />
-                    <GuyName pl={pl} m={m} />
-                    <span className="fine">{timeAgo(a.created_at)}</span>
+                    {anon ? (
+                      <>
+                        <span className="avatar anon-mask" style={{ width: 40, height: 40 }} aria-hidden="true">
+                          🎭
+                        </span>
+                        <span className="guy-name">{a.user_id === pl.profile.id ? "You (only you know)" : "Anonymous"}</span>
+                      </>
+                    ) : (
+                      <>
+                        <Avatar src={m ? urls.get(m.photo_path) : undefined} name={m?.first_name ?? ""} size={40} />
+                        <GuyName pl={pl} m={m} />
+                        <span className="fine">{timeAgo(a.created_at)}</span>
+                      </>
+                    )}
                   </div>
                   {a.photo_path && urls.get(a.photo_path) && (
                     // eslint-disable-next-line @next/next/no-img-element

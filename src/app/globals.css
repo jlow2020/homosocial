@@ -2473,3 +2473,14 @@ a.guy-name:hover {
 .mutual-body p {
   color: var(--soft);
 }
+.anon-note {
+  font-weight: 700;
+  color: var(--mint);
+}
+.anon-mask {
+  display: inline-grid;
+  place-items: center;
+  background: var(--prime);
+  border: 1px solid var(--line);
+  font-size: 20px;
+}

@@ -4,7 +4,7 @@ import Countdown from "@/components/Countdown";
 import { WEEKS, SEASON } from "@/lib/season";
 
 const plays = [
-  { title: "Monday drops", tone: "hot", body: "A new prompt every week. Hot takes, show us your fridge, rank the Spice Girls. Answer to see everyone else's." },
+  { title: "Monday drops", tone: "hot", body: "A new prompt every week. Hot takes, thirst traps, anonymous confessions. Answer to see everyone else's." },
   { title: "The Lounge", tone: "gold", body: "Your Circle's group chat. It gets chaotic by week three. That's the point." },
   { title: "Plans", tone: "mint", body: "Trivia night, beach day, a terrible movie. Anyone can post a plan and see who's in." },
   { title: "DMs", tone: "hot", body: "Slide in, but only inside your Circle. Photos unlock when you both say yes." },

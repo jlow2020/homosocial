@@ -181,6 +181,7 @@ async function Home({ pl }: { pl: Player }) {
           </p>
           <h2 className="drop-prompt">{prompt.body}</h2>
           {prompt.hint && <p className="drop-hint">{prompt.hint}</p>}
+          {prompt.anon && <p className="anon-note">🎭 Anonymous this week. Nobody sees who wrote what.</p>}
           <div className="row">
             <Link href={`/circle/week/${week}`} className={answered ? "btn btn-outline" : "btn btn-pink"}>
               {answered ? "See everyone's answers" : prompt.kind === "photo" ? "Post your photo" : "Answer to unlock"}
