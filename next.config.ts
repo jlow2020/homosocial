@@ -2,6 +2,8 @@ import path from "node:path";
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // ffmpeg ships as a real binary; keep it out of the bundle.
+  serverExternalPackages: ["ffmpeg-static"],
   experimental: {
     // Profile photos and Realness Check frames are shrunk in the browser,
     // but leave room for the occasional big one.

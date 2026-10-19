@@ -4,7 +4,8 @@
 
 export type PlayMode = "survey" | "thisorthat" | "madlibs" | "speed" | "twotruths" | "video" | "rank" | "owner" | "chain" | "hotseat" | "voice" | "blinddate";
 
-export type SurveySpec = { kind: "survey"; questions: string[]; title: string; census: boolean };
+// anon: only the Census shows, nobody's card does. For the questions guys lie about under their own name.
+export type SurveySpec = { kind: "survey"; questions: string[]; title: string; census: boolean; anon?: boolean };
 export type ThisOrThatSpec = { kind: "thisorthat"; pairs: [string, string][]; reveal: boolean };
 export type MadLibsSpec = { kind: "madlibs"; slots: string[]; template: string }; // template uses {0} {1} ...
 export type SpeedSpec = { kind: "speed"; questions: string[]; seconds: number };
@@ -45,11 +46,12 @@ export const PLAYS: Play[] = [
     heat: 4,
     mode: "survey",
     body: "The Scandalous Survey. Ten questions, yes or no, no explaining yourself.",
-    hint: "Your answers become your card for the week. The Circle's totals get posted too.",
+    hint: "Anonymous. Nobody sees your answers, only the Circle's totals, and how Florida compares.",
     spec: {
       kind: "survey",
       title: "Scandal score",
       census: true,
+      anon: true,
       questions: [
         "Hooked up with a coworker",
         "Hooked up in a car",
@@ -70,11 +72,12 @@ export const PLAYS: Play[] = [
     heat: 4,
     mode: "survey",
     body: "The Bedroom Survey. Yes or no. Nobody's checking, but we'll know.",
-    hint: "Your answers become your card. Totals get posted.",
+    hint: "Anonymous. Only the totals get posted, yours and all of Florida's.",
     spec: {
       kind: "survey",
       title: "Bedroom report",
       census: true,
+      anon: true,
       questions: [
         "Lights on",
         "Music on",

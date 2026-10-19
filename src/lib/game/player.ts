@@ -19,6 +19,7 @@ export type Circle = {
   is_test: boolean;
   demo_seeded: Record<string, boolean>;
   heat_boost: number;
+  ticked_at: string | null;
 };
 
 export type Member = {
@@ -87,6 +88,25 @@ export async function loadPlayer(opts: { needSeat?: boolean } = {}): Promise<Pla
       const { data } = await db.from("circles").select("*").eq("id", circle.id).single();
       circle = data as Circle;
       members = await loadMembers(db, circle.id, p.id);
+    }
+  }
+
+  // The clock runs from here too, so nothing waits on the scheduler. Test
+  // Circles run it every load (that's how weeks lock when the week changes);
+  // real ones every ten minutes.
+  if (clock.phase !== "filling") {
+    const stale = !circle.ticked_at || Date.now() - new Date(circle.ticked_at).getTime() > 10 * 60 * 1000;
+    if (circle.is_test || stale) {
+      const { data: claimed } = await db
+        .from("circles")
+        .update({ ticked_at: new Date().toISOString() })
+        .eq("id", circle.id)
+        .or(`ticked_at.is.null,ticked_at.lt.${new Date(Date.now() - (circle.is_test ? 5000 : 10 * 60 * 1000)).toISOString()}`)
+        .select("id");
+      if (claimed?.length) {
+        const { tickCircle } = await import("./tick");
+        await tickCircle(db, circle).catch(() => {});
+      }
     }
   }
 

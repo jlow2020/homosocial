@@ -18,6 +18,8 @@ export type Drop = {
   credit: string | null;
   spec: PlaySpec | null;
   created_at: string;
+  locked_at: string | null;
+  result: Record<string, unknown> | null;
 };
 
 // What a drop asks, as the player sees it.

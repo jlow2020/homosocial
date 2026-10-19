@@ -3470,3 +3470,447 @@ audio {
   width: 100%;
   max-width: 420px;
 }
+
+/* Notifications ---------------------------------------------------------- */
+.push-ask {
+  background: linear-gradient(160deg, var(--studio), #22123a);
+  border: 2px solid var(--gold);
+  padding: 14px 18px;
+  margin-bottom: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.push-ask p {
+  margin: 0;
+}
+.push-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-top: 1px solid var(--line);
+}
+.kbd {
+  display: inline-block;
+  padding: 0 6px;
+  border: 1px solid var(--muted);
+  border-radius: 4px;
+  font-size: 14px;
+  color: var(--soft);
+}
+.chy-heat {
+  letter-spacing: -2px;
+  font-size: 14px;
+}
+
+/* The Sunday Read ------------------------------------------------------ */
+.read {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.read-head .game-h1 {
+  margin: 6px 0;
+}
+.read-card {
+  background: var(--studio);
+  border: 1px solid var(--line);
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.read-card ul,
+.read-card ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.read-top {
+  border: 2px solid var(--hot);
+  background: linear-gradient(160deg, var(--studio), #2e1234);
+}
+.read-winner {
+  border-color: var(--gold);
+}
+.read-winner .answer-head {
+  align-items: center;
+}
+.read-winner p {
+  margin: 0;
+}
+.read-quote {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 24px;
+  line-height: 1.1;
+  margin: 0;
+  color: var(--spot);
+}
+.read-quote.madlib {
+  font-family: var(--body);
+  font-weight: 400;
+  font-size: 17px;
+  line-height: 1.5;
+}
+.census-list li {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px;
+  overflow: hidden;
+  border-radius: 6px;
+  background: var(--prime);
+}
+.census-list li > span:last-child {
+  position: relative;
+}
+.census-fl {
+  color: var(--gold);
+  font-size: 14px;
+}
+.pairs li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+}
+.badge-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.badge-pill {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: var(--prime);
+  border: 1px solid var(--gold);
+  color: var(--gold);
+  font-size: 14px;
+  font-weight: 700;
+}
+.standings li {
+  display: grid;
+  grid-template-columns: 24px 32px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0;
+  border-top: 1px solid var(--line);
+}
+.standings li:first-child {
+  border-top: 0;
+}
+.standing-no {
+  font-family: var(--display);
+  font-weight: 900;
+  font-size: 20px;
+  color: var(--muted);
+}
+.standing-stats {
+  font-size: 14px;
+  color: var(--soft);
+  white-space: nowrap;
+}
+.read-card-home {
+  border-color: var(--gold);
+}
+.pill-win {
+  margin-left: auto;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--gold);
+  border: 1px solid var(--gold);
+  border-radius: 999px;
+  padding: 1px 8px;
+  white-space: nowrap;
+}
+.winner-note {
+  border-color: var(--gold);
+}
+
+/* Answers: reports, hot seat, lies, mad libs, deck, grid ------------------ */
+.converting {
+  margin: 0;
+  font-size: 14px;
+  color: var(--gold);
+}
+.answer-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.answer-report {
+  background: none;
+  border: 0;
+  color: var(--muted);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  padding: 4px 0;
+}
+.answer-report:hover {
+  color: var(--hot);
+}
+.answer-hidden {
+  opacity: 0.6;
+  border-style: dashed;
+}
+.hotseat-q {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.hotseat-a {
+  margin: 0;
+  padding: 8px 12px;
+  border-left: 3px solid var(--hot);
+  background: var(--prime);
+}
+.hotseat-dodged {
+  margin: 0;
+  color: var(--muted);
+  font-style: italic;
+}
+.fooled {
+  margin: 4px 0 0;
+  font-size: 14px;
+  color: var(--soft);
+}
+.fooled.hot {
+  color: var(--hot);
+  font-weight: 700;
+}
+.madlib-word {
+  background: rgba(255, 61, 139, 0.22);
+  color: var(--spot);
+  padding: 0 4px;
+  border-radius: 4px;
+  font-weight: 700;
+}
+.story-vote {
+  align-self: flex-start;
+  background: none;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--soft);
+  font: inherit;
+  font-size: 14px;
+  padding: 4px 12px;
+  cursor: pointer;
+}
+.story-vote.on {
+  border-color: var(--gold);
+  color: var(--gold);
+}
+.deck {
+  background: var(--studio);
+  border: 1px solid var(--line);
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.deck-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.deck-card {
+  animation: deck-in 0.25s ease-out;
+}
+@keyframes deck-in {
+  from {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.deck-text {
+  font-family: var(--display);
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1.1;
+  margin: 0;
+  padding: 24px 8px;
+}
+.faces {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+  gap: 8px;
+}
+.face {
+  width: 100%;
+  background: var(--prime);
+  border: 2px solid transparent;
+  border-radius: 10px;
+  padding: 6px 4px;
+  color: var(--soft);
+  font: inherit;
+  font-size: 13px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+}
+.face img,
+.face .avatar {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+.face.on {
+  border-color: var(--hot);
+  color: var(--spot);
+}
+.answer-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 10px;
+}
+.answer-grid .answer {
+  padding: 8px;
+  gap: 6px;
+}
+.answer-grid .answer-photo {
+  aspect-ratio: 1;
+  object-fit: cover;
+}
+.answer-grid .answer-head .guy-name {
+  font-size: 14px;
+}
+.my-drops {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 15px;
+  color: var(--soft);
+}
+.speed-count {
+  font-family: var(--display);
+  font-weight: 900;
+  font-size: 96px;
+  text-align: center;
+  margin: 10px 0;
+  color: var(--hot);
+  animation: deck-in 0.3s ease-out;
+}
+
+/* Voice memos ------------------------------------------------------------- */
+.wave {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--prime);
+  border-radius: 999px;
+  padding: 6px 12px 6px 6px;
+}
+.wave-play {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 0;
+  background: var(--hot);
+  color: #fff;
+  font-size: 14px;
+  cursor: pointer;
+  flex: none;
+}
+.wave-bars {
+  flex: 1;
+  height: 44px;
+  width: 100%;
+  cursor: pointer;
+}
+.wave-time {
+  font-variant-numeric: tabular-nums;
+  min-width: 36px;
+  text-align: right;
+}
+
+/* Blind Date reveal ------------------------------------------------------- */
+.reveal {
+  background: linear-gradient(160deg, var(--studio), #2e1234);
+  border: 2px solid var(--hot);
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.reveal h2 {
+  margin: 0;
+  font-size: 28px;
+}
+.reveal p {
+  margin: 0;
+}
+.reveal-faces {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+}
+.reveal-face {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+}
+.reveal-face img,
+.reveal-face .avatar {
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid var(--gold);
+}
+.reveal-plus {
+  font-family: var(--display);
+  font-size: 40px;
+  color: var(--hot);
+}
+
+/* Chemistry card ---------------------------------------------------------- */
+.chem {
+  background: linear-gradient(160deg, var(--studio), #22123a);
+  border: 2px solid var(--mint);
+  padding: 16px 18px;
+  margin-bottom: 20px;
+}
+.chem ul {
+  list-style: none;
+  margin: 8px 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.chem li {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+.chem-emoji {
+  flex: none;
+  width: 24px;
+}

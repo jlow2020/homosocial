@@ -8,6 +8,8 @@ import Live from "../../Live";
 import AcceptButton from "./AcceptButton";
 import { PhotoSwitch } from "./DmPhotos";
 import ChatThread, { type ChatMessage } from "./ChatThread";
+import BlindReveal from "./BlindReveal";
+import { ageFrom } from "@/lib/season";
 
 export const dynamic = "force-dynamic";
 
@@ -17,6 +19,7 @@ type Row = {
   body: string | null;
   photo_path: string | null;
   media_type: "photo" | "video" | null;
+  ready: boolean;
   created_at: string;
   dm_reactions: { user_id: string; emoji: string }[];
 };
@@ -37,7 +40,7 @@ export default async function Thread({ params }: { params: Promise<{ id: string 
   const [{ data: rows }, { data: otherRow }] = await Promise.all([
     pl.db
       .from("dm_messages")
-      .select("id, user_id, body, photo_path, media_type, created_at, dm_reactions(user_id, emoji)")
+      .select("id, user_id, body, photo_path, media_type, ready, created_at, dm_reactions(user_id, emoji)")
       .eq("thread_id", id)
       .order("created_at"),
     pl.db
@@ -63,15 +66,20 @@ export default async function Thread({ params }: { params: Promise<{ id: string 
     mine: m.user_id === me,
     body: m.body,
     media: m.photo_path
-      ? { type: m.media_type === "video" ? "video" : "photo", url: (m.media_type === "video" ? clips : urls).get(m.photo_path) ?? null }
+      ? { type: m.media_type === "video" ? "video" : "photo", url: m.ready === false ? null : ((m.media_type === "video" ? clips : urls).get(m.photo_path) ?? null), converting: m.ready === false }
       : null,
     at: m.created_at,
     reactions: m.dm_reactions.map((r) => ({ emoji: r.emoji, mine: r.user_id === me })),
   }));
 
   const blind = !!t.blind_until && new Date(t.blind_until) > new Date();
+  // After the reveal both have to say Keep talking before the chat reopens.
+  const revealPending = !!t.blind_until && !blind && !(t.keep_a && t.keep_b);
+  const iKept = amA ? !!t.keep_a : !!t.keep_b;
+  const heKept = amA ? !!t.keep_b : !!t.keep_a;
   const mineOn = !blind && (amA ? t.photos_a : t.photos_b);
   const theirsOn = !blind && (amA ? t.photos_b : t.photos_a);
+  const myUrl = (await photoUrls(pl.db, [pl.profile.photo_path])).get(pl.profile.photo_path) ?? null;
   const seenAt = (amA ? t.read_b : t.read_a) as string | null;
   const incoming = !t.accepted_at && t.requested_by !== me;
   const waiting = !t.accepted_at && t.requested_by === me;
@@ -99,7 +107,7 @@ export default async function Thread({ params }: { params: Promise<{ id: string 
           otherPhoto={blind ? null : (urls.get(other.photo_path) ?? null)}
           seenAt={seenAt}
           media={!!t.accepted_at && !blind && mineOn && theirsOn}
-          canSend={!incoming && !(waiting && messages.length > 0)}
+          canSend={!incoming && !revealPending && !(waiting && messages.length > 0)}
           waiting={waiting}
           footer={
             incoming ? (
@@ -116,6 +124,14 @@ export default async function Thread({ params }: { params: Promise<{ id: string 
               </div>
             ) : blind ? (
               <p className="fine">💘 Blind Date. Photos and videos stay off until the reveal.</p>
+            ) : revealPending ? (
+              <BlindReveal
+                threadId={id}
+                me={{ name: pl.profile.first_name, photo: myUrl, age: ageFrom(pl.profile.birthdate) }}
+                him={{ name: other.first_name, photo: urls.get(other.photo_path) ?? null, age: ageFrom(other.birthdate) }}
+                iKept={iKept}
+                heKept={heKept}
+              />
             ) : t.accepted_at ? (
               <PhotoSwitch threadId={id} mine={mineOn} theirs={theirsOn} name={other.first_name} />
             ) : null

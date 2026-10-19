@@ -113,6 +113,27 @@ export async function seedThrough(
         for (const f of fans) reactions.push({ answer_id: a.id, user_id: f, emoji: EMOJI[Math.floor(Math.random() * EMOJI.length)] });
       }
       if (reactions.length) await db.from("reactions").upsert(reactions, { ignoreDuplicates: true });
+      // Mad Libs: the fake guys vote for a story. Two Truths: they vote on lies.
+      const theirs = (saved ?? []).filter((a) => a.user_id !== playerId);
+      if (drop.spec?.kind === "madlibs" && theirs.length > 1) {
+        const votes = [...ids.values()].map((voter) => {
+          const pool = theirs.filter((a) => a.user_id !== voter);
+          const pick = pool[Math.floor(Math.random() * pool.length)];
+          return pick ? { drop_id: drop.id, voter, answer_id: pick.id } : null;
+        }).filter(Boolean);
+        if (votes.length) await db.from("story_votes").upsert(votes as { drop_id: string; voter: string; answer_id: string }[], { onConflict: "drop_id,voter", ignoreDuplicates: true });
+      }
+      if (drop.spec?.kind === "twotruths" && theirs.length) {
+        const votes: { drop_id: string; voter: string; answer_id: string; choice: number }[] = [];
+        for (const voter of ids.values()) for (const a of theirs) if (a.user_id !== voter && Math.random() < 0.7) votes.push({ drop_id: drop.id, voter, answer_id: a.id, choice: Math.floor(Math.random() * 3) });
+        if (votes.length) await db.from("votes").upsert(votes, { onConflict: "drop_id,voter,answer_id", ignoreDuplicates: true });
+      }
+      if ((drop.mode === "guesswho" || drop.mode === "owner") && theirs.length) {
+        const all = [...ids.values()];
+        const guesses: { drop_id: string; guesser: string; answer_id: string; guessed: string }[] = [];
+        for (const guesser of all) for (const a of theirs) if (a.user_id !== guesser && Math.random() < 0.6) guesses.push({ drop_id: drop.id, guesser, answer_id: a.id, guessed: Math.random() < 0.4 ? a.user_id : all[Math.floor(Math.random() * all.length)] });
+        if (guesses.length) await db.from("guesses").upsert(guesses, { onConflict: "drop_id,guesser,answer_id", ignoreDuplicates: true });
+      }
     }
 
     // The Lounge.
@@ -271,7 +292,7 @@ function demoPlay(spec: PlaySpec, slug: string): Record<string, unknown> | null 
       return null; // Filled in by demoRank, which knows the guys' ids.
     }
     case "chain": {
-      const lines = ["a man in a Speedo holding a casserole.", "Dante, shirtless, already arguing with someone.", "my ex. Of course it was my ex.", "the smell of Cuban bread and bad decisions.", "nobody I knew, and he winked.", "a parrot. The parrot was fine. The man was not.", "two guys from this Circle, and they weren't talking.", "Hollis, in velvet, saying 'places.'"];
+      const lines = ["a man in a Speedo holding a casserole, and before I could say anything he", "Dante, shirtless, already arguing with someone about", "my ex, of course it was my ex, and he was holding", "the smell of Cuban bread and bad decisions, which meant", "nobody I knew, and he winked, so naturally I", "a parrot, which was fine, except the man under it was", "two guys from this Circle who weren't talking, until", "Hollis, in velvet, saying 'places,' and then the lights"];
       return { line: lines[Math.floor(Math.random() * lines.length)] };
     }
     case "hotseat": {

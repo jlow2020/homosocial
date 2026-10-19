@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import PageHead from "@/components/PageHead";
 import ProfileForm from "./ProfileForm";
+import PushPrompt from "@/components/PushPrompt";
+import EmailToggle from "@/components/EmailToggle";
 import { deleteAccount } from "./actions";
 import { signOut } from "@/app/join/actions";
 import { getMe, getSupabaseAdmin } from "@/lib/supabase-server";
@@ -51,6 +53,13 @@ export default async function ProfilePage() {
           }
         }
       />
+      {p && (
+        <div className="wrap account-link">
+          <h2 className="admin-h3" style={{ marginTop: 0 }}>Alerts</h2>
+          <PushPrompt compact />
+          <EmailToggle on={(p as { notify_email?: boolean }).notify_email !== false} />
+        </div>
+      )}
       {p && (
         <div className="wrap account-link">
           <p>

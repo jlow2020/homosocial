@@ -6,7 +6,7 @@ import { answerClipTicket, answerDrop, blindDateIn, takeHotSeat } from "../../ga
 import Link from "next/link";
 import type { PlaySpec } from "@/lib/game/plays";
 
-type Props = { week: number; spec: PlaySpec; guys?: { id: string; name: string; photo: string | null }[]; meId?: string; myRow?: Record<string, unknown> | null };
+type Props = { week: number; spec: PlaySpec; guys?: { id: string; name: string; photo: string | null }[]; meId?: string; myRow?: Record<string, unknown> | null; ending?: boolean };
 
 function useSubmit(week: number) {
   const router = useRouter();
@@ -26,12 +26,16 @@ function useSubmit(week: number) {
   return { pending, error, submit };
 }
 
-export default function PlayForm({ week, spec, guys = [], meId = "", myRow = null }: Props) {
+export default function PlayForm({ week, spec, guys = [], meId = "", myRow = null, ending = false }: Props) {
   switch (spec.kind) {
     case "rank":
       return <Rank week={week} spec={spec} guys={guys} meId={meId} />;
     case "chain":
-      return <OneLine week={week} field="line" max={spec.maxLen} placeholder="Add the next line. Don't end it." button="Add my line" />;
+      return ending ? (
+        <OneLine week={week} field="line" max={spec.maxLen} placeholder="You're writing the ending. Land it." button="End the story" />
+      ) : (
+        <OneLine week={week} field="line" max={spec.maxLen} placeholder="Add the next line, and stop mid-sentence so the next guy has somewhere to go" button="Add my line" />
+      );
     case "hotseat":
       return spec.seat ? (
         <OneLine week={week} field="question" max={200} placeholder={`Ask ${spec.seatName} anything.`} button="Ask it" />
@@ -144,6 +148,7 @@ function MadLibs({ week, spec }: { week: number; spec: Extract<PlaySpec, { kind:
 
 function Speed({ week, spec }: { week: number; spec: Extract<PlaySpec, { kind: "speed" }> }) {
   const [started, setStarted] = useState(false);
+  const [count, setCount] = useState<number | null>(null);
   const [left, setLeft] = useState(spec.seconds);
   const [i, setI] = useState(0);
   const [a, setA] = useState<string[]>(spec.questions.map(() => ""));
@@ -151,6 +156,17 @@ function Speed({ week, spec }: { week: number; spec: Extract<PlaySpec, { kind: "
   const { pending, error, submit } = useSubmit(week);
   const box = useRef<HTMLInputElement>(null);
   const finished = useRef(false);
+
+  useEffect(() => {
+    if (count === null) return;
+    if (count <= 0) {
+      setCount(null);
+      setStarted(true);
+      return;
+    }
+    const t = setTimeout(() => setCount(count - 1), 1000);
+    return () => clearTimeout(t);
+  }, [count]);
 
   useEffect(() => {
     if (!started) return;
@@ -180,14 +196,21 @@ function Speed({ week, spec }: { week: number; spec: Extract<PlaySpec, { kind: "
     }
   };
 
+  if (count !== null) {
+    return (
+      <div className="play speed">
+        <p className="speed-count" aria-live="assertive">{count === 0 ? "Go" : count}</p>
+      </div>
+    );
+  }
   if (!started) {
     return (
       <div className="play">
         <p className="fine">
-          {spec.questions.length} questions, {spec.seconds} seconds. Whatever you type is what the Circle sees. No edits, no takebacks.
+          {spec.questions.length} questions, {spec.seconds} seconds. Whatever you type is what the Circle sees. No edits, no takebacks. Put your phone on Do Not Disturb first.
         </p>
-        <button className="btn btn-pink" onClick={() => setStarted(true)}>
-          Start the clock
+        <button className="btn btn-pink" onClick={() => setCount(3)}>
+          Ready?
         </button>
       </div>
     );

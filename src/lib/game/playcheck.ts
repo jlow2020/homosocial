@@ -3,7 +3,7 @@ import type { PlaySpec } from "./plays";
 
 const str = (x: unknown, max: number) => typeof x === "string" && x.trim().length > 0 && x.length <= max;
 
-export function checkPlayAnswer(spec: PlaySpec, data: unknown): string | null {
+export function checkPlayAnswer(spec: PlaySpec, data: unknown, ctx: { ending?: boolean } = {}): string | null {
   const d = data as Record<string, unknown> | null;
   switch (spec.kind) {
     case "survey": {
@@ -45,8 +45,13 @@ export function checkPlayAnswer(spec: PlaySpec, data: unknown): string | null {
       if (!Array.isArray(o) || o.length !== expected.length || [...o].sort().join() !== [...expected].sort().join()) return "Put every guy in order.";
       return null;
     }
-    case "chain":
-      return str(d?.line, spec.maxLen) ? null : "One line, and keep it under the limit.";
+    case "chain": {
+      if (!str(d?.line, spec.maxLen)) return "One line, and keep it under the limit.";
+      const line = (d!.line as string).trim();
+      if (!ctx.ending && /[.!?…]["')\]]*$/.test(line)) return "Don't end the sentence. Stop in the middle so the next guy has to pick it up.";
+      if (ctx.ending && !/[.!?…"')\]]$/.test(line)) return "This is the ending. Finish the sentence.";
+      return null;
+    }
     case "hotseat":
       return str(d?.question, 200) ? null : "Ask him something.";
     case "caption":

@@ -9,7 +9,7 @@ export type ChatMessage = {
   id: string;
   mine: boolean;
   body: string | null;
-  media: { type: "photo" | "video"; url: string | null } | null;
+  media: { type: "photo" | "video"; url: string | null; converting?: boolean } | null;
   at: string;
   reactions: { emoji: string; mine: boolean }[];
 };
@@ -241,7 +241,7 @@ function Media({
   messageId,
   onTap,
 }: {
-  media: { type: "photo" | "video"; url: string | null };
+  media: { type: "photo" | "video"; url: string | null; converting?: boolean };
   mine: boolean;
   name: string;
   otherId: string;
@@ -263,6 +263,7 @@ function Media({
       {reported ? "Reported. He's blocked." : "Report"}
     </button>
   );
+  if (media.converting) return <p className="dm-bubble theirs">⏳ Clip converting, a minute tops</p>;
   if (!media.url) return <p className="dm-bubble theirs">Media unavailable</p>;
   if (!shown) {
     return (

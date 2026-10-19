@@ -22,6 +22,10 @@ export const viewport: Viewport = {
   themeColor: "#160C24",
 };
 
+metadata.manifest = "/manifest.json";
+metadata.appleWebApp = { capable: true, statusBarStyle: "black-translucent", title: "Homosocial" };
+metadata.icons = { apple: "/apple-touch-icon.png" };
+
 export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {

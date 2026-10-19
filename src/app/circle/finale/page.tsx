@@ -4,6 +4,7 @@ import { etLabel, untilLabel } from "@/lib/game/clock";
 import { openChat } from "../game-actions";
 import { Avatar, GuyName, Shell } from "../ui";
 import PicksForm from "./PicksForm";
+import { chemistryFor } from "@/lib/game/chemistry";
 
 export const dynamic = "force-dynamic";
 
@@ -28,6 +29,15 @@ export default async function Finale() {
   const myStay = (stays ?? []).find((s) => s.user_id === me)?.choice as "stay" | "mix" | undefined;
 
   if (clock.phase === "season") {
+    const chem = await chemistryFor(db, circle, me, pl.members);
+    const nm = (id: string) => byId.get(id)?.first_name ?? "Someone";
+    const lines: { emoji: string; text: React.ReactNode }[] = [];
+    if (chem.agreed) lines.push({ emoji: "⚖️", text: <><b>{nm(chem.agreed.id)}</b> picked the same side as you {chem.agreed.n} of {chem.agreed.of} times.</> });
+    if (chem.dmd) lines.push({ emoji: "💬", text: <>You and <b>{nm(chem.dmd.id)}</b> have {chem.dmd.n} messages between you. The most of anyone.</> });
+    if (chem.reactedToYou) lines.push({ emoji: "🔥", text: <><b>{nm(chem.reactedToYou.id)}</b> reacted to your answers {chem.reactedToYou.n} times. More than anyone.</> });
+    if (chem.youReacted && chem.youReacted.id !== chem.reactedToYou?.id) lines.push({ emoji: "👀", text: <>You reacted to <b>{nm(chem.youReacted.id)}</b> the most. {chem.youReacted.n} times. Just saying.</> });
+    if (chem.guessedYou) lines.push({ emoji: "🕵️", text: <><b>{nm(chem.guessedYou.id)}</b> clocked your anonymous answers {chem.guessedYou.n === 1 ? "once" : `${chem.guessedYou.n} times`}. He reads you.</> });
+    if (chem.datesWith?.length) lines.push({ emoji: "💘", text: <>Your blind date{chem.datesWith.length > 1 ? "s" : ""}: <b>{chem.datesWith.map(nm).join(", ")}</b>.</> });
     return (
       <Shell pl={pl}>
         <div className="finale-head">
@@ -40,6 +50,20 @@ export default async function Finale() {
             Picks lock at the Finale: {clock.testMode ? "whenever Daddy hits the star" : `${etLabel(clock.finaleAt)} (${untilLabel(clock.finaleAt)})`}.
           </p>
         </div>
+        {lines.length > 0 && (
+          <section className="chem">
+            <p className="eyebrow">Your chemistry card · only you see this</p>
+            <ul>
+              {lines.map((l, i) => (
+                <li key={i}>
+                  <span className="chem-emoji">{l.emoji}</span>
+                  <span>{l.text}</span>
+                </li>
+              ))}
+            </ul>
+            <p className="fine">The numbers behind eight weeks. Pick with your gut anyway.</p>
+          </section>
+        )}
         <PicksForm
           dating={dating}
           guys={pl.members

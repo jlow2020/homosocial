@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { loadPlayer, photoUrls } from "@/lib/game/player";
+import { badgesFor } from "@/lib/game/standings";
+import { BADGES } from "@/lib/game/lock";
 import { UUID } from "@/lib/admin";
 import { ageFrom } from "@/lib/season";
 import { promptOf, type Drop } from "@/lib/game/drops";
@@ -40,6 +42,7 @@ export default async function Guy({ params }: { params: Promise<{ id: string }> 
     .eq("b", [id, pl.profile.id].sort()[1])
     .maybeSingle();
   const urls = await photoUrls(pl.db, [m.photo_path, ...his.map((a) => a.photo_path)]);
+  const badges = await badgesFor(pl.db, m.id);
 
   return (
     <Shell pl={pl}>
@@ -60,6 +63,18 @@ export default async function Guy({ params }: { params: Promise<{ id: string }> 
                 </span>
           <p className="member-into">Into {m.interests}</p>
           <p className="member-take">&ldquo;{m.hot_take}&rdquo;</p>
+          {badges.length > 0 && (
+            <ul className="badge-list">
+              {badges.map((b, i) => (
+                <li key={i}>
+                  <span className="badge-pill" title={BADGES[b.badge]?.blurb}>
+                    {BADGES[b.badge]?.emoji ?? "🏅"} {b.label}
+                  </span>
+                  <span className="fine"> S{b.season_no}{b.week < 9 ? ` W${b.week}` : ""}</span>
+                </li>
+              ))}
+            </ul>
+          )}
           <div className="row">
             {thread ? (
               <Link href={`/circle/dms/${thread.id}`} className="btn btn-pink">

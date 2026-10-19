@@ -14,6 +14,8 @@ type Thread = {
   read_a: string | null;
   read_b: string | null;
   blind_until: string | null;
+  keep_a: boolean;
+  keep_b: boolean;
   dm_messages: { body: string | null; user_id: string; created_at: string }[];
 };
 
@@ -22,7 +24,7 @@ export default async function Dms() {
   const me = pl.profile.id;
   const { data } = await pl.db
     .from("dm_threads")
-    .select("id, a, b, requested_by, accepted_at, last_at, read_a, read_b, blind_until, dm_messages(body, user_id, created_at)")
+    .select("id, a, b, requested_by, accepted_at, last_at, read_a, read_b, blind_until, keep_a, keep_b, dm_messages(body, user_id, created_at)")
     .or(`a.eq.${me},b.eq.${me}`)
     .order("last_at", { ascending: false });
   const threads = (data ?? []) as Thread[];
@@ -41,7 +43,8 @@ export default async function Dms() {
     const other = blind ? { first_name: "💘 Your blind date", photo_path: "" } : who.get(t.a === me ? t.b : t.a);
     const last = [...t.dm_messages].sort((x, y) => y.created_at.localeCompare(x.created_at))[0];
     const read = t.a === me ? t.read_a : t.read_b;
-    const unread = !!last && last.user_id !== me && (!read || new Date(last.created_at) > new Date(read));
+    const revealPending = !!t.blind_until && !blind && !(t.keep_a && t.keep_b);
+    const unread = revealPending || (!!last && last.user_id !== me && (!read || new Date(last.created_at) > new Date(read)));
     return (
       <li key={t.id}>
         <Link href={`/circle/dms/${t.id}`} className={unread ? "thread unread" : "thread"}>
@@ -49,7 +52,9 @@ export default async function Dms() {
           <span className="thread-main">
             <span className="guy-name">{other?.first_name ?? "Someone"}</span>
             <span className="fine thread-last">
-              {!t.accepted_at && t.requested_by === me
+              {revealPending
+                ? "💘 The reveal is in. Keep talking?"
+                : !t.accepted_at && t.requested_by === me
                 ? "Waiting for him to say yes"
                 : last
                   ? `${last.user_id === me ? "You: " : ""}${last.body ?? "📷 Media"}`

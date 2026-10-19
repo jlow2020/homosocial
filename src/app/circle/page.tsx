@@ -175,6 +175,9 @@ async function Home({ pl }: { pl: Player }) {
       .neq("requested_by", pl.profile.id),
   ]);
   const { data: heatVotes } = await db.from("heat_votes").select("user_id").eq("circle_id", circle.id).eq("season_no", circle.season_no);
+  const { data: lockedRows } = await db.from("drops").select("week, locked_at").eq("circle_id", circle.id).eq("season_no", circle.season_no).not("locked_at", "is", null).order("week", { ascending: false }).limit(1);
+  const lastRead = lockedRows?.[0]?.week as number | undefined;
+  const readAt = clock.phase === "season" && clock.nextDrop ? new Date(clock.nextDrop.getTime() - 11 * 3600e3) : null;
   const heatNeeded = circle.is_test ? 1 : Math.max(5, Math.ceil(pl.members.length * 0.6));
   const answered = (answers ?? []).some((a) => a.user_id === pl.profile.id);
   const answerCount = (answers ?? []).length;
@@ -232,6 +235,17 @@ async function Home({ pl }: { pl: Player }) {
             </Link>
           </section>
         )}
+
+        <section className="mini-card read-card-home">
+          <div className="mini-head">
+            <h3>📰 The Sunday Read</h3>
+            {lastRead && <Link href={`/circle/read/${lastRead}`}>Week {lastRead}</Link>}
+          </div>
+          <p className="fine">
+            {lastRead ? `Week ${lastRead} is wrapped: the best answer, the Census, who won. ` : "Every Sunday at 8pm: the week's best answer, the Census, who won, and the standings. "}
+            {!revealed && <Link href={`/circle/read/${week}`}>{readAt && clock.phase === "season" && !clock.testMode ? `Week ${week} locks ${etLabel(readAt)}` : `Week ${week} so far`}</Link>}
+          </p>
+        </section>
 
         {(requests ?? []).length > 0 && (
           <section className="mini-card">

@@ -34,11 +34,11 @@ export async function reportMember(
   if (!REASONS.includes(reason as (typeof REASONS)[number])) {
     return { ok: false, error: "Pick a reason." };
   }
-  const { error } = await g.db.from("reports").upsert(
-    { reporter: g.me.userId, reported: targetId, reason, details: details.trim().slice(0, 1000) || null },
-    { onConflict: "reporter,reported", ignoreDuplicates: true }
-  );
-  if (error) return { ok: false, error: "Your report didn't send. Try again." };
+  const { error } = await g.db
+    .from("reports")
+    .insert({ reporter: g.me.userId, reported: targetId, reason, details: details.trim().slice(0, 1000) || null });
+  // 23505: he already reported this guy. That's fine.
+  if (error && error.code !== "23505") return { ok: false, error: "Your report didn't send. Try again." };
   // Reporting someone also blocks him.
   await g.db.from("blocks").upsert(
     { blocker: g.me.userId, blocked: targetId },

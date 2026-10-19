@@ -122,3 +122,15 @@ export async function setAdminRole(id: string, role: "god" | "mod" | "none"): Pr
   await logAdmin(a.me.userId, role === "none" ? "removed admin" : `made ${role === "god" ? "Daddy" : "Mod"}`, id);
   return done(id, role === "none" ? "Admin access removed." : `He's now ${role === "god" ? "Daddy" : "a Mod"}.`);
 }
+
+// Pull an answer from the Circle, or put it back.
+export async function setAnswerHidden(answerId: string, hidden: boolean): Promise<Result> {
+  const a = await guard(answerId);
+  if (!a) return FORBIDDEN;
+  const { data } = await a.db.from("answers").update({ hidden }).eq("id", answerId).select("user_id").maybeSingle();
+  if (!data) return { ok: false, message: "No such answer." };
+  await logAdmin(a.me.userId, hidden ? "pulled an answer" : "restored an answer", data.user_id, { answer_id: answerId });
+  revalidatePath("/admin/reports");
+  revalidatePath("/circle", "layout");
+  return { ok: true, message: hidden ? "Pulled." : "Back up." };
+}

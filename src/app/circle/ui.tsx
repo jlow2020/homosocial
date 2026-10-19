@@ -6,6 +6,8 @@ import { WEEKS, ageFrom } from "@/lib/season";
 import type { Player, Member } from "@/lib/game/player";
 import NavTabs from "./NavTabs";
 import TestBar from "./TestBar";
+import PushPrompt from "@/components/PushPrompt";
+import { targetHeat } from "@/lib/game/engine";
 
 export function weekTitle(week: number): string {
   return WEEKS.find((w) => w.n === week)?.title ?? "";
@@ -54,11 +56,19 @@ export async function Shell({ pl, children }: { pl: Player; children: React.Reac
             Circle {pl.circle.number}
             {pl.circle.is_test ? " · Test" : ""} · Season {pl.circle.season_no}
           </span>
+          {c.phase === "season" && (
+            <span className="chy-heat" title={`Heat ${targetHeat(pl.circle, c.week)} of 5`} aria-label={`Heat ${targetHeat(pl.circle, c.week)} of 5`}>
+              {"🔥".repeat(targetHeat(pl.circle, c.week))}
+            </span>
+          )}
           {pl.profile.founder_no && <span className="chy-hot">Founder #{pl.profile.founder_no}</span>}
         </div>
       </div>
       {pl.seated && c.phase !== "filling" && <NavTabs dropWeek={dropWeek} unread={unread ?? 0} />}
-      <div className="wrap game-body">{children}</div>
+      <div className="wrap game-body">
+        {pl.seated && <PushPrompt />}
+        {children}
+      </div>
     </main>
   );
 }

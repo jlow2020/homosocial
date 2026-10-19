@@ -1,20 +1,26 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
+import { convertClip } from "@/lib/media";
 import { redirect } from "next/navigation";
 import { loadPlayer, isMember, type Player } from "@/lib/game/player";
 import { ensureDrop } from "@/lib/game/drops";
 import { demoReactToAnswer, demoReplyInThread } from "@/lib/game/seed";
 import { checkPlayAnswer } from "@/lib/game/playcheck";
 import { UUID } from "@/lib/admin";
+import { notify, teaser } from "@/lib/notify";
+import { chainEndingAt } from "@/lib/game/chain";
 
 type Result = { ok: boolean; error?: string };
 const MAX_PHOTO = 3 * 1024 * 1024;
 const LIMITS = { friend: 5, date: 3, setups: 2, roses: 3 };
+const EMOJI: Record<string, string> = { fire: "🔥", lol: "😂", crown: "👑", heart: "❤️" };
 
 async function player(): Promise<Player> {
   return loadPlayer({ needSeat: true });
 }
+
 
 function currentWeek(pl: Player): number | null {
   return pl.clock.phase === "season" ? pl.clock.week : null;
@@ -45,7 +51,13 @@ export async function answerDrop(form: FormData): Promise<Result> {
       return { ok: false, error: "That didn't come through. Try again." };
     }
     if (drop.spec.kind === "rank" && data && typeof data === "object") (data as Record<string, unknown>).me = pl.profile.id;
-    const problem = checkPlayAnswer(drop.spec, data);
+    let ending = false;
+    if (drop.spec.kind === "chain") {
+      const { count: lines } = await pl.db.from("answers").select("id", { count: "exact", head: true }).eq("drop_id", drop.id).eq("passed", false);
+      ending = (lines ?? 0) >= chainEndingAt(pl.members.length);
+      if (data && typeof data === "object") (data as Record<string, unknown>).ending = ending;
+    }
+    const problem = checkPlayAnswer(drop.spec, data, { ending });
     if (problem) return { ok: false, error: problem };
     // Blind Date and Hot Seat have their own doors.
     if (drop.spec.kind === "blinddate" || (drop.spec.kind === "hotseat" && drop.spec.seat === pl.profile.id)) return { ok: false, error: "Use the button above." };
@@ -84,12 +96,17 @@ export async function answerDrop(form: FormData): Promise<Result> {
     photo_path = videoPath;
     media_type = drop.mode === "voice" ? "audio" : "video";
   }
+  const needsConvert = !!videoPath && !pass;
   const { data: saved, error } = await pl.db
     .from("answers")
-    .insert({ drop_id: drop.id, user_id: pl.profile.id, body: pass ? null : body || null, photo_path, media_type, data: pass ? null : data, passed: pass })
+    .insert({ drop_id: drop.id, user_id: pl.profile.id, body: pass ? null : body || null, photo_path, media_type, data: pass ? null : data, passed: pass, ready: !needsConvert })
     .select("id")
     .single();
   if (error) return { ok: false, error: error.code === "23505" ? "You already answered this one." : "That didn't save. Try again." };
+  if (needsConvert && saved) {
+    const db = pl.db;
+    after(() => convertClip(db, { table: "answers", id: saved.id, path: videoPath, kind: media_type === "audio" ? "audio" : "video" }));
+  }
 
   if (pl.circle.is_test && !pass && saved) await demoReactToAnswer(pl.db, pl.circle.id, saved.id);
   revalidatePath("/circle", "layout");
@@ -98,8 +115,8 @@ export async function answerDrop(form: FormData): Promise<Result> {
 
 async function answerInMyCircle(pl: Player, answerId: string) {
   if (!UUID.test(answerId)) return null;
-  const { data } = await pl.db.from("answers").select("id, user_id, drop_id, drops(circle_id, week)").eq("id", answerId).maybeSingle();
-  const d = data as unknown as { id: string; user_id: string; drops: { circle_id: string; week: number } } | null;
+  const { data } = await pl.db.from("answers").select("id, user_id, drop_id, drops(circle_id, week, mode)").eq("id", answerId).maybeSingle();
+  const d = data as unknown as { id: string; user_id: string; drop_id: string; drops: { circle_id: string; week: number; mode: string } } | null;
   if (!d || d.drops.circle_id !== pl.circle.id) return null;
   // You see answers only after you've answered that drop yourself.
   const { count } = await pl.db.from("answers").select("id", { count: "exact", head: true }).eq("drop_id", data!.drop_id).eq("user_id", pl.profile.id);
@@ -115,7 +132,14 @@ export async function toggleReaction(answerId: string, emoji: string): Promise<R
   const key = { answer_id: answerId, user_id: pl.profile.id, emoji };
   const { count } = await pl.db.from("reactions").select("answer_id", { count: "exact", head: true }).match(key);
   if (count) await pl.db.from("reactions").delete().match(key);
-  else await pl.db.from("reactions").insert(key);
+  else {
+    await pl.db.from("reactions").insert(key);
+    if (a.user_id !== pl.profile.id) {
+      const { count: total } = await pl.db.from("reactions").select("answer_id", { count: "exact", head: true }).eq("answer_id", answerId);
+      if (total === 1) await notify(pl.db, [a.user_id], { title: "First reaction on your answer", body: `${pl.profile.first_name} hit ${EMOJI[emoji]}.`, url: `/circle/week/${a.drops.week}`, tag: `react:${answerId}`, email: false });
+      else if (total === 5 || total === 10 || total === 20) await notify(pl.db, [a.user_id], { title: "Your answer is on fire", body: `${total} reactions and counting.`, url: `/circle/week/${a.drops.week}`, tag: `react:${answerId}`, email: false });
+    }
+  }
   revalidatePath("/circle", "layout");
   return { ok: true };
 }
@@ -127,6 +151,10 @@ export async function replyToAnswer(answerId: string, body: string): Promise<Res
   const a = await answerInMyCircle(pl, answerId);
   if (!a) return { ok: false, error: "You can't reply to that." };
   await pl.db.from("replies").insert({ answer_id: answerId, user_id: pl.profile.id, body: text });
+  if (a.user_id !== pl.profile.id) {
+    const anon = ["anon", "guesswho", "twotruths"].includes(a.drops.mode);
+    await notify(pl.db, [a.user_id], { title: `${pl.profile.first_name} replied to your ${anon ? "anonymous " : ""}answer`, body: teaser(text), url: `/circle/week/${a.drops.week}`, tag: `reply:${answerId}`, email: false });
+  }
   revalidatePath("/circle", "layout");
   return { ok: true };
 }
@@ -205,6 +233,9 @@ export async function startDm(otherId: string): Promise<void> {
   if (other.is_demo && !t.accepted_at) {
     await pl.db.from("dm_threads").update({ accepted_at: new Date().toISOString() }).eq("id", t.id);
   }
+  if (!t.accepted_at && t.requested_by === pl.profile.id) {
+    await notify(pl.db, [otherId], { title: `${pl.profile.first_name} wants to DM you`, body: "Say yes and you can both talk.", url: `/circle/dms/${t.id}`, tag: `dm:${t.id}` });
+  }
   redirect(`/circle/dms/${t.id}`);
 }
 
@@ -229,6 +260,9 @@ async function myThread(pl: Player, threadId: string) {
     accepted_at: string | null;
     photos_a: boolean;
     photos_b: boolean;
+    blind_until: string | null;
+    keep_a: boolean;
+    keep_b: boolean;
   };
 }
 
@@ -269,6 +303,7 @@ export async function sendDmPhoto(form: FormData): Promise<Result> {
   const otherId = t.a === pl.profile.id ? t.b : t.a;
   const { data: other } = await pl.db.from("profiles").select("is_demo, email").eq("id", otherId).maybeSingle();
   if (other?.is_demo) await demoReplyInThread(pl.db, t.id, otherId, other.email as string | null);
+  else await notify(pl.db, [otherId], { title: pl.profile.first_name, body: "📷 Sent you a photo", url: `/circle/dms/${t.id}`, tag: `dm:${t.id}`, email: false });
   revalidatePath(`/circle/dms/${t.id}`);
   return { ok: true };
 }
@@ -278,6 +313,7 @@ export async function acceptDm(threadId: string): Promise<Result> {
   const t = await myThread(pl, threadId);
   if (!t || t.requested_by === pl.profile.id) return { ok: false };
   await pl.db.from("dm_threads").update({ accepted_at: new Date().toISOString() }).eq("id", t.id);
+  await notify(pl.db, [t.requested_by], { title: `${pl.profile.first_name} said yes`, body: "Your DM is open. Go say something.", url: `/circle/dms/${t.id}`, tag: `dm:${t.id}`, email: false });
   revalidatePath("/circle/dms", "layout");
   return { ok: true };
 }
@@ -306,6 +342,7 @@ export async function sendDm(threadId: string, body: string): Promise<Result> {
   const otherId = t.a === pl.profile.id ? t.b : t.a;
   const { data: other } = await pl.db.from("profiles").select("is_demo, email").eq("id", otherId).maybeSingle();
   if (other?.is_demo) await demoReplyInThread(pl.db, t.id, otherId, other.email as string | null);
+  else await notify(pl.db, [otherId], { title: t.blind_until && new Date(t.blind_until) > new Date() ? "💘 Your blind date" : pl.profile.first_name, body: teaser(text, 120), url: `/circle/dms/${t.id}`, tag: `dm:${t.id}`, email: false });
   revalidatePath(`/circle/dms/${t.id}`);
   return { ok: true };
 }
@@ -329,6 +366,7 @@ export async function giveRose(toId: string, body: string): Promise<Result> {
     .from("roses")
     .insert({ circle_id: pl.circle.id, season_no: pl.circle.season_no, from_id: pl.profile.id, to_id: toId, body: text });
   if (error) return { ok: false, error: "You already gave him a Rose." };
+  await notify(pl.db, [toId], { title: "🌹 Someone sent you a Rose", body: "Go read it.", url: "/circle/roses", tag: "rose" });
   revalidatePath("/circle/roses");
   return { ok: true };
 }
@@ -429,11 +467,16 @@ export async function sendDmClip(threadId: string, path: string): Promise<Result
   const name = path.slice(`dms/${t.id}/`.length);
   const { data: found } = await pl.db.storage.from("clips").list(`dms/${t.id}`, { search: name, limit: 1 });
   if (!found?.length) return { ok: false, error: "The upload didn't finish. Try again." };
-  await pl.db.from("dm_messages").insert({ thread_id: t.id, user_id: pl.profile.id, photo_path: path, media_type: "video" });
+  const { data: msg } = await pl.db.from("dm_messages").insert({ thread_id: t.id, user_id: pl.profile.id, photo_path: path, media_type: "video", ready: false }).select("id").single();
   await pl.db.from("dm_threads").update({ last_at: new Date().toISOString() }).eq("id", t.id);
+  if (msg) {
+    const db = pl.db;
+    after(() => convertClip(db, { table: "dm_messages", id: msg.id, path, kind: "video" }));
+  }
   const otherId = t.a === pl.profile.id ? t.b : t.a;
   const { data: other } = await pl.db.from("profiles").select("is_demo, email").eq("id", otherId).maybeSingle();
   if (other?.is_demo) await demoReplyInThread(pl.db, t.id, otherId, other.email as string | null);
+  else await notify(pl.db, [otherId], { title: pl.profile.first_name, body: "🎥 Sent you a clip", url: `/circle/dms/${t.id}`, tag: `dm:${t.id}`, email: false });
   revalidatePath(`/circle/dms/${t.id}`);
   return { ok: true };
 }
@@ -508,7 +551,7 @@ export async function guessWho(dropId: string, answerId: string, guessed: string
   const pl = await player();
   if (!UUID.test(dropId) || !UUID.test(answerId)) return { ok: false };
   const { data: drop } = await pl.db.from("drops").select("circle_id, mode, week").eq("id", dropId).maybeSingle();
-  if (!drop || drop.circle_id !== pl.circle.id || drop.mode !== "guesswho") return { ok: false };
+  if (!drop || drop.circle_id !== pl.circle.id || (drop.mode !== "guesswho" && drop.mode !== "owner")) return { ok: false };
   if (pl.clock.phase !== "season" || pl.clock.week !== drop.week) return { ok: false, error: "Guessing is closed." };
   const a = await answerInMyCircle(pl, answerId);
   if (!a || a.user_id === pl.profile.id) return { ok: false };
@@ -605,6 +648,7 @@ export async function blindDateIn(week: number): Promise<Result> {
     const { data: t } = await pl.db.from("dm_threads").select("id").eq("a", a).eq("b", b).single();
     await pl.db.from("answers").update({ data: { status: "paired", thread: t!.id } }).eq("id", waiting.id);
     await pl.db.from("answers").insert({ drop_id: drop.id, user_id: pl.profile.id, body: "Paired.", data: { status: "paired", thread: t!.id } });
+    await notify(pl.db, [waiting.user_id as string], { title: "💘 You've got a blind date", body: "He's in your DMs. No names, no faces, until the reveal.", url: `/circle/dms/${t!.id}`, tag: `dm:${t!.id}` });
     // Fake guys open with a line.
     const { data: other } = await pl.db.from("profiles").select("is_demo, email").eq("id", waiting.user_id).maybeSingle();
     if (other?.is_demo) await demoReplyInThread(pl.db, t!.id, waiting.user_id as string, other.email as string | null);
@@ -627,3 +671,59 @@ export async function blindDateIn(week: number): Promise<Result> {
   return { ok: true };
 }
 
+
+// Mad Libs: one vote for the best story.
+export async function voteStory(dropId: string, answerId: string): Promise<Result> {
+  const pl = await player();
+  if (!UUID.test(dropId) || !UUID.test(answerId)) return { ok: false };
+  const { data: drop } = await pl.db.from("drops").select("circle_id, week, locked_at").eq("id", dropId).maybeSingle();
+  if (!drop || drop.circle_id !== pl.circle.id || drop.locked_at) return { ok: false, error: "Voting is closed." };
+  const a = await answerInMyCircle(pl, answerId);
+  if (!a || a.user_id === pl.profile.id) return { ok: false, error: "Not your own." };
+  await pl.db.from("story_votes").upsert({ drop_id: dropId, voter: pl.profile.id, answer_id: answerId }, { onConflict: "drop_id,voter" });
+  revalidatePath("/circle", "layout");
+  return { ok: true };
+}
+
+// Report an answer (a photo, a clip, a line). Two reports pull it until a mod looks.
+const ANSWER_REASONS = new Set(["explicit", "harassment", "underage", "fake", "other"]);
+export async function reportAnswer(answerId: string, reason: string, details: string): Promise<Result> {
+  const pl = await player();
+  if (!ANSWER_REASONS.has(reason)) return { ok: false, error: "Pick a reason." };
+  if (!UUID.test(answerId)) return { ok: false };
+  const { data: a } = await pl.db.from("answers").select("id, user_id, drops(circle_id)").eq("id", answerId).maybeSingle();
+  const row = a as unknown as { id: string; user_id: string; drops: { circle_id: string } } | null;
+  if (!row || row.drops.circle_id !== pl.circle.id || row.user_id === pl.profile.id) return { ok: false };
+  const dbReason = reason === "explicit" ? "other" : reason;
+  const { error } = await pl.db
+    .from("reports")
+    .insert({ reporter: pl.profile.id, reported: row.user_id, answer_id: answerId, reason: dbReason, details: ((reason === "explicit" ? "Explicit in a public space. " : "") + clean(details, 500)).trim() || null });
+  if (error && error.code !== "23505") return { ok: false, error: "That didn't send. Try again." };
+  const { count } = await pl.db.from("reports").select("id", { count: "exact", head: true }).eq("answer_id", answerId);
+  if ((count ?? 0) >= 2) await pl.db.from("answers").update({ hidden: true }).eq("id", answerId);
+  revalidatePath("/circle", "layout");
+  return { ok: true };
+}
+
+// Blind Date, after the reveal: both have to say Keep talking.
+export async function blindKeep(threadId: string, keep: boolean): Promise<Result> {
+  const pl = await player();
+  const t = await myThread(pl, threadId);
+  if (!t || !t.blind_until) return { ok: false };
+  if (new Date(t.blind_until) > new Date()) return { ok: false, error: "Not until the reveal." };
+  if (!keep) {
+    await pl.db.from("dm_threads").delete().eq("id", t.id);
+    revalidatePath("/circle/dms", "layout");
+    return { ok: true };
+  }
+  const mine = t.a === pl.profile.id ? "keep_a" : "keep_b";
+  const theirs = mine === "keep_a" ? "keep_b" : "keep_a";
+  const otherId = t.a === pl.profile.id ? t.b : t.a;
+  const { data: other } = await pl.db.from("profiles").select("is_demo").eq("id", otherId).maybeSingle();
+  await pl.db.from("dm_threads").update({ [mine]: true, ...(other?.is_demo ? { [theirs]: true } : {}) }).eq("id", t.id);
+  if (!other?.is_demo && !t[theirs]) {
+    await notify(pl.db, [otherId], { title: `${pl.profile.first_name} wants to keep talking`, body: "Your blind date said yes. Your move.", url: `/circle/dms/${t.id}`, tag: `dm:${t.id}` });
+  }
+  revalidatePath(`/circle/dms/${t.id}`);
+  return { ok: true };
+}

@@ -1,0 +1,11 @@
+name: Circle clock
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+jobs:
+  tick:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run the clock
+        run: curl -fsS -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" https://homosocial.net/api/tick

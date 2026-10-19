@@ -1,12 +1,13 @@
 import Link from "next/link";
 import { requireAdmin } from "@/lib/admin";
 import { when } from "../util";
+import AnswerToggle from "./AnswerToggle";
 
 export default async function Reports() {
   const { db } = await requireAdmin();
   const { data: reports } = await db
     .from("reports")
-    .select("id, created_at, reason, details, reporter, reported")
+    .select("id, created_at, reason, details, reporter, reported, answer_id, answers(hidden, body, drops(week))")
     .order("created_at", { ascending: false })
     .limit(500);
   const ids = [...new Set((reports ?? []).flatMap((r) => [r.reporter as string, r.reported as string]))];
@@ -50,7 +51,18 @@ export default async function Reports() {
                   <td>
                     <span className="pill pill-hot">{r.reason}</span>
                   </td>
-                  <td className="wrap-cell">{r.details ?? ""}</td>
+                  <td className="wrap-cell">
+                    {r.details ?? ""}
+                    {r.answer_id && (() => {
+                      const a = r.answers as unknown as { hidden: boolean; body: string | null; drops: { week: number } } | null;
+                      return a ? (
+                        <p className="fine">
+                          Answer, Week {a.drops?.week}: &ldquo;{(a.body ?? "(media)").slice(0, 120)}&rdquo; {a.hidden ? <span className="pill pill-hot">pulled</span> : <span className="pill pill-plain">live</span>}{" "}
+                          <AnswerToggle id={r.answer_id} hidden={a.hidden} />
+                        </p>
+                      ) : null;
+                    })()}
+                  </td>
                   <td>
                     <Link href={`/admin/members/${r.reporter}`}>{who.get(r.reporter)?.first_name ?? "Unknown"}</Link>
                   </td>
