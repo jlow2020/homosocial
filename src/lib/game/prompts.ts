@@ -20,7 +20,6 @@ export type Prompt = {
 
 export const PROMPTS: Prompt[] = [
   // Week 1: Arrivals. First impressions, first flirts.
-  { id: "w1-villa", week: 1, kind: "text", body: "You're walking into the villa. What song is playing, what are you wearing, and what's your first line to the hottest guy in the room?" },
   { id: "w1-honestbio", week: 1, kind: "text", body: "Your dating app bio if it had to be 100% honest. No \"love to travel.\" The truth." },
   { id: "w1-rizz", week: 1, kind: "text", body: "Rate your own rizz out of 10. Then show us: what's your opening line?" },
   { id: "w1-redflag", week: 1, kind: "text", body: "Your biggest red flag, pitched like it's a turn-on." },
