@@ -195,7 +195,56 @@ async function myThread(pl: Player, threadId: string) {
   if (!UUID.test(threadId)) return null;
   const { data } = await pl.db.from("dm_threads").select("*").eq("id", threadId).maybeSingle();
   if (!data || (data.a !== pl.profile.id && data.b !== pl.profile.id)) return null;
-  return data as { id: string; a: string; b: string; requested_by: string; accepted_at: string | null };
+  return data as {
+    id: string;
+    a: string;
+    b: string;
+    requested_by: string;
+    accepted_at: string | null;
+    photos_a: boolean;
+    photos_b: boolean;
+  };
+}
+
+// Each guy turns photos on for a chat. Photos unlock only when both have.
+export async function setDmPhotos(threadId: string, on: boolean): Promise<Result> {
+  const pl = await player();
+  const t = await myThread(pl, threadId);
+  if (!t) return { ok: false };
+  if (!t.accepted_at) return { ok: false, error: "Accept the chat first." };
+  const mine = t.a === pl.profile.id ? "photos_a" : "photos_b";
+  const theirs = mine === "photos_a" ? "photos_b" : "photos_a";
+  const otherId = t.a === pl.profile.id ? t.b : t.a;
+  const { data: other } = await pl.db.from("profiles").select("is_demo").eq("id", otherId).maybeSingle();
+  // Fake guys always say yes.
+  await pl.db
+    .from("dm_threads")
+    .update({ [mine]: on, ...(on && other?.is_demo ? { [theirs]: true } : {}) })
+    .eq("id", t.id);
+  revalidatePath(`/circle/dms/${t.id}`);
+  return { ok: true };
+}
+
+export async function sendDmPhoto(form: FormData): Promise<Result> {
+  const pl = await player();
+  const t = await myThread(pl, String(form.get("thread") ?? ""));
+  if (!t?.accepted_at) return { ok: false, error: "That chat is gone." };
+  if (!t.photos_a || !t.photos_b) return { ok: false, error: "You both have to turn photos on first." };
+  const file = form.get("photo");
+  if (!(file instanceof File) || file.type !== "image/jpeg" || file.size === 0 || file.size > MAX_PHOTO) {
+    return { ok: false, error: "That photo didn't work. Try a different one." };
+  }
+  const photo_path = `dms/${t.id}/${pl.profile.id}-${Date.now()}.jpg`;
+  const up = await pl.db.storage.from("photos").upload(photo_path, file, { contentType: "image/jpeg" });
+  if (up.error) return { ok: false, error: "Your photo didn't send. Try again." };
+  const caption = clean(form.get("caption"), 500);
+  await pl.db.from("dm_messages").insert({ thread_id: t.id, user_id: pl.profile.id, body: caption || null, photo_path });
+  await pl.db.from("dm_threads").update({ last_at: new Date().toISOString() }).eq("id", t.id);
+  const otherId = t.a === pl.profile.id ? t.b : t.a;
+  const { data: other } = await pl.db.from("profiles").select("is_demo, email").eq("id", otherId).maybeSingle();
+  if (other?.is_demo) await demoReplyInThread(pl.db, t.id, otherId, other.email as string | null);
+  revalidatePath(`/circle/dms/${t.id}`);
+  return { ok: true };
 }
 
 export async function acceptDm(threadId: string): Promise<Result> {

@@ -2484,3 +2484,71 @@ a.guy-name:hover {
   border: 1px solid var(--line);
   font-size: 20px;
 }
+.photo-switch {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 14px;
+  color: var(--muted);
+  padding: 10px 12px;
+  border: 1px dashed var(--line);
+}
+.photo-switch.on {
+  border-color: var(--mint);
+  color: var(--soft);
+}
+.photo-send {
+  align-self: flex-start;
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  font-weight: 700;
+  color: var(--prime);
+  background: var(--mint);
+  padding: 10px 16px;
+  cursor: pointer;
+}
+.photo-send.busy {
+  opacity: 0.6;
+}
+.dm-photo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: inherit;
+}
+.dm-photo-btn {
+  position: relative;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  border-radius: 14px;
+  overflow: hidden;
+  max-width: min(320px, 70vw);
+}
+.dm-photo-btn img {
+  display: block;
+  width: 100%;
+}
+.blurred-photo img {
+  filter: blur(28px) brightness(0.7);
+  transform: scale(1.1);
+}
+.dm-photo-tap {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  color: var(--spot);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 14px;
+}
+.dm-photo-report {
+  font-size: 13px;
+}

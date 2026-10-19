@@ -18,7 +18,14 @@ export default function Rules() {
         <ol>
           <li>You&apos;re 18 or older, and you prove it once with an ID check. No exceptions.</li>
           <li>You&apos;re you. Your face, your name, your photos.</li>
-          <li>No nudes or explicit photos. Flirting is fine. Porn is not.</li>
+          <li>
+            Anywhere the whole Circle can see (drops, the Lounge, Roses, your profile photo): underwear and thirst traps
+            are fine, explicit photos are not.
+          </li>
+          <li>
+            In DMs, explicit photos are allowed only after you both turn photos on, and only of yourself. Never send or
+            share anyone else&apos;s photos. Screenshotting and sharing someone&apos;s DM photos gets you banned.
+          </li>
           <li>No harassment, hate, or threats, toward anyone, for any reason.</li>
           <li>No selling, recruiting, scams, or spam.</li>
           <li>&ldquo;No&rdquo; and no reply are both answers. Take them.</li>

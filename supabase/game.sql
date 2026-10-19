@@ -163,3 +163,11 @@ alter table public.stay_choices enable row level security;
 
 -- Jonathan's birthdate.
 update public.profiles set birthdate = '1980-09-29' where id = 'aac09c2d-6682-4021-b242-c51f802e4401';
+
+-- DM photos: each guy turns photos on for a chat. Both on = photos unlocked.
+alter table public.dm_threads
+  add column if not exists photos_a boolean not null default false,
+  add column if not exists photos_b boolean not null default false;
+alter table public.dm_messages
+  add column if not exists photo_path text,
+  alter column body drop not null;

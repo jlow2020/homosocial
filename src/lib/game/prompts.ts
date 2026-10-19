@@ -2,7 +2,8 @@
 // same prompt twice. Add new prompts anywhere; ids must never change or be reused.
 //
 // House style: juicy, a little filthy, never explicit. Everyone here is a
-// verified adult, so we flirt like adults. Photos: thirst yes, nudity no.
+// verified adult, so we flirt like adults. Public photos: underwear yes,
+// explicit no. Explicit photos only in DMs, once both guys turn photos on.
 // anon: answers show without names or faces. Use it for the confessions
 // nobody would sign with their real face.
 
@@ -25,7 +26,7 @@ export const PROMPTS: Prompt[] = [
   { id: "w1-redflag", week: 1, kind: "text", body: "Your biggest red flag, pitched like it's a turn-on." },
   { id: "w1-exes", week: 1, kind: "text", body: "What would your exes say you're like in a relationship? What would they say you're like in bed? Answer one. We'll notice which one you dodged." },
   { id: "w1-unhinged", week: 1, kind: "photo", body: "The most unhinged message you've ever gotten on an app. Screenshot it.", hint: "Blur the name and face. We want the message, not the man." },
-  { id: "w1-secondlook", week: 1, kind: "photo", body: "Post the photo you'd use to get a second look.", hint: "Faces welcome. Nudity isn't." },
+  { id: "w1-secondlook", week: 1, kind: "photo", body: "Post the photo you'd use to get a second look.", hint: "Faces welcome. Underwear yes. Explicit no. Save that for the DMs." },
   { id: "w1-florida", week: 1, kind: "text", body: "The most Florida thing that's ever happened to you on a date." },
 
   // Week 2: Hot Takes. Pick a side and defend it.
@@ -41,7 +42,7 @@ export const PROMPTS: Prompt[] = [
 
   // Week 3: Show and Tell. Photos, and the stories behind them.
   { id: "w3-comeover", week: 3, kind: "text", body: "Your go-to \"come over\" move. Candles? A playlist? A suspiciously clean apartment? Walk us through it." },
-  { id: "w3-thirst", week: 3, kind: "photo", body: "Thirst trap time. Your best one.", hint: "Faces welcome. Nudity isn't. Make us work for it." },
+  { id: "w3-thirst", week: 3, kind: "photo", body: "Thirst trap time. Your best one.", hint: "Underwear yes. Explicit no. Make us work for it." },
   { id: "w3-nightstand", week: 3, kind: "photo", body: "Open your nightstand drawer. Photo.", hint: "Blur what you need to. We'll respect the blur. We'll also wonder about the blur." },
   { id: "w3-stayover", week: 3, kind: "photo", body: "The outfit you wear when you're hoping he stays over." },
   { id: "w3-fridge", week: 3, kind: "photo", body: "Show us your fridge. A man's fridge tells you if he'll make you breakfast." },

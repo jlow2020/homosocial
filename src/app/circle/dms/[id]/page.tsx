@@ -7,6 +7,7 @@ import { Avatar, GuyName, Shell, timeAgo } from "../../ui";
 import Composer from "../../Composer";
 import Live from "../../Live";
 import AcceptButton from "./AcceptButton";
+import { DmPhoto, PhotoSend, PhotoSwitch } from "./DmPhotos";
 
 export const dynamic = "force-dynamic";
 
@@ -19,11 +20,13 @@ export default async function Thread({ params }: { params: Promise<{ id: string 
   if (!t || (t.a !== me && t.b !== me)) notFound();
   const otherId = t.a === me ? t.b : t.a;
   const [{ data: msgs }, { data: otherRow }] = await Promise.all([
-    pl.db.from("dm_messages").select("id, user_id, body, created_at").eq("thread_id", id).order("created_at"),
+    pl.db.from("dm_messages").select("id, user_id, body, photo_path, created_at").eq("thread_id", id).order("created_at"),
     pl.db.from("profiles").select("id, first_name, birthdate, interests, hot_take, photo_path, looking_for, is_demo, email").eq("id", otherId).single(),
   ]);
   const other = pl.members.find((m) => m.id === otherId) ?? (otherRow as (typeof pl.members)[number]);
-  const urls = await photoUrls(pl.db, [other.photo_path]);
+  const urls = await photoUrls(pl.db, [other.photo_path, ...(msgs ?? []).map((m) => m.photo_path)]);
+  const mineOn = t.a === me ? t.photos_a : t.photos_b;
+  const theirsOn = t.a === me ? t.photos_b : t.photos_a;
   const incoming = !t.accepted_at && t.requested_by !== me;
   const waiting = !t.accepted_at && t.requested_by === me;
 
@@ -42,7 +45,10 @@ export default async function Thread({ params }: { params: Promise<{ id: string 
           {(msgs ?? []).map((m) => (
             <li key={m.id} className={m.user_id === me ? "msg msg-mine" : "msg"}>
               <div className="msg-body">
-                <p className="bubble">{m.body}</p>
+                {m.photo_path && urls.get(m.photo_path) && (
+                  <DmPhoto src={urls.get(m.photo_path)!} fromThem={m.user_id !== me} otherId={otherId} messageId={m.id} />
+                )}
+                {m.body && <p className="bubble">{m.body}</p>}
                 <span className="fine msg-time">{timeAgo(m.created_at)}</span>
               </div>
             </li>
@@ -63,6 +69,8 @@ export default async function Thread({ params }: { params: Promise<{ id: string 
         ) : (
           <>
             {waiting && (msgs ?? []).length > 0 && <p className="fine">Sent. You can keep talking once he says yes.</p>}
+            {t.accepted_at && <PhotoSwitch threadId={id} mine={mineOn} theirs={theirsOn} name={other.first_name} />}
+            {t.accepted_at && mineOn && theirsOn && <PhotoSend threadId={id} />}
             <Composer
               send={sendDm.bind(null, id)}
               placeholder={waiting && (msgs ?? []).length === 0 ? "Say hi. One message until he says yes." : `Message ${other.first_name}`}

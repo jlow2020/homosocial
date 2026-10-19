@@ -11,7 +11,7 @@ type Thread = {
   requested_by: string;
   accepted_at: string | null;
   last_at: string;
-  dm_messages: { body: string; user_id: string; created_at: string }[];
+  dm_messages: { body: string | null; user_id: string; created_at: string }[];
 };
 
 export default async function Dms() {
@@ -46,7 +46,7 @@ export default async function Dms() {
               {!t.accepted_at && t.requested_by === me
                 ? "Waiting for him to say yes"
                 : last
-                  ? `${last.user_id === me ? "You: " : ""}${last.body}`
+                  ? `${last.user_id === me ? "You: " : ""}${last.body ?? "📷 Photo"}`
                   : "Say hi"}
             </span>
           </span>
