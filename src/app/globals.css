@@ -675,6 +675,7 @@ img {
 }
 .submit-row {
   display: flex;
+  align-items: center;
   gap: 12px;
 }
 .or {
@@ -5344,4 +5345,9 @@ input[type="date"].input::-webkit-date-and-time-value {
 }
 .miy-card .field {
   gap: 8px;
+}
+.saved-tick {
+  color: var(--mint, #5fe3b0);
+  font-weight: 700;
+  animation: chip-pop 0.4s var(--spring);
 }

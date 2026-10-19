@@ -10,13 +10,12 @@ import { suggestDown, downLabel } from "@/lib/profile/downfor";
 import { PROMPT_BY_ID, PROFILE_PROMPTS, STARTERS, PHOTO_THEMES, PRONOUNS, ZODIAC, RELATIONSHIP, VOICE_SCRIPTS } from "@/lib/profile/prompts";
 import { suggest, search, labelOf, type Community } from "@/lib/profile/suggest";
 import type { Extras } from "@/lib/profile/data";
+import { STEP_KEYS, STEP_TITLES, type StepKey } from "@/lib/profile/steps";
 import { addPhoto, pinAnswer, removePhoto, removeVoice, saveAnswers, saveBasics, saveTags, setPhotoTheme, voiceTicket, saveVoice, promptPack, promptDrafts } from "./actions";
 
 type Line = { id: string; body: string; fires: number; week: number; season: number; prompt: string };
 
-export const STEP_KEYS = ["into", "down", "prompts", "photos", "voice", "details", "hit"] as const;
-export type StepKey = (typeof STEP_KEYS)[number];
-const TITLES: Record<StepKey, string> = { into: "Into", down: "Down for", prompts: "Prompts", photos: "Photos", voice: "Say hi", details: "Details", hit: "Greatest Hit" };
+const TITLES = STEP_TITLES;
 
 export default function MakeItYours({
   extras,
@@ -356,7 +355,9 @@ function Prompts({ initial, lines, onNext }: { initial: { prompt_id: string; bod
 
 // Say hi: a 15-second hello.
 function Voice({ url, converting, onNext }: { url: string | null; converting: boolean; onNext: () => void }) {
-  const [script] = useState(() => VOICE_SCRIPTS[Math.floor(Math.random() * VOICE_SCRIPTS.length)]);
+  const [script, setScript] = useState(VOICE_SCRIPTS[0]);
+  // Picked after load so the server and the phone agree on the first render.
+  useEffect(() => setScript(VOICE_SCRIPTS[Math.floor(Math.random() * VOICE_SCRIPTS.length)]), []);
   const [pending, start] = useTransition();
   const router = useRouter();
   return (

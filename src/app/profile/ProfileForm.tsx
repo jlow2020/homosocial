@@ -163,6 +163,11 @@ export default function ProfileForm({ initial, photoUrl }: { initial: Initial; p
         <button className="btn btn-pink" type="submit" disabled={pending || !!cropping}>
           {pending ? "Saving" : isNew ? "Save and keep going" : "Save changes"}
         </button>
+        {state.saved && !pending && (
+          <span key={state.saved} className="saved-tick" role="status">
+            ✓ Saved
+          </span>
+        )}
       </div>
     </form>
   );

@@ -6,7 +6,8 @@ import { getMe, getSupabaseAdmin } from "@/lib/supabase-server";
 import { TERMS_VERSION } from "@/lib/legal";
 import { loadExtras, loadCommunity, bestLines } from "@/lib/profile/data";
 import { photoUrls } from "@/lib/game/player";
-import MakeItYours, { STEP_KEYS, type StepKey } from "./MakeItYours";
+import MakeItYours from "./MakeItYours";
+import { STEP_KEYS, type StepKey } from "@/lib/profile/steps";
 
 export const metadata: Metadata = { title: "Your profile | Homosocial" };
 export const dynamic = "force-dynamic";

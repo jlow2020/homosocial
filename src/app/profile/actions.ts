@@ -2,12 +2,13 @@
 
 import { randomUUID } from "crypto";
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { getMe, getSupabaseAdmin } from "@/lib/supabase-server";
 import { SEASON, ageFrom, regionForZip } from "@/lib/season";
 import { purgeAllMedia } from "@/lib/retention";
 import { moderateImage, moderateText, enqueue } from "@/lib/moderation";
 
-export type ProfileState = { error?: string };
+export type ProfileState = { error?: string; saved?: number };
 
 const MAX_PHOTO_BYTES = 3 * 1024 * 1024;
 
@@ -106,7 +107,13 @@ export async function saveProfile(_prev: ProfileState, form: FormData): Promise<
 
   // New guys go straight into the rest of the profile; it all can be skipped.
   if (!existing) redirect("/profile/more");
-  redirect(hasPhoto || !existing.verified_at ? "/verify" : "/circle");
+  // A new face photo means a new Realness Check.
+  if (hasPhoto) redirect("/verify");
+  // Still signing up: carry on with the rest of the profile.
+  if (!existing.verified_at) redirect("/profile/more");
+  revalidatePath("/profile");
+  revalidatePath("/circle", "layout");
+  return { saved: Date.now() };
 }
 
 export async function deleteAccount() {
