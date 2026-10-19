@@ -4,6 +4,7 @@ import { requireAdmin, UUID } from "@/lib/admin";
 import { ageFrom, SEASON } from "@/lib/season";
 import { circleLabel, loadCircles, loadPeople } from "../../data";
 import { stageTone } from "../../util";
+import { PlayHere } from "../TestButtons";
 
 // God view: everyone in the Circle, faces and all, whatever stage he's at.
 export default async function CircleInside({ params }: { params: Promise<{ id: string }> }) {
@@ -35,6 +36,7 @@ export default async function CircleInside({ params }: { params: Promise<{ id: s
         {seated} of {circle.capacity} seats taken ·{" "}
         {seated >= SEASON.minToOpen ? "kicked off" : `${SEASON.minToOpen - seated} more to kick off`}
       </p>
+      {circle.region === "test" && <PlayHere circleId={circle.id} />}
       <ul className="member-list">
         {inside.map((p) => (
           <li key={p.id} className="member">

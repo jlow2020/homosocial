@@ -3,6 +3,7 @@ import { requireAdmin } from "@/lib/admin";
 import { SEASON } from "@/lib/season";
 import { loadCircles, loadPeople } from "../data";
 import { when } from "../util";
+import { CreateTestCircle } from "./TestButtons";
 
 export default async function Circles() {
   const { db } = await requireAdmin();
@@ -26,6 +27,7 @@ export default async function Circles() {
       <p className="admin-sub">
         A Circle kicks off at {SEASON.minToOpen} seated guys. {waitlist} on the out-of-state waitlist.
       </p>
+      <CreateTestCircle />
       <div className="circle-cards">
         {circles.map((c) => {
           const t = tally.get(c.id) ?? { seated: 0, lobby: 0, paused: 0 };
@@ -33,7 +35,10 @@ export default async function Circles() {
           return (
             <Link key={c.id} href={`/admin/circles/${c.id}`} className="circle-card">
               <span className="circle-card-top">
-                <b>Circle {c.number}</b>
+                <b>
+                  Circle {c.number}
+                  {c.region === "test" ? " · Test" : ""}
+                </b>
                 <span className={live ? "pill pill-mint" : "pill pill-gold"}>{live ? "Kicked off" : "Filling"}</span>
               </span>
               <span className="admin-sub">
