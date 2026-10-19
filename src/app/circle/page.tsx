@@ -3,7 +3,9 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import PageHead from "@/components/PageHead";
 import MemberActions from "./MemberActions";
+import StaffBadge from "@/components/StaffBadge";
 import { getMe, getSupabaseAdmin, nextPath } from "@/lib/supabase-server";
+import { isAdmin, ROLE_TITLE, type AdminRole } from "@/lib/admin";
 import { SEASON, ageFrom } from "@/lib/season";
 
 export const metadata: Metadata = { title: "Your Circle | Homosocial" };
@@ -24,7 +26,19 @@ export default async function CirclePage() {
   const p = me.profile;
   if (!p) redirect("/profile");
 
-  const nav = <Link href="/profile" className="topbar-link">Profile</Link>;
+  const admin = await isAdmin(me.userId);
+  const nav = (
+    <div className="row" style={{ gap: 20 }}>
+      {admin && (
+        <Link href="/admin" className="topbar-link">
+          Admin
+        </Link>
+      )}
+      <Link href="/profile" className="topbar-link">
+        Profile
+      </Link>
+    </div>
+  );
 
   if (p.status === "paused" || p.status === "banned") {
     return (
@@ -71,6 +85,12 @@ export default async function CirclePage() {
   const others = visible.filter((m) => m.id !== p.id);
   const self = visible.find((m) => m.id === p.id);
   const ordered = self ? [self, ...others] : others;
+
+  // Admins wear their title where everyone can see it.
+  const { data: staff } = ordered.length
+    ? await db.from("admins").select("user_id, role").in("user_id", ordered.map((m) => m.id))
+    : { data: [] };
+  const titleOf = new Map((staff ?? []).map((s) => [s.user_id as string, ROLE_TITLE[s.role as AdminRole]]));
 
   // Lobby: before his ID check he sees who has a seat, not their faces.
   const greenRoom = !p.id_verified_at;
@@ -160,6 +180,7 @@ export default async function CirclePage() {
                   {m.first_name}, {ageFrom(m.birthdate)}
                   {m.id === p.id && <span className="member-you"> (you)</span>}
                 </p>
+                {titleOf.get(m.id) && <StaffBadge title={titleOf.get(m.id)!} />}
                 <p className="member-into">Into {m.interests}</p>
                 {greenRoom && m.id !== p.id ? (
                   <p className="member-take">Grab your seat to see his face and his hot take.</p>
