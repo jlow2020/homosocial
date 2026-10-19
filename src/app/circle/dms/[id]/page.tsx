@@ -21,7 +21,7 @@ export default async function Thread({ params }: { params: Promise<{ id: string 
   const otherId = t.a === me ? t.b : t.a;
   const [{ data: msgs }, { data: otherRow }] = await Promise.all([
     pl.db.from("dm_messages").select("id, user_id, body, photo_path, created_at").eq("thread_id", id).order("created_at"),
-    pl.db.from("profiles").select("id, first_name, birthdate, interests, hot_take, photo_path, looking_for, is_demo, email").eq("id", otherId).single(),
+    pl.db.from("profiles").select("id, first_name, birthdate, interests, hot_take, photo_path, looking_for, is_demo, email, founder_no").eq("id", otherId).single(),
   ]);
   const other = pl.members.find((m) => m.id === otherId) ?? (otherRow as (typeof pl.members)[number]);
   const urls = await photoUrls(pl.db, [other.photo_path, ...(msgs ?? []).map((m) => m.photo_path)]);

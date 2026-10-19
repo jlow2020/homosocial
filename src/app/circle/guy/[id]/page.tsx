@@ -5,6 +5,7 @@ import { UUID } from "@/lib/admin";
 import { ageFrom } from "@/lib/season";
 import { promptOf, type Drop } from "@/lib/game/drops";
 import StaffBadge from "@/components/StaffBadge";
+import FounderBadge from "@/components/FounderBadge";
 import MemberActions from "../../MemberActions";
 import { startDm } from "../../game-actions";
 import { Shell, weekTitle } from "../../ui";
@@ -53,7 +54,10 @@ export default async function Guy({ params }: { params: Promise<{ id: string }> 
           <h1 className="game-h1">
             {m.first_name}, {ageFrom(m.birthdate)}
           </h1>
-          {pl.titles.get(m.id) && <StaffBadge title={pl.titles.get(m.id)!} />}
+          <span className="badges">
+                  {pl.titles.get(m.id) && <StaffBadge title={pl.titles.get(m.id)!} />}
+                  {m.founder_no && <FounderBadge no={m.founder_no} />}
+                </span>
           <p className="member-into">Into {m.interests}</p>
           <p className="member-take">&ldquo;{m.hot_take}&rdquo;</p>
           <div className="row">

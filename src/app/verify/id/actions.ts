@@ -4,7 +4,7 @@ import { createHmac } from "node:crypto";
 import { getMe, getSupabaseAdmin } from "@/lib/supabase-server";
 import { readDocument } from "@/lib/server/idread";
 import { closestIdentity, identitiesIn, type Identity } from "@/lib/server/vision";
-import { ageFrom, SEASON } from "@/lib/season";
+import { ageFrom, SEASON, FOUNDER_CAP } from "@/lib/season";
 
 export type IdOutcome = { passed: boolean; message: string; retry: boolean };
 
@@ -153,5 +153,7 @@ export async function checkId(form: FormData): Promise<IdOutcome> {
     .update({ id_verified_at: stamp, id_attempts: attempt, birthdate: birth, updated_at: stamp })
     .eq("id", p.id);
   if (error) return { passed: false, message: "Your result didn't save. Try again.", retry: true };
+  // One of the first in? He's a Founder now.
+  await db.rpc("claim_founder", { p_user: p.id, p_cap: FOUNDER_CAP });
   return { passed: true, message: "", retry: false };
 }

@@ -30,12 +30,13 @@ export type Member = {
   looking_for: "friends" | "friends_dating";
   is_demo: boolean;
   email: string | null;
+  founder_no: number | null;
 };
 
 export type Player = {
   db: SupabaseClient;
   me: NonNullable<Awaited<ReturnType<typeof getMe>>>;
-  profile: Profile & { is_demo?: boolean; home_circle_id?: string | null };
+  profile: Profile & { is_demo?: boolean; home_circle_id?: string | null; founder_no?: number | null };
   role: AdminRole | null;
   circle: Circle;
   clock: Clock;
@@ -44,7 +45,7 @@ export type Player = {
   titles: Map<string, string>; // admin titles by member id
 };
 
-const MEMBER_COLS = "id, first_name, birthdate, interests, hot_take, photo_path, looking_for, is_demo, email";
+const MEMBER_COLS = "id, first_name, birthdate, interests, hot_take, photo_path, looking_for, is_demo, email, founder_no";
 
 // Everything a Circle page needs. Sends him wherever he belongs if it's not here.
 export async function loadPlayer(opts: { needSeat?: boolean } = {}): Promise<Player> {

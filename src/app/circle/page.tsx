@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import PageHead from "@/components/PageHead";
 import MemberActions from "./MemberActions";
 import StaffBadge from "@/components/StaffBadge";
+import FounderBadge from "@/components/FounderBadge";
 import { getMe, getSupabaseAdmin, nextPath } from "@/lib/supabase-server";
 import { SEASON, WEEKS, ageFrom } from "@/lib/season";
 import { loadPlayer, photoUrls, type Player } from "@/lib/game/player";
@@ -61,7 +62,7 @@ async function Lobby({ pl }: { pl: Player }) {
   // Guys in the lobby only see themselves.
   const ordered = greenRoom
     ? [
-        ...(await db.from("profiles").select("id, first_name, birthdate, interests, hot_take, photo_path, looking_for, is_demo, email").eq("id", p.id)).data!,
+        ...(await db.from("profiles").select("id, first_name, birthdate, interests, hot_take, photo_path, looking_for, is_demo, email, founder_no").eq("id", p.id)).data!,
         ...pl.members,
       ]
     : [...pl.members.filter((m) => m.id === p.id), ...pl.members.filter((m) => m.id !== p.id)];
@@ -126,7 +127,10 @@ async function Lobby({ pl }: { pl: Player }) {
                   {m.first_name}, {ageFrom(m.birthdate)}
                   {m.id === p.id && <span className="member-you"> (you)</span>}
                 </p>
-                {pl.titles.get(m.id) && <StaffBadge title={pl.titles.get(m.id)!} />}
+                <span className="badges">
+                  {pl.titles.get(m.id) && <StaffBadge title={pl.titles.get(m.id)!} />}
+                  {m.founder_no && <FounderBadge no={m.founder_no} />}
+                </span>
                 <p className="member-into">Into {m.interests}</p>
                 {greenRoom && m.id !== p.id ? (
                   <p className="member-take">Grab your seat to see his face and his hot take.</p>

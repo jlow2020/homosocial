@@ -1,7 +1,11 @@
 import Link from "next/link";
 import TopBar from "@/components/TopBar";
 import Countdown from "@/components/Countdown";
-import { WEEKS, SEASON } from "@/lib/season";
+import { WEEKS, SEASON, FOUNDER_CAP } from "@/lib/season";
+import { getSupabaseAdmin } from "@/lib/supabase-server";
+
+// Founder spots left refreshes every minute.
+export const revalidate = 60;
 
 const plays = [
   { title: "Monday drops", tone: "hot", body: "A new prompt every week. Hot takes, thirst traps, anonymous confessions. Answer to see everyone else's." },
@@ -26,6 +30,10 @@ const faq = [
     a: "Nothing.",
   },
   {
+    q: "What's a Founder?",
+    a: `The first ${FOUNDER_CAP} guys in Florida to grab a seat are Founders, for good. You get a numbered Founder badge on your card, a free Season Pass for as long as Homosocial runs once it launches (two Circles at once), and first dibs on new cities and features. When the spots are gone, they're gone.`,
+  },
+  {
     q: "Who's in my Circle?",
     a: `Up to ${SEASON.spots} guys who live near you. Your Circle kicks off once ${SEASON.minToOpen} are in, and guys can still join late.`,
   },
@@ -43,7 +51,16 @@ const faq = [
   },
 ];
 
-export default function Home() {
+async function foundersLeft(): Promise<number | null> {
+  const db = getSupabaseAdmin();
+  if (!db) return null;
+  const { count, error } = await db.from("profiles").select("id", { count: "exact", head: true }).not("founder_no", "is", null);
+  if (error) return null;
+  return Math.max(FOUNDER_CAP - (count ?? 0), 0);
+}
+
+export default async function Home() {
+  const left = await foundersLeft();
   return (
     <main>
       <TopBar
@@ -74,6 +91,11 @@ export default function Home() {
             <span className="cta-meta">
               Free. {SEASON.minAge} and up. Gay, bi, trans and queer men.
             </span>
+            {left !== null && left > 0 && (
+              <span className="founder-count">
+                ★ {left} of {FOUNDER_CAP} Founder spots left
+              </span>
+            )}
           </div>
         </div>
       </section>

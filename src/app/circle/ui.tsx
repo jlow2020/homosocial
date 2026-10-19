@@ -1,6 +1,7 @@
 import Link from "next/link";
 import TopBar from "@/components/TopBar";
 import StaffBadge from "@/components/StaffBadge";
+import FounderBadge from "@/components/FounderBadge";
 import { WEEKS, ageFrom } from "@/lib/season";
 import type { Player, Member } from "@/lib/game/player";
 import NavTabs from "./NavTabs";
@@ -50,6 +51,7 @@ export async function Shell({ pl, children }: { pl: Player; children: React.Reac
             Circle {pl.circle.number}
             {pl.circle.is_test ? " · Test" : ""} · Season {pl.circle.season_no}
           </span>
+          {pl.profile.founder_no && <span className="chy-hot">Founder #{pl.profile.founder_no}</span>}
         </div>
       </div>
       {pl.seated && c.phase !== "filling" && <NavTabs dropWeek={dropWeek} unread={unread ?? 0} />}
@@ -87,6 +89,7 @@ export function GuyName({ pl, m, link = true, age = false }: { pl: Player; m: Me
         <span className="guy-name">{label}</span>
       )}
       {title && <StaffBadge title={title} />}
+      {m.founder_no && <FounderBadge no={m.founder_no} />}
     </span>
   );
 }

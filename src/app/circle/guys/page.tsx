@@ -2,6 +2,7 @@ import Link from "next/link";
 import { loadPlayer, photoUrls } from "@/lib/game/player";
 import { ageFrom } from "@/lib/season";
 import StaffBadge from "@/components/StaffBadge";
+import FounderBadge from "@/components/FounderBadge";
 import { Shell } from "../ui";
 
 export const dynamic = "force-dynamic";
@@ -31,7 +32,10 @@ export default async function Guys() {
                   {m.first_name}, {ageFrom(m.birthdate)}
                   {m.id === pl.profile.id && <span className="member-you"> (you)</span>}
                 </span>
-                {pl.titles.get(m.id) && <StaffBadge title={pl.titles.get(m.id)!} />}
+                <span className="badges">
+                  {pl.titles.get(m.id) && <StaffBadge title={pl.titles.get(m.id)!} />}
+                  {m.founder_no && <FounderBadge no={m.founder_no} />}
+                </span>
                 <span className="member-into">Into {m.interests}</span>
               </span>
             </Link>

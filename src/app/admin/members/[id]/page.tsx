@@ -40,7 +40,7 @@ export default async function Member({ params }: { params: Promise<{ id: string 
 
   const user = authUser?.user;
   if (!user && !profileRow) notFound();
-  const p = profileRow as (Profile & { notes: string | null; verification: Verification | null; created_at: string }) | null;
+  const p = profileRow as (Profile & { notes: string | null; verification: Verification | null; created_at: string; founder_no: number | null }) | null;
   const username = (login?.username as string | undefined) ?? null;
   const stage = stageOf(p, !!username);
   const circle = p?.circle_id ? circles.find((c) => c.id === p.circle_id) : undefined;
@@ -114,6 +114,8 @@ export default async function Member({ params }: { params: Promise<{ id: string 
             <dd>{p?.interests ?? "n/a"}</dd>
             <dt>Hot take</dt>
             <dd>{p?.hot_take ?? "n/a"}</dd>
+            <dt>Founder</dt>
+            <dd>{p?.founder_no ? `#${p.founder_no}` : "no"}</dd>
             <dt>User id</dt>
             <dd className="mono">{id}</dd>
           </dl>

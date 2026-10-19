@@ -8,6 +8,9 @@ export const SEASON = {
   minAge: 18,
 };
 
+// The first guys in Florida to grab a seat are Founders, for good.
+export const FOUNDER_CAP = 300;
+
 export const WEEKS = [
   { n: 1, title: "Arrivals", blurb: "Who walked in, and what did they bring." },
   { n: 2, title: "Hot Takes", blurb: "Food, music, movies. Pick a side." },
