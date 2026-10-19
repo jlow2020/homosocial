@@ -4357,3 +4357,776 @@ audio {
   line-height: 1.4;
   color: var(--soft);
 }
+
+
+/* ============================================================================
+   Motion. Everything eases in; nothing bounces for more than a beat.
+   Turned off for anyone with "reduce motion" set (see the rule near the top).
+   ========================================================================== */
+:root {
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes page-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes rise {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes chip-pop {
+  0% { opacity: 0; transform: scale(0.85); }
+  60% { opacity: 1; transform: scale(1.04); }
+  100% { transform: none; }
+}
+@keyframes slide-fwd {
+  from { opacity: 0; transform: translateX(48px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes slide-back {
+  from { opacity: 0; transform: translateX(-48px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes grow-x {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+@keyframes drop-down {
+  from { opacity: 0; transform: translateY(-12px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 61, 139, 0); }
+  50% { box-shadow: 0 0 0 6px rgba(255, 61, 139, 0.18); }
+}
+@keyframes shimmer {
+  from { background-position: -150% 0; }
+  to { background-position: 250% 0; }
+}
+
+/* Pages ease in on every navigation. No fill mode, so nothing keeps a transform afterward. */
+.page-enter {
+  animation: page-in 0.42s var(--ease-out);
+}
+
+/* Lists cascade in, a beat apart. */
+.answer-list > li, .thread-list > li, .member-list > li, .mini-list > li, .standings > li, .recap-reel > li, .read > *, .home-grid > *, .plan-list > li, .rose-list > li, .chat-list > li, .badge-list > li, .rn-board > li, .readings > li, .mod-list > li, .legal-section, .guy-sections > *, .hits > li, .miy-photos > *, .faces > li {
+  animation: rise 0.5s var(--ease-out) backwards;
+  animation-delay: calc(var(--n, 0) * 45ms);
+}
+.answer-list > li:nth-child(1), .thread-list > li:nth-child(1), .member-list > li:nth-child(1), .mini-list > li:nth-child(1), .standings > li:nth-child(1), .recap-reel > li:nth-child(1), .read > *:nth-child(1), .home-grid > *:nth-child(1), .plan-list > li:nth-child(1), .rose-list > li:nth-child(1), .badge-list > li:nth-child(1), .rn-board > li:nth-child(1), .readings > li:nth-child(1), .mod-list > li:nth-child(1), .legal-section:nth-child(1), .guy-sections > *:nth-child(1), .hits > li:nth-child(1), .miy-photos > *:nth-child(1), .faces > li:nth-child(1) {
+  --n: 1;
+}
+.answer-list > li:nth-child(2), .thread-list > li:nth-child(2), .member-list > li:nth-child(2), .mini-list > li:nth-child(2), .standings > li:nth-child(2), .recap-reel > li:nth-child(2), .read > *:nth-child(2), .home-grid > *:nth-child(2), .plan-list > li:nth-child(2), .rose-list > li:nth-child(2), .badge-list > li:nth-child(2), .rn-board > li:nth-child(2), .readings > li:nth-child(2), .mod-list > li:nth-child(2), .legal-section:nth-child(2), .guy-sections > *:nth-child(2), .hits > li:nth-child(2), .miy-photos > *:nth-child(2), .faces > li:nth-child(2) {
+  --n: 2;
+}
+.answer-list > li:nth-child(3), .thread-list > li:nth-child(3), .member-list > li:nth-child(3), .mini-list > li:nth-child(3), .standings > li:nth-child(3), .recap-reel > li:nth-child(3), .read > *:nth-child(3), .home-grid > *:nth-child(3), .plan-list > li:nth-child(3), .rose-list > li:nth-child(3), .badge-list > li:nth-child(3), .rn-board > li:nth-child(3), .readings > li:nth-child(3), .mod-list > li:nth-child(3), .legal-section:nth-child(3), .guy-sections > *:nth-child(3), .hits > li:nth-child(3), .miy-photos > *:nth-child(3), .faces > li:nth-child(3) {
+  --n: 3;
+}
+.answer-list > li:nth-child(4), .thread-list > li:nth-child(4), .member-list > li:nth-child(4), .mini-list > li:nth-child(4), .standings > li:nth-child(4), .recap-reel > li:nth-child(4), .read > *:nth-child(4), .home-grid > *:nth-child(4), .plan-list > li:nth-child(4), .rose-list > li:nth-child(4), .badge-list > li:nth-child(4), .rn-board > li:nth-child(4), .readings > li:nth-child(4), .mod-list > li:nth-child(4), .legal-section:nth-child(4), .guy-sections > *:nth-child(4), .hits > li:nth-child(4), .miy-photos > *:nth-child(4), .faces > li:nth-child(4) {
+  --n: 4;
+}
+.answer-list > li:nth-child(5), .thread-list > li:nth-child(5), .member-list > li:nth-child(5), .mini-list > li:nth-child(5), .standings > li:nth-child(5), .recap-reel > li:nth-child(5), .read > *:nth-child(5), .home-grid > *:nth-child(5), .plan-list > li:nth-child(5), .rose-list > li:nth-child(5), .badge-list > li:nth-child(5), .rn-board > li:nth-child(5), .readings > li:nth-child(5), .mod-list > li:nth-child(5), .legal-section:nth-child(5), .guy-sections > *:nth-child(5), .hits > li:nth-child(5), .miy-photos > *:nth-child(5), .faces > li:nth-child(5) {
+  --n: 5;
+}
+.answer-list > li:nth-child(6), .thread-list > li:nth-child(6), .member-list > li:nth-child(6), .mini-list > li:nth-child(6), .standings > li:nth-child(6), .recap-reel > li:nth-child(6), .read > *:nth-child(6), .home-grid > *:nth-child(6), .plan-list > li:nth-child(6), .rose-list > li:nth-child(6), .badge-list > li:nth-child(6), .rn-board > li:nth-child(6), .readings > li:nth-child(6), .mod-list > li:nth-child(6), .legal-section:nth-child(6), .guy-sections > *:nth-child(6), .hits > li:nth-child(6), .miy-photos > *:nth-child(6), .faces > li:nth-child(6) {
+  --n: 6;
+}
+.answer-list > li:nth-child(7), .thread-list > li:nth-child(7), .member-list > li:nth-child(7), .mini-list > li:nth-child(7), .standings > li:nth-child(7), .recap-reel > li:nth-child(7), .read > *:nth-child(7), .home-grid > *:nth-child(7), .plan-list > li:nth-child(7), .rose-list > li:nth-child(7), .badge-list > li:nth-child(7), .rn-board > li:nth-child(7), .readings > li:nth-child(7), .mod-list > li:nth-child(7), .legal-section:nth-child(7), .guy-sections > *:nth-child(7), .hits > li:nth-child(7), .miy-photos > *:nth-child(7), .faces > li:nth-child(7) {
+  --n: 7;
+}
+.answer-list > li:nth-child(8), .thread-list > li:nth-child(8), .member-list > li:nth-child(8), .mini-list > li:nth-child(8), .standings > li:nth-child(8), .recap-reel > li:nth-child(8), .read > *:nth-child(8), .home-grid > *:nth-child(8), .plan-list > li:nth-child(8), .rose-list > li:nth-child(8), .badge-list > li:nth-child(8), .rn-board > li:nth-child(8), .readings > li:nth-child(8), .mod-list > li:nth-child(8), .legal-section:nth-child(8), .guy-sections > *:nth-child(8), .hits > li:nth-child(8), .miy-photos > *:nth-child(8), .faces > li:nth-child(8) {
+  --n: 8;
+}
+.answer-list > li:nth-child(9), .thread-list > li:nth-child(9), .member-list > li:nth-child(9), .mini-list > li:nth-child(9), .standings > li:nth-child(9), .recap-reel > li:nth-child(9), .read > *:nth-child(9), .home-grid > *:nth-child(9), .plan-list > li:nth-child(9), .rose-list > li:nth-child(9), .badge-list > li:nth-child(9), .rn-board > li:nth-child(9), .readings > li:nth-child(9), .mod-list > li:nth-child(9), .legal-section:nth-child(9), .guy-sections > *:nth-child(9), .hits > li:nth-child(9), .miy-photos > *:nth-child(9), .faces > li:nth-child(9) {
+  --n: 9;
+}
+.answer-list > li:nth-child(10), .thread-list > li:nth-child(10), .member-list > li:nth-child(10), .mini-list > li:nth-child(10), .standings > li:nth-child(10), .recap-reel > li:nth-child(10), .read > *:nth-child(10), .home-grid > *:nth-child(10), .plan-list > li:nth-child(10), .rose-list > li:nth-child(10), .badge-list > li:nth-child(10), .rn-board > li:nth-child(10), .readings > li:nth-child(10), .mod-list > li:nth-child(10), .legal-section:nth-child(10), .guy-sections > *:nth-child(10), .hits > li:nth-child(10), .miy-photos > *:nth-child(10), .faces > li:nth-child(10) {
+  --n: 10;
+}
+.answer-list > li:nth-child(11), .thread-list > li:nth-child(11), .member-list > li:nth-child(11), .mini-list > li:nth-child(11), .standings > li:nth-child(11), .recap-reel > li:nth-child(11), .read > *:nth-child(11), .home-grid > *:nth-child(11), .plan-list > li:nth-child(11), .rose-list > li:nth-child(11), .badge-list > li:nth-child(11), .rn-board > li:nth-child(11), .readings > li:nth-child(11), .mod-list > li:nth-child(11), .legal-section:nth-child(11), .guy-sections > *:nth-child(11), .hits > li:nth-child(11), .miy-photos > *:nth-child(11), .faces > li:nth-child(11) {
+  --n: 11;
+}
+.answer-list > li:nth-child(12), .thread-list > li:nth-child(12), .member-list > li:nth-child(12), .mini-list > li:nth-child(12), .standings > li:nth-child(12), .recap-reel > li:nth-child(12), .read > *:nth-child(12), .home-grid > *:nth-child(12), .plan-list > li:nth-child(12), .rose-list > li:nth-child(12), .badge-list > li:nth-child(12), .rn-board > li:nth-child(12), .readings > li:nth-child(12), .mod-list > li:nth-child(12), .legal-section:nth-child(12), .guy-sections > *:nth-child(12), .hits > li:nth-child(12), .miy-photos > *:nth-child(12), .faces > li:nth-child(12) {
+  --n: 12;
+}
+
+/* Buttons: lift on hover, press on tap. */
+.btn,
+.chip,
+.starter,
+.hit,
+.face,
+.story-vote,
+.dm-challenge,
+.miy-step {
+  transition: transform 0.18s var(--ease-out), box-shadow 0.18s var(--ease-out), background-color 0.18s, border-color 0.18s, color 0.18s;
+}
+.btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px -8px rgba(255, 61, 139, 0.6);
+}
+.btn:active:not(:disabled),
+.chip:active,
+.starter:active,
+.face:active,
+.hit:active {
+  transform: scale(0.96);
+}
+
+/* Cards lift a hair when you point at them. */
+.drop-card,
+.mini-card,
+.event-card,
+.read-card,
+.recap-card,
+.game-card,
+.answer,
+.plan,
+.rose {
+  transition: transform 0.25s var(--ease-out), box-shadow 0.25s var(--ease-out), border-color 0.25s;
+}
+@media (hover: hover) {
+  .mini-card:hover,
+  .event-card:hover,
+  .recap-card:hover,
+  .read-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 14px 30px -18px rgba(0, 0, 0, 0.8);
+  }
+}
+
+/* Bars grow into place. */
+.census-bar,
+.split-bar > span,
+.meter > span {
+  transform-origin: left center;
+  animation: grow-x 0.9s var(--ease-out) backwards;
+  animation-delay: 0.15s;
+}
+
+/* Notices drop in from above. */
+.flash,
+.push-ask,
+.held-tag {
+  animation: drop-down 0.4s var(--ease-out) backwards;
+}
+
+/* The drop's call to action breathes until you answer. */
+.drop-card > .row > a.btn-pink {
+  animation: glow 2.6s ease-in-out infinite;
+}
+
+/* Reveals. */
+.reveal-face {
+  animation: chip-pop 0.6s var(--spring) backwards;
+}
+.reveal-face:nth-child(3) {
+  animation-delay: 0.18s;
+}
+.rn-mine,
+.winner-note,
+.recap-stat {
+  animation: chip-pop 0.6s var(--spring) backwards;
+  animation-delay: 0.2s;
+}
+.badge-pill {
+  background-image: linear-gradient(110deg, transparent 35%, rgba(245, 196, 81, 0.25) 50%, transparent 65%);
+  background-size: 200% 100%;
+  background-repeat: no-repeat;
+}
+.badge-pill:hover {
+  animation: shimmer 1.1s ease;
+}
+
+/* Profile builder: steps slide the way you're going. */
+.miy-pane.fwd {
+  animation: slide-fwd 0.42s var(--ease-out);
+}
+.miy-pane.back {
+  animation: slide-back 0.42s var(--ease-out);
+}
+.chips-pick.ideas > li {
+  animation: chip-pop 0.42s var(--spring) backwards;
+  animation-delay: calc(var(--i, 0) * 28ms);
+}
+.chip-in {
+  animation: chip-pop 0.35s var(--spring);
+}
+.chip.on {
+  animation: chip-pop 0.3s var(--spring);
+}
+
+/* Profile builder ------------------------------------------------------------ */
+.meter {
+  height: 10px;
+  background: var(--studio);
+  border-radius: 999px;
+  overflow: hidden;
+  margin-top: 8px;
+}
+.meter > span {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--hot), var(--gold));
+  border-radius: 999px;
+}
+.miy {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  margin: 16px 0 96px;
+}
+.miy-steps {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  scrollbar-width: none;
+}
+.miy-step {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+  background: var(--studio);
+  border: 1px solid var(--line);
+  color: var(--soft);
+  border-radius: 999px;
+  padding: 8px 14px;
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+.miy-step.on {
+  background: var(--hot);
+  border-color: var(--hot);
+  color: var(--prime);
+  font-weight: 700;
+}
+.miy-num {
+  font-family: var(--display);
+  font-weight: 900;
+}
+.miy-card {
+  background: var(--studio);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  padding: 22px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.miy-card h2 {
+  margin: 0;
+  font-size: 40px;
+}
+.miy-foot {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.chips-pick {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.chip {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  background: var(--prime);
+  border: 1px solid var(--line);
+  color: var(--spot);
+  border-radius: 14px;
+  padding: 8px 13px;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+}
+.chip small {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--muted);
+}
+.chip:hover {
+  border-color: var(--hot);
+}
+.chip.on {
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  background: var(--hot);
+  border-color: var(--hot);
+  color: var(--prime);
+}
+.chip-add {
+  border-style: dashed;
+  color: var(--gold);
+}
+.chips-pick.picked {
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--line);
+}
+.miy-prompt {
+  background: var(--prime);
+  border-radius: 16px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.miy-prompt-q {
+  font-family: var(--display);
+  font-weight: 900;
+  font-size: 24px;
+  text-transform: uppercase;
+  line-height: 1;
+}
+.starters {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.starter {
+  background: var(--studio);
+  border: 1px solid var(--line);
+  color: var(--soft);
+  border-radius: 12px;
+  padding: 6px 10px;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  text-align: left;
+}
+.starter small {
+  color: var(--muted);
+  margin-left: 4px;
+}
+.starter:hover {
+  border-color: var(--gold);
+  color: var(--spot);
+}
+.your-lines summary {
+  cursor: pointer;
+  color: var(--gold);
+  font-size: 14px;
+}
+.your-lines ul {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.miy-script {
+  margin: 0;
+  padding: 10px 14px;
+  border-left: 3px solid var(--gold);
+  background: var(--prime);
+  color: var(--soft);
+}
+.miy-photos {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 12px;
+}
+.miy-photo {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.miy-photo img,
+.miy-photo > span {
+  width: 100%;
+  aspect-ratio: 4 / 5;
+  object-fit: cover;
+  border-radius: 14px;
+  background: var(--prime);
+  display: block;
+}
+.miy-photo.main img {
+  outline: 3px solid var(--gold);
+}
+.miy-photo figcaption {
+  font-size: 13px;
+  color: var(--muted);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.miy-add {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-end;
+}
+.hits {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.hit {
+  width: 100%;
+  text-align: left;
+  background: var(--prime);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 12px 14px;
+  color: var(--spot);
+  font: inherit;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.hit small {
+  color: var(--muted);
+  font-size: 12px;
+}
+.hit.on {
+  border-color: var(--gold);
+  box-shadow: inset 0 0 0 1px var(--gold);
+}
+
+/* Profile view --------------------------------------------------------------- */
+.self-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  background: var(--studio);
+  border: 1px solid var(--gold);
+  border-radius: 14px;
+  padding: 10px 14px;
+  margin-bottom: 16px;
+  animation: drop-down 0.4s var(--ease-out) backwards;
+}
+.guy-top {
+  display: grid;
+  grid-template-columns: minmax(0, 420px) minmax(0, 1fr);
+  gap: 28px;
+  align-items: start;
+}
+@media (max-width: 760px) {
+  .guy-top {
+    grid-template-columns: 1fr;
+  }
+}
+.gallery {
+  position: relative;
+}
+.gallery-strip {
+  display: flex;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  border-radius: 22px;
+  scrollbar-width: none;
+}
+.gallery-strip::-webkit-scrollbar {
+  display: none;
+}
+.gallery-shot {
+  position: relative;
+  flex: 0 0 100%;
+  margin: 0;
+  scroll-snap-align: start;
+  aspect-ratio: 4 / 5;
+  background: var(--studio);
+}
+.gallery-shot > img,
+.gallery-shot .veil,
+.gallery-shot .veil img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  max-height: none;
+  border-radius: 0;
+}
+.gallery-shot figcaption {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  background: rgba(22, 12, 36, 0.82);
+  color: var(--spot);
+  font-family: var(--display);
+  font-weight: 900;
+  text-transform: uppercase;
+  font-size: 18px;
+  padding: 4px 10px;
+  border-radius: 8px;
+}
+.gallery-dots {
+  position: absolute;
+  top: 10px;
+  left: 12px;
+  right: 12px;
+  display: flex;
+  gap: 4px;
+}
+.gallery-dots button {
+  flex: 1;
+  height: 4px;
+  border: 0;
+  padding: 0;
+  border-radius: 4px;
+  background: rgba(251, 244, 255, 0.35);
+  cursor: pointer;
+  transition: background-color 0.25s;
+}
+.gallery-dots button.on {
+  background: var(--spot);
+}
+.guy-id {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.guy-id .game-h1 {
+  margin: 0;
+}
+.guy-sub {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.pron {
+  font-size: 14px;
+  color: var(--muted);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 2px 10px;
+}
+.guy-facts {
+  margin: 0;
+  color: var(--soft);
+  font-size: 17px;
+}
+.guy-voice {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.guy-sections {
+  margin-top: 28px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr));
+  gap: 14px;
+  align-items: start;
+}
+.g-card {
+  background: var(--studio);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.g-card .eyebrow {
+  margin: 0;
+}
+.g-two {
+  border: 2px solid var(--mint);
+  background: linear-gradient(160deg, var(--studio), #1d2a3a);
+}
+.g-two ul {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: var(--soft);
+}
+.g-hit {
+  border: 2px solid var(--hot);
+}
+.g-hit-prompt,
+.g-prompt-q {
+  margin: 0;
+  font-family: var(--display);
+  font-weight: 900;
+  text-transform: uppercase;
+  font-size: 20px;
+  line-height: 1.05;
+  color: var(--muted);
+}
+.g-prompt-q {
+  color: var(--gold);
+}
+.g-quote {
+  margin: 0;
+  font-size: 22px;
+  line-height: 1.3;
+  color: var(--spot);
+}
+.g-quote.small {
+  font-size: 16px;
+}
+.g-big {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+}
+.g-pair {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 14px;
+}
+.g-tags {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.g-tags li {
+  background: var(--prime);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 4px 11px;
+  font-size: 14px;
+  color: var(--soft);
+}
+.g-tags li.shared {
+  border-color: var(--gold);
+  color: var(--gold);
+  font-weight: 700;
+}
+.g-tags.picks li {
+  border-color: transparent;
+  background: rgba(124, 240, 208, 0.12);
+  color: var(--mint);
+}
+.g-speed {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.g-speed div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  border-top: 1px solid var(--line);
+  padding-top: 6px;
+}
+.g-speed dt {
+  color: var(--muted);
+  font-size: 14px;
+}
+.g-speed dd {
+  margin: 0;
+  font-weight: 700;
+  text-align: right;
+}
+.g-shelf {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 10px;
+}
+.trophy {
+  background: var(--prime);
+  border-radius: 14px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 2px;
+  font-size: 13px;
+  color: var(--soft);
+  transition: transform 0.25s var(--spring);
+}
+.trophy:hover {
+  transform: translateY(-3px) rotate(-1.5deg);
+}
+.trophy.gold {
+  outline: 2px solid var(--gold);
+}
+.trophy-big {
+  font-family: var(--display);
+  font-weight: 900;
+  font-size: 30px;
+  line-height: 1.1;
+  color: var(--gold);
+}
+.yearbook {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.yearbook li {
+  border-left: 3px solid var(--hot);
+  padding-left: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.yb-head {
+  margin: 0;
+  font-family: var(--display);
+  font-weight: 900;
+  text-transform: uppercase;
+  font-size: 20px;
+}
+.g-card {
+  animation: rise 0.5s var(--ease-out) backwards;
+}
+.nudge-card {
+  border-color: var(--hot);
+}
+.nudge-card .btn {
+  align-self: flex-start;
+}
+.make-it-yours {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 18px;
+  border-radius: 16px;
+  background: linear-gradient(120deg, var(--studio), #2e1234);
+  border: 1px solid var(--hot);
+  color: var(--spot);
+  text-decoration: none;
+  transition: transform 0.2s var(--ease-out);
+}
+.make-it-yours:hover {
+  transform: translateY(-2px);
+}
+.make-it-yours > span:first-child {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.make-it-yours > span:last-child {
+  font-size: 26px;
+  color: var(--hot);
+}

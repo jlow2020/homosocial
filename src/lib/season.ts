@@ -43,3 +43,15 @@ export function ageFrom(birthdate: string): number {
   if (m < 0 || (m === 0 && now.getUTCDate() < b.getUTCDate())) age--;
   return age;
 }
+
+// Three-digit zip prefixes, roughly one metro each. Good enough for a label.
+const REGION_NAMES: Record<string, string> = {
+  "320": "Jacksonville", "321": "Daytona", "322": "Jacksonville", "323": "Tallahassee", "324": "Panama City", "325": "Pensacola",
+  "326": "Gainesville", "327": "Orlando", "328": "Orlando", "329": "Melbourne", "330": "Miami", "331": "Miami", "332": "Miami",
+  "333": "Fort Lauderdale", "334": "West Palm Beach", "335": "Tampa", "336": "Tampa", "337": "St. Pete", "338": "Lakeland",
+  "339": "Fort Myers", "341": "Naples", "342": "Sarasota", "344": "Ocala", "346": "Tampa", "347": "Orlando", "349": "West Palm Beach",
+};
+export function regionName(region: string | null): string {
+  if (region === "test") return "Sarasota";
+  return (region && REGION_NAMES[region]) || "Florida";
+}

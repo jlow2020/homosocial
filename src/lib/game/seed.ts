@@ -1,4 +1,5 @@
 import "server-only";
+import { seedDemoProfiles } from "./demoProfiles";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { ensureDrop } from "./drops";
 import type { PlaySpec } from "./plays";
@@ -56,6 +57,19 @@ export async function seedThrough(
   playerName: string
 ): Promise<boolean> {
   const seeded = circle.demo_seeded ?? {};
+  // Rich profiles for the fake guys, once per Circle.
+  if (!seeded["profilesv1"]) {
+    const { data: claimed } = await db
+      .from("circles")
+      .update({ demo_seeded: { ...seeded, "profilesv1": true } })
+      .eq("id", circle.id)
+      .is("demo_seeded->>profilesv1", null)
+      .select("id");
+    if (claimed?.length) {
+      seeded["profilesv1"] = true;
+      await seedDemoProfiles(db, await demoIds(db, circle.id));
+    }
+  }
   const todo: number[] = [];
   for (let w = 1; w <= week; w++) if (!seeded[`s${circle.season_no}w${w}`]) todo.push(w);
   if (!todo.length) return false;

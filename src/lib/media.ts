@@ -22,7 +22,7 @@ async function ffmpegPath(): Promise<string> {
   return p;
 }
 
-export type ClipRef = { table: "answers" | "dm_messages" | "chain_readings"; id: string; path: string; kind: "video" | "audio" };
+export type ClipRef = { table: "answers" | "dm_messages" | "chain_readings" | "profiles"; id: string; path: string; kind: "video" | "audio" };
 
 export async function convertClip(db: SupabaseClient, ref: ClipRef): Promise<void> {
   const dir = await mkdtemp(path.join(tmpdir(), "clip-"));
@@ -48,8 +48,11 @@ export async function convertClip(db: SupabaseClient, ref: ClipRef): Promise<voi
     const up = await db.storage.from("clips").upload(newPath, out, { contentType: ref.kind === "video" ? "video/mp4" : "audio/mp4", upsert: true });
     if (up.error) throw up.error;
     const flags = check.action === "hold" ? { held: true } : check.action === "veil" ? { veiled: true } : {};
-    const col = ref.table === "chain_readings" ? "path" : "photo_path";
-    await db.from(ref.table).update({ [col]: newPath, ready: true, ...flags }).eq("id", ref.id);
+    if (ref.table === "profiles") await db.from("profiles").update({ voice_path: newPath, voice_ready: true }).eq("id", ref.id);
+    else {
+      const col = ref.table === "chain_readings" ? "path" : "photo_path";
+      await db.from(ref.table).update({ [col]: newPath, ready: true, ...flags }).eq("id", ref.id);
+    }
     await db.storage.from("clips").remove([ref.path]);
     if (check.action !== "allow") {
       const { data: row } = await db.from("answers").select("user_id, drops(circle_id)").eq("id", ref.id).maybeSingle();
@@ -68,7 +71,7 @@ export async function convertClip(db: SupabaseClient, ref: ClipRef): Promise<voi
   } catch (e) {
     console.error("convert failed", ref, e);
     // Leave the original in place and let it play where it can.
-    await db.from(ref.table).update({ ready: true }).eq("id", ref.id);
+    await db.from(ref.table).update(ref.table === "profiles" ? { voice_ready: true } : { ready: true }).eq("id", ref.id);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }

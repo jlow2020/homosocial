@@ -260,6 +260,7 @@ export async function postPlan(form: FormData): Promise<Result> {
     .single();
   if (made) {
     await pl.db.from("plan_rsvps").insert({ plan_id: made.id, user_id: pl.profile.id });
+    if (!held) await pingDownFor(pl, words, title);
     await queueFor(pl.db, d, { user_id: pl.profile.id, circle_id: pl.circle.id, surface: "plan", ref_table: "plans", ref_id: made.id, content: words });
   }
   revalidatePath("/circle/plans");
@@ -934,4 +935,24 @@ export async function fireReading(readingId: string): Promise<Result> {
   else await pl.db.from("reading_fires").insert(key);
   revalidatePath("/circle", "layout");
   return { ok: true };
+}
+
+// A new plan pings the guys in the Circle who said they're down for that kind of thing.
+const PLAN_WORDS: [RegExp, string][] = [
+  [/\b(beach|siesta|sand|lido)\b/, "beach-day"], [/\b(boat|sandbar|pontoon)\b/, "boat-days"], [/\b(gym|lift|workout)\b/, "gym-buddy"],
+  [/\b(coffee|cafe|latte)\b/, "coffee"], [/\b(drinks?|bar|happy hour|cocktails?)\b/, "drinks"], [/\b(dinner|restaurant)\b/, "dinner"],
+  [/\b(game night|board games?|trivia)\b/, "game-night"], [/\b(concert|show|live music|gig)\b/, "concerts"], [/\b(road trip)\b/, "road-trips"],
+  [/\b(hike|hiking|trail)\b/, "hikes"], [/\b(movie|movies|cinema|film)\b/, "movies"], [/\b(karaoke)\b/, "karaoke"], [/\b(brunch|mimosas?)\b/, "brunch"],
+  [/\b(dog park|dog walk|walk the dogs?)\b/, "dog-walks"], [/\b(study|studying)\b/, "study-sessions"], [/\b(pickleball|volleyball|basketball|kickball|softball)\b/, "pickup-games"],
+  [/\b(disney|universal|busch gardens|theme park)\b/, "theme-parks"], [/\b(volunteer|volunteering)\b/, "volunteering"], [/\b(watch party|watch the)\b/, "watch-parties"],
+  [/\b(cook|cooking|potluck)\b/, "cooking-together"], [/\b(dance|dancing|club)\b/, "dancing"], [/\b(day trip)\b/, "day-trips"], [/\b(thrift|thrifting)\b/, "thrifting"], [/\b(run|running|5k)\b/, "running-buddy"],
+];
+async function pingDownFor(pl: Player, words: string, title: string) {
+  const t = words.toLowerCase();
+  const slugs = PLAN_WORDS.filter(([re]) => re.test(t)).map(([, s]) => s);
+  if (!slugs.length) return;
+  const others = pl.members.filter((m) => m.id !== pl.profile.id).map((m) => m.id);
+  const { data } = await pl.db.from("user_tags").select("user_id").eq("kind", "down").in("slug", slugs).in("user_id", others);
+  const who = [...new Set((data ?? []).map((r) => r.user_id as string))];
+  if (who.length) await notify(pl.db, who, { title: `${pl.profile.first_name} posted a plan you're down for`, body: teaser(title), url: "/circle/plans", tag: "plan", email: false });
 }

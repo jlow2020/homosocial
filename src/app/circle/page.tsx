@@ -14,6 +14,7 @@ import { Avatar, GuyName, Shell, timeAgo, weekTitle } from "./ui";
 import HeatVote from "./HeatVote";
 import { targetHeat } from "@/lib/game/engine";
 import { myRecap } from "@/lib/game/recap";
+import { loadExtras, completeness } from "@/lib/profile/data";
 
 export const metadata: Metadata = { title: "Your Circle | Homosocial" };
 export const dynamic = "force-dynamic";
@@ -194,6 +195,7 @@ async function Home({ pl }: { pl: Player }) {
   const answered = (answers ?? []).some((a) => a.user_id === pl.profile.id);
   const answerCount = (answers ?? []).length;
   const loungePhotos = await photoUrls(db, (lounge ?? []).map((l) => byId.get(l.user_id)?.photo_path));
+  const profileDone = completeness(await loadExtras(db, pl.profile.id), !!pl.profile.photo_path);
   const recap = week >= 2 ? await myRecap(db, circle, pl.profile.id, pl.members, revealed ? 9 : week) : [];
 
   return (
@@ -276,6 +278,22 @@ async function Home({ pl }: { pl: Player }) {
             {!revealed && <Link href={`/circle/read/${week}`}>{readAt && clock.phase === "season" && !clock.testMode ? `Week ${week} locks ${etLabel(readAt)}` : `Week ${week} so far`}</Link>}
           </p>
         </section>
+
+        {profileDone.pct < 100 && (
+          <section className="mini-card nudge-card">
+            <div className="mini-head">
+              <h3>Your profile</h3>
+              <span className="fine">{profileDone.pct}%</span>
+            </div>
+            <div className="meter" aria-hidden="true">
+              <span style={{ width: `${profileDone.pct}%` }} />
+            </div>
+            <p className="fine">{profileDone.next ? `${profileDone.next}. Two minutes, mostly taps.` : ""}</p>
+            <Link href="/profile/more" className="btn btn-small btn-pink">
+              Make it yours
+            </Link>
+          </section>
+        )}
 
         {(requests ?? []).length > 0 && (
           <section className="mini-card">
