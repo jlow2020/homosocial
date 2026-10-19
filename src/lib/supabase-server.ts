@@ -5,13 +5,19 @@ import { createServerClient } from "@supabase/ssr";
 
 let admin: SupabaseClient | null = null;
 
+// Next.js reuses identical GET requests within one page render. For the
+// database that means a read right after a write can return the old answer.
+// A fresh abort signal on every request opts out of that reuse.
+const freshFetch: typeof fetch = (input, init) =>
+  fetch(input, { ...init, cache: "no-store", signal: init?.signal ?? new AbortController().signal });
+
 // Full-access client. Server-only: uses the secret key.
 export function getSupabaseAdmin(): SupabaseClient | null {
   const url = process.env.SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !key) return null;
   if (!admin) {
-    admin = createClient(url, key, { auth: { persistSession: false } });
+    admin = createClient(url, key, { auth: { persistSession: false }, global: { fetch: freshFetch } });
   }
   return admin;
 }
