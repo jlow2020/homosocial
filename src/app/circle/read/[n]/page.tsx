@@ -6,6 +6,7 @@ import { computeWeek, BADGES, type WeekResult } from "@/lib/game/lock";
 import { standings } from "@/lib/game/standings";
 import { etLabel } from "@/lib/game/clock";
 import { Avatar, GuyName, Shell, weekTitle } from "../../ui";
+import Waveform from "@/components/Waveform";
 
 export const dynamic = "force-dynamic";
 
@@ -35,6 +36,7 @@ export default async function ReadPage({ params }: { params: Promise<{ n: string
   ]);
   const topClip = r.top && (r.top.media_type === "video" || r.top.media_type === "audio") && r.top.photo_path ? (await db.storage.from("clips").createSignedUrl(r.top.photo_path, 3600)).data?.signedUrl : null;
 
+  const readingUrl = r.reading ? (await db.storage.from("clips").createSignedUrl(r.reading.path, 3600)).data?.signedUrl : null;
   // The Chain, in full.
   let chain: { line: string; by: string }[] = [];
   if (drop.spec?.kind === "chain") {
@@ -145,6 +147,28 @@ export default async function ReadPage({ params }: { params: Promise<{ n: string
             <p className="fine">{name(r.caption.user_id)} · {r.caption.reactions} reactions</p>
           </section>
         )}
+        {r.superlatives && r.superlatives.winners.length > 0 && (
+          <section className="read-card read-winner">
+            <p className="eyebrow">🎖️ Rank Night · everybody got a title</p>
+            {r.superlatives.titles[pl.profile.id] && (
+              <p className="rn-mine">
+                Yours: <b>{r.superlatives.titles[pl.profile.id].category}</b>
+              </p>
+            )}
+            <ul className="rn-board">
+              {r.superlatives.winners.map((w) => (
+                <li key={w.category}>
+                  <Avatar src={urls.get(byId.get(w.user_id)?.photo_path ?? "")} name={name(w.user_id)} size={40} />
+                  <span>
+                    <span className="fine">{w.category}</span>
+                    <br />
+                    <b>{name(w.user_id)}</b>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
         {r.guesser && <Winner pl={pl} id={r.guesser.user_id} urls={urls} eyebrow="🕵️ Best Guesser" line={`Called ${r.guesser.right} of ${r.guesser.of} right.`} />}
         {r.liar && <Winner pl={pl} id={r.liar.user_id} urls={urls} eyebrow="🤥 Best Liar" line={`Fooled ${r.liar.fooled} of ${r.liar.of} guys.`} />}
         {r.detective && <Winner pl={pl} id={r.detective.user_id} urls={urls} eyebrow="🔎 Lie Detector" line={`Caught ${r.detective.right} of ${r.detective.of} lies.`} />}
@@ -153,6 +177,16 @@ export default async function ReadPage({ params }: { params: Promise<{ n: string
             <p className="eyebrow">📖 Best Story · {r.story.votes} votes</p>
             <p className="read-quote madlib">{story}</p>
             <p className="fine">by {name(r.story.user_id)}</p>
+          </section>
+        )}
+        {r.reading && readingUrl && (
+          <section className="read-card">
+            <p className="eyebrow">🎙️ Best reading of The Chain · {r.reading.fires} 🔥</p>
+            <div className="answer-head">
+              <Avatar src={urls.get(byId.get(r.reading.user_id)?.photo_path ?? "")} name={name(r.reading.user_id)} size={40} />
+              <GuyName pl={pl} m={byId.get(r.reading.user_id)} />
+            </div>
+            <Waveform src={readingUrl} />
           </section>
         )}
         {chain.length > 0 && (

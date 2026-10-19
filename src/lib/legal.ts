@@ -14,5 +14,5 @@ export const LEGAL = {
 
 // Bump these when the Terms or the biometric notice change in a way that
 // matters. Everyone gets asked to agree again the next time they sign in.
-export const TERMS_VERSION = "2026-10-19";
+export const TERMS_VERSION = "2026-10-19.2";
 export const BIOMETRIC_VERSION = "2026-10-19";

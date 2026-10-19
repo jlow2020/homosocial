@@ -13,6 +13,8 @@ import LieVote from "./LieVote";
 import StoryVote from "./StoryVote";
 import ReportAnswer from "./ReportAnswer";
 import OwnerDeck from "./OwnerDeck";
+import Veil from "./Veil";
+import { FireReading, RecordReading } from "./ReadAloud";
 import Waveform from "@/components/Waveform";
 import Live from "../../Live";
 import { compile } from "@/lib/game/playcheck";
@@ -32,10 +34,12 @@ type AnswerRow = {
   data: Record<string, unknown> | null;
   passed: boolean;
   hidden: boolean;
+  held: boolean;
+  veiled: boolean;
   ready: boolean;
   created_at: string;
   reactions: { user_id: string; emoji: string }[];
-  replies: { id: string; user_id: string; body: string; created_at: string }[];
+  replies: { id: string; user_id: string; body: string; created_at: string; held: boolean }[];
 };
 
 export default async function WeekPage({ params }: { params: Promise<{ n: string }> }) {
@@ -52,12 +56,15 @@ export default async function WeekPage({ params }: { params: Promise<{ n: string
   const over = week < current || clock.phase === "revealed";
   const { data } = await db
     .from("answers")
-    .select("id, user_id, body, photo_path, media_type, data, passed, hidden, ready, created_at, reactions(user_id, emoji), replies(id, user_id, body, created_at)")
+    .select("id, user_id, body, photo_path, media_type, data, passed, hidden, held, veiled, ready, created_at, reactions(user_id, emoji), replies(id, user_id, body, created_at, held)")
     .eq("drop_id", drop.id)
     .order("created_at", { ascending: true });
   const memberIds = new Set(pl.members.map((m) => m.id));
   const all = ((data ?? []) as AnswerRow[]).filter((a) => memberIds.has(a.user_id));
-  const rows = all.filter((a) => !a.hidden || a.user_id === pl.profile.id);
+  // Pulled after reports, or held by the filter: only the guy who posted it sees it.
+  const rows = all
+    .filter((a) => (!a.hidden && !a.held) || a.user_id === pl.profile.id)
+    .map((a) => ({ ...a, replies: a.replies.filter((r) => !r.held || r.user_id === pl.profile.id) }));
   const mine = rows.find((a) => a.user_id === pl.profile.id);
   const anon = !!prompt.anon;
   // Anonymous drops: no names, no faces, and no posting order to give anyone away.
@@ -163,6 +170,17 @@ export default async function WeekPage({ params }: { params: Promise<{ n: string
   const questions = seatId ? rows.filter((a) => a.user_id !== seatId && a.data?.question) : [];
   const seatAnswered = questions.filter((q) => q.replies.some((r) => r.user_id === seatId)).length;
 
+  // The Chain, read aloud.
+  type Reading = { id: string; user_id: string; path: string; ready: boolean; reading_fires: { user_id: string }[] };
+  const readings: Reading[] = chainDone
+    ? (((await db.from("chain_readings").select("id, user_id, path, ready, reading_fires(user_id)").eq("drop_id", drop.id).order("created_at")).data ?? []) as Reading[]).filter((r) => memberIds.has(r.user_id))
+    : [];
+  const readingUrls = readings.filter((r) => r.ready).length
+    ? new Map(((await db.storage.from("clips").createSignedUrls(readings.filter((r) => r.ready).map((r) => r.path), 3600)).data ?? []).map((x) => [x.path as string, x.signedUrl as string]))
+    : new Map<string, string>();
+  const readingUrlsAll = readingUrls;
+  const urlsForReaders = chainDone ? await photoUrls(db, readings.map((r) => byId.get(r.user_id)?.photo_path)) : new Map<string, string>();
+
   const samePose = drop.prompt_id.startsWith("tpl:samepose");
   const converting = rows.some((a) => !a.ready);
   const clipPaths = rows.filter((a) => (a.media_type === "video" || a.media_type === "audio") && a.photo_path && a.ready).map((a) => a.photo_path as string);
@@ -178,13 +196,17 @@ export default async function WeekPage({ params }: { params: Promise<{ n: string
   const Media = ({ a }: { a: AnswerRow }) => (
     <>
       {!a.ready && a.photo_path && <p className="converting">⏳ Converting so it plays everywhere. A minute, tops.</p>}
-      {a.photo_path && urls.get(a.photo_path) && (
+      {a.photo_path && urls.get(a.photo_path) && (a.veiled && a.user_id !== pl.profile.id ? (
+        <Veil src={urls.get(a.photo_path)!} kind="photo" />
+      ) : (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={urls.get(a.photo_path)} alt="" className="answer-photo" loading="lazy" />
-      )}
-      {a.media_type === "video" && a.photo_path && clips.get(a.photo_path) && (
+      ))}
+      {a.media_type === "video" && a.photo_path && clips.get(a.photo_path) && (a.veiled && a.user_id !== pl.profile.id ? (
+        <Veil src={clips.get(a.photo_path)!} kind="video" />
+      ) : (
         <video src={clips.get(a.photo_path)} controls playsInline preload="metadata" className="answer-photo" />
-      )}
+      ))}
       {a.media_type === "audio" && a.photo_path && clips.get(a.photo_path) && <Waveform src={clips.get(a.photo_path)!} />}
     </>
   );
@@ -243,6 +265,31 @@ export default async function WeekPage({ params }: { params: Promise<{ n: string
             {locked.rank.runner_up && <>, runner-up {name(locked.rank.runner_up)}</>}. {locked.rank.ranked} ranked. Final.
           </p>
         )}
+        {spec?.kind === "ranknight" && !locked && (
+          <p className="anon-note">🎖️ Rank Night. {answeredPlays.length} ballots in. Results lock {lockLabel}, and everybody in the Circle gets a title.</p>
+        )}
+        {spec?.kind === "ranknight" && locked?.superlatives && (
+          <div className="rn-results">
+            {locked.superlatives.titles[pl.profile.id] && (
+              <p className="rn-mine">
+                The Circle voted you: <b>{locked.superlatives.titles[pl.profile.id].category}</b>
+                {locked.superlatives.titles[pl.profile.id].votes > 0 && <span className="fine"> · {locked.superlatives.titles[pl.profile.id].votes} {locked.superlatives.titles[pl.profile.id].votes === 1 ? "vote" : "votes"}</span>}
+              </p>
+            )}
+            <ul className="rn-board">
+              {locked.superlatives.winners.map((w) => (
+                <li key={w.category}>
+                  <Avatar src={urls.get(byId.get(w.user_id)?.photo_path ?? "")} name={name(w.user_id)} size={40} />
+                  <span>
+                    <span className="fine">{w.category}</span>
+                    <br />
+                    <b>{name(w.user_id)}</b>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
         {spec?.kind === "rank" && !locked && rankLive && (
           <p className="anon-note">
             🏆 Leading for {spec.category}: <b>{rankLive[0]}</b>
@@ -271,12 +318,27 @@ export default async function WeekPage({ params }: { params: Promise<{ n: string
                 {(a.data?.line as string) ?? a.body} <span className="fine">· {byId.get(a.user_id)?.first_name}</span>
               </p>
             ))}
-            {chainDone && (
-              <p className="fine">
-                The end. Read it out loud, then <Link href={`/circle/read/${week}`}>see it in the Read</Link>.
-              </p>
-            )}
+            {chainDone && <p className="fine">The end.</p>}
           </div>
+          {chainDone && (
+            <div className="read-aloud">
+              <p className="eyebrow">🎙️ Read it aloud · {readings.length} {readings.length === 1 ? "reading" : "readings"}</p>
+              <p className="fine">Record yourself reading the whole story. Do the voices. The Circle fires up their favorite, and the best one makes the Sunday Read.</p>
+              <ul className="readings">
+                {readings.map((r) => (
+                  <li key={r.id}>
+                    <div className="answer-head">
+                      <Avatar src={urlsForReaders.get(byId.get(r.user_id)?.photo_path ?? "")} name={name(r.user_id)} size={32} />
+                      <GuyName pl={pl} m={byId.get(r.user_id)} />
+                    </div>
+                    {r.ready && readingUrlsAll.get(r.path) ? <Waveform src={readingUrlsAll.get(r.path)!} /> : <p className="converting">⏳ Converting. A minute, tops.</p>}
+                    <FireReading id={r.id} count={r.reading_fires.length} mine={r.reading_fires.some((f) => f.user_id === pl.profile.id)} />
+                  </li>
+                ))}
+              </ul>
+              {!readings.some((r) => r.user_id === pl.profile.id) && <RecordReading week={week} />}
+            </div>
+          )}
         </section>
       ) : !mine ? (
         <section className="answers">
@@ -355,7 +417,7 @@ export default async function WeekPage({ params }: { params: Promise<{ n: string
             />
           )}
           <ul className={samePose ? "answer-list answer-grid" : "answer-list"}>
-            {(spec?.kind === "blinddate" || anonSurvey || ownerDeck ? [] : [...rows.filter((a) => a.user_id === pl.profile.id && !a.passed), ...others]).map((a) => {
+            {(spec?.kind === "blinddate" || spec?.kind === "ranknight" || anonSurvey || ownerDeck ? [] : [...rows.filter((a) => a.user_id === pl.profile.id && !a.passed), ...others]).map((a) => {
               const m = byId.get(a.user_id);
               const isMine = a.user_id === pl.profile.id;
               const hideName = anon && !revealed && !lieRevealed;
@@ -364,6 +426,7 @@ export default async function WeekPage({ params }: { params: Promise<{ n: string
               return (
                 <li key={a.id} className={[isMine ? "answer answer-mine" : "answer", a.hidden ? "answer-hidden" : ""].join(" ")}>
                   {a.hidden && <p className="fine">⚠️ Pulled after reports. Only you see it while a mod looks.</p>}
+                  {a.held && !a.hidden && <span className="held-tag">⏳ Waiting on a quick look before your Circle sees it. If it&apos;s fine, it posts with no mark on your account.</span>}
                   <div className="answer-head">
                     {hideName ? (
                       <>
@@ -462,7 +525,7 @@ export default async function WeekPage({ params }: { params: Promise<{ n: string
               );
             })}
           </ul>
-          {others.length === 0 && !anonSurvey && <p className="fine">You&apos;re first. Everyone else is still thinking.</p>}
+          {others.length === 0 && !anonSurvey && spec?.kind !== "ranknight" && <p className="fine">You&apos;re first. Everyone else is still thinking.</p>}
         </section>
       )}
       {week >= 2 && (

@@ -55,6 +55,8 @@ export async function purgeAllMedia(db: SupabaseClient, userId: string): Promise
     const { data: msgs } = await db.from("dm_messages").select("photo_path, media_type").in("thread_id", ids).not("photo_path", "is", null);
     for (const m of msgs ?? []) sort(m.photo_path, m.media_type);
   }
+  const { data: readings } = await db.from("chain_readings").select("path").eq("user_id", userId);
+  for (const r of readings ?? []) clips.add(r.path as string);
   for (const [bucket, set] of [["photos", photos], ["clips", clips]] as const) {
     const list = [...set];
     for (let i = 0; i < list.length; i += 100) await db.storage.from(bucket).remove(list.slice(i, i + 100));

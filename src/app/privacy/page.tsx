@@ -102,7 +102,10 @@ const sections: Section[] = [
         <li>to create your account, verify you&apos;re a real adult, and keep each person to one account;</li>
         <li>to place you in a Circle and run the game: drops, games, results, badges, the Sunday Read and the Finale;</li>
         <li>to deliver your messages and send you the notifications you&apos;ve allowed;</li>
-        <li>to keep members safe: review reports, enforce our rules, and prevent fraud, abuse and spam;</li>
+        <li>
+          to keep members safe: review reports, enforce our rules, and prevent fraud, abuse and spam. This includes automated
+          checks, described under &ldquo;Who sees what&rdquo;;
+        </li>
         <li>to keep the Service working, secure, and fix problems;</li>
         <li>to follow the law and respond to valid legal requests;</li>
         <li>to work out totals across Circles (like the Florida Census), which never show any one person&apos;s answers.</li>
@@ -133,6 +136,14 @@ const sections: Section[] = [
           We don&apos;t browse your messages otherwise.
         </p>
         <p>
+          <b>Automated safety checks.</b> Posts and private messages are checked automatically, by software on our own servers,
+          for a short list of serious problems: selling sex, drugs, minors, threats, hate, and spam. Photos and videos posted to
+          shared spaces are also checked for nudity the rules don&apos;t allow. Explicit photos in private messages, which are
+          allowed with consent, are not checked for nudity. When a check is unsure, the text or photo may be sent to our AI
+          provider for a second opinion, and a moderator may review it. Nothing is removed and no strike is given without a
+          person deciding.
+        </p>
+        <p>
           <b>Guys in the lobby</b> who haven&apos;t done their ID check yet see only first names, ages and interests, not faces
           or hot takes.
         </p>
@@ -155,6 +166,8 @@ const sections: Section[] = [
             (database, sign-in and file storage), Railway (website hosting), Resend (email delivery), and the push services built
             into your browser or phone, such as Apple, Google or Mozilla (delivering notifications; the contents of our
             notifications are encrypted so the push service can&apos;t read them). Google, if you choose to sign in with Google.
+            Anthropic, our AI provider, only for the borderline posts and photos described under &ldquo;Automated safety
+            checks,&rdquo; and only to give us a second opinion on them.
           </li>
           <li>
             <b>Law enforcement and others, when required.</b> When the law requires it, such as a valid subpoena or court

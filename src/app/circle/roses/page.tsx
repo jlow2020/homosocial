@@ -11,12 +11,12 @@ export default async function Roses() {
   if (week < 7) redirect("/circle");
   const { data } = await pl.db
     .from("roses")
-    .select("id, from_id, to_id, body, created_at")
+    .select("id, from_id, to_id, body, created_at, held")
     .eq("circle_id", pl.circle.id)
     .eq("season_no", pl.circle.season_no)
     .order("created_at", { ascending: false });
   const byId = new Map(pl.members.map((m) => [m.id, m]));
-  const roses = (data ?? []).filter((r) => byId.has(r.from_id) && byId.has(r.to_id));
+  const roses = (data ?? []).filter((r) => byId.has(r.from_id) && byId.has(r.to_id) && (!r.held || r.from_id === pl.profile.id));
   const given = roses.filter((r) => r.from_id === pl.profile.id);
   const toMe = roses.filter((r) => r.to_id === pl.profile.id);
   const urls = await photoUrls(pl.db, pl.members.map((m) => m.photo_path));
@@ -58,6 +58,7 @@ export default async function Roses() {
                 </span>
               </div>
               <p className="rose-body">&ldquo;{r.body}&rdquo;</p>
+              {r.held && <span className="held-tag">⏳ Waiting on a quick look. Only you see this for now.</span>}
               <p className="fine">
                 from {from?.first_name} · {timeAgo(r.created_at)}
               </p>

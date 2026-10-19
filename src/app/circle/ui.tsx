@@ -7,6 +7,8 @@ import type { Player, Member } from "@/lib/game/player";
 import NavTabs from "./NavTabs";
 import TestBar from "./TestBar";
 import PushPrompt from "@/components/PushPrompt";
+import Flash from "@/components/Flash";
+import { cookies } from "next/headers";
 import { targetHeat } from "@/lib/game/engine";
 
 export function weekTitle(week: number): string {
@@ -31,6 +33,8 @@ export async function Shell({ pl, children }: { pl: Player; children: React.Reac
       : c.phase === "revealed"
         ? "Finale: revealed"
         : `Week ${c.week}: ${weekTitle(c.week)}`;
+  const rawFlash = (await cookies()).get("hs_flash")?.value;
+  const flashText = rawFlash ? decodeURIComponent(rawFlash).slice(0, 400) : null;
   const dropWeek = c.phase === "season" ? c.week : c.phase === "revealed" ? 8 : null;
   return (
     <main className="game">
@@ -66,6 +70,7 @@ export async function Shell({ pl, children }: { pl: Player; children: React.Reac
       </div>
       {pl.seated && c.phase !== "filling" && <NavTabs dropWeek={dropWeek} unread={unread ?? 0} />}
       <div className="wrap game-body">
+        <Flash text={flashText} />
         {pl.seated && <PushPrompt />}
         {children}
       </div>

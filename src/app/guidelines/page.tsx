@@ -27,7 +27,7 @@ const sections: Section[] = [
       <ul>
         <li>
           <b>Anywhere the whole Circle can see</b> (drops, the Lounge, Plans, Roses, your profile photo): flirty, filthy-minded,
-          underwear and thirst traps are all fine. Genitals, bare butts and sex acts are not.
+          underwear, thirst traps and a bare butt are all fine. Genitals, an anus, and sex acts are not.
         </li>
         <li>
           <b>In DMs</b>, explicit photos and videos are fine only after you both turn photos on, and only of yourself.
@@ -102,6 +102,15 @@ const sections: Section[] = [
         <p>
           Two reports on one answer hide it until a moderator looks. Three reports from different members pause an account
           automatically until it&apos;s reviewed.
+        </p>
+        <p>
+          <b>The filter.</b> Posts and photos get checked automatically for the serious stuff above. If it&apos;s not sure, your
+          post goes up as normal. If it&apos;s sure, your post waits for a quick look by a person, and only you can see it until
+          then. If the person says it&apos;s fine, it posts with no mark on your account. The filter never gives strikes.
+        </p>
+        <p>
+          <b>Strikes</b> only come from a person. One is a warning. Two in 90 days is a 7-day pause. Three pauses your account
+          until it&apos;s reviewed.
         </p>
         <p>
           What happens next depends on how bad it was: a warning, content removed, a pause, or a permanent ban. Some things

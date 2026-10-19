@@ -14,6 +14,7 @@ type PlanRow = {
   place: string | null;
   starts_at: string | null;
   details: string | null;
+  held: boolean;
   plan_rsvps: { user_id: string }[];
 };
 
@@ -22,12 +23,12 @@ export default async function Plans() {
   if (pl.clock.phase === "filling") redirect("/circle");
   const { data } = await pl.db
     .from("plans")
-    .select("id, user_id, title, place, starts_at, details, plan_rsvps(user_id)")
+    .select("id, user_id, title, place, starts_at, details, held, plan_rsvps(user_id)")
     .eq("circle_id", pl.circle.id)
     .order("starts_at", { ascending: true, nullsFirst: false });
   const byId = new Map(pl.members.map((m) => [m.id, m]));
   const cutoff = Date.now() - 6 * 3600e3;
-  const all = ((data ?? []) as PlanRow[]).filter((p) => byId.has(p.user_id));
+  const all = ((data ?? []) as PlanRow[]).filter((p) => byId.has(p.user_id) && (!p.held || p.user_id === pl.profile.id));
   const upcoming = all.filter((p) => !p.starts_at || new Date(p.starts_at).getTime() >= cutoff);
   const past = all.filter((p) => p.starts_at && new Date(p.starts_at).getTime() < cutoff).reverse();
   const urls = await photoUrls(pl.db, pl.members.map((m) => m.photo_path));
@@ -41,6 +42,7 @@ export default async function Plans() {
         <div className="plan-main">
           <p className="eyebrow">{p.starts_at ? etLabel(new Date(p.starts_at)) : "Time TBD"}</p>
           <h2 className="plan-title">{p.title}</h2>
+          {p.held && <span className="held-tag">⏳ Waiting on a quick look. Only you see this for now.</span>}
           {p.place && <p className="plan-place">📍 {p.place}</p>}
           {p.details && <p className="plan-details">{p.details}</p>}
           <p className="fine">

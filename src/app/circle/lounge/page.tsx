@@ -12,12 +12,12 @@ export default async function Lounge() {
   if (pl.clock.phase === "filling") redirect("/circle");
   const { data } = await pl.db
     .from("lounge_messages")
-    .select("id, user_id, body, created_at")
+    .select("id, user_id, body, created_at, held")
     .eq("circle_id", pl.circle.id)
     .order("created_at", { ascending: false })
     .limit(150);
   const byId = new Map(pl.members.map((m) => [m.id, m]));
-  const msgs = (data ?? []).filter((m) => byId.has(m.user_id)).reverse();
+  const msgs = (data ?? []).filter((m) => byId.has(m.user_id) && (!m.held || m.user_id === pl.profile.id)).reverse();
   const urls = await photoUrls(pl.db, pl.members.map((m) => m.photo_path));
 
   return (
@@ -39,6 +39,7 @@ export default async function Lounge() {
                 <div className="msg-body">
                   {!mine && !same && <GuyName pl={pl} m={guy} />}
                   <p className="bubble">{m.body}</p>
+                  {m.held && <span className="held-tag">⏳ Waiting on a quick look. Only you see this for now.</span>}
                   <span className="fine msg-time">{timeAgo(m.created_at)}</span>
                 </div>
               </li>

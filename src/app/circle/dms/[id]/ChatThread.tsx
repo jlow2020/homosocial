@@ -1,5 +1,7 @@
 "use client";
 
+import SpeedGame, { type Game } from "./SpeedGame";
+
 import { useEffect, useMemo, useOptimistic, useRef, useState, useTransition } from "react";
 import { clipTicket, reactDm, sendDm, sendDmClip, sendDmPhoto } from "../../game-actions";
 import { shrinkImage } from "@/lib/image";
@@ -11,6 +13,8 @@ export type ChatMessage = {
   body: string | null;
   media: { type: "photo" | "video"; url: string | null; converting?: boolean } | null;
   at: string;
+  held?: boolean;
+  game?: Game | null;
   reactions: { emoji: string; mine: boolean }[];
 };
 
@@ -211,11 +215,16 @@ function Bubble({
           </div>
         )}
         {m.media && <Media media={m.media} mine={m.mine} name={otherName} otherId={otherId} messageId={m.id} onTap={onTap} />}
-        {m.body && (
-          <p className={`dm-bubble ${m.mine ? "mine" : "theirs"} ${shape}`} onClick={onTap}>
-            {m.body}
-          </p>
+        {m.game ? (
+          <SpeedGame game={m.game} otherName={otherName} />
+        ) : (
+          m.body && (
+            <p className={`dm-bubble ${m.mine ? "mine" : "theirs"} ${shape}`} onClick={onTap}>
+              {m.body}
+            </p>
+          )
         )}
+        {m.held && <span className="held-tag">⏳ Held for a quick look. He won&apos;t see it unless it&apos;s cleared.</span>}
         {counts.size > 0 && (
           <button className="dm-reacts" onClick={onTap} aria-label="Reactions">
             {[...counts.entries()].map(([e, n]) => (

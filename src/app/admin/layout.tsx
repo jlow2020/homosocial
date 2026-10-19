@@ -11,6 +11,7 @@ export const dynamic = "force-dynamic";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const a = await requireAdmin();
+  const { count: pending } = await a.db.from("mod_queue").select("id", { count: "exact", head: true }).eq("status", "pending");
   return (
     <main className="admin">
       <TopBar
@@ -30,6 +31,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           <Link href="/admin/members">Members</Link>
           <Link href="/admin/circles">Circles</Link>
           <Link href="/admin/drops">Drops</Link>
+          <Link href="/admin/moderation">Moderation{pending ? ` (${pending})` : ""}</Link>
           <Link href="/admin/reports">Reports</Link>
           <Link href="/admin/log">Log</Link>
         </nav>

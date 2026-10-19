@@ -22,6 +22,9 @@ export type WeekResult = {
   chainLines?: number;
   blindDates?: number;
   fooled?: Record<string, { fooled: number; of: number }>; // per Two Truths answer
+  // Rank Night: who won each title, and every guy's own title.
+  reading?: { user_id: string; path: string; fires: number }; // The Chain, best reading
+  superlatives?: { winners: { category: string; user_id: string; votes: number }[]; titles: Record<string, { category: string; votes: number }> };
 };
 
 export const BADGES: Record<string, { emoji: string; label: string; blurb: string }> = {
@@ -32,6 +35,7 @@ export const BADGES: Record<string, { emoji: string; label: string; blurb: strin
   detective: { emoji: "🔎", label: "Lie Detector", blurb: "Caught the most lies." },
   caption: { emoji: "💬", label: "Caption Champ", blurb: "Best caption, by reactions." },
   story: { emoji: "📖", label: "Best Story", blurb: "The Circle's favorite Mad Lib." },
+  superlative: { emoji: "🎖️", label: "Superlative", blurb: "Voted by the Circle on Rank Night." },
   season_fire: { emoji: "🏆", label: "Most 🔥 of the Season", blurb: "More reactions than anyone across all eight weeks." },
   season_chemistry: { emoji: "💘", label: "Most Wanted", blurb: "Picked by the most guys at the Finale." },
   season_mvp: { emoji: "⭐", label: "Season MVP", blurb: "The most badges in one Season." },
@@ -46,6 +50,7 @@ type AnswerRow = {
   data: Record<string, unknown> | null;
   passed: boolean;
   hidden: boolean;
+  held: boolean;
   reactions: { user_id: string }[];
 };
 
@@ -54,15 +59,15 @@ export async function computeWeek(db: SupabaseClient, drop: Drop, members: Membe
   const memberIds = new Set(members.map((m) => m.id));
   const { data } = await db
     .from("answers")
-    .select("id, user_id, body, photo_path, media_type, data, passed, hidden, reactions(user_id)")
+    .select("id, user_id, body, photo_path, media_type, data, passed, hidden, held, reactions(user_id)")
     .eq("drop_id", drop.id);
-  const rows = ((data ?? []) as AnswerRow[]).filter((a) => memberIds.has(a.user_id) && !a.passed && !a.hidden);
+  const rows = ((data ?? []) as AnswerRow[]).filter((a) => memberIds.has(a.user_id) && !a.passed && !a.hidden && !a.held);
   const r: WeekResult = { answered: rows.length, of: members.length };
   const spec = drop.spec;
   const played = rows.filter((a) => a.data);
 
   // Answer of the week: most reactions. Chats, pairings and rankings don't count.
-  const scoreable = rows.filter((a) => !spec || !["rank", "blinddate", "hotseat"].includes(spec.kind) || (spec.kind === "hotseat" && a.user_id !== spec.seat));
+  const scoreable = rows.filter((a) => !spec || !["rank", "blinddate", "hotseat", "ranknight"].includes(spec.kind) || (spec.kind === "hotseat" && a.user_id !== spec.seat));
   const top = [...scoreable].sort((x, y) => y.reactions.length - x.reactions.length)[0];
   if (top && top.reactions.length >= 1) {
     r.top = { answer_id: top.id, user_id: top.user_id, reactions: top.reactions.length, body: top.body ?? (top.data?.caption as string) ?? (top.data?.line as string) ?? null, photo_path: top.photo_path, media_type: top.media_type };
@@ -124,13 +129,22 @@ export async function computeWeek(db: SupabaseClient, drop: Drop, members: Membe
     if (row && best[1] >= 2) r.story = { answer_id: row.id, user_id: row.user_id, votes: best[1] };
   }
 
+  if (spec?.kind === "ranknight") r.superlatives = superlatives(spec.categories, played.map((a) => (a.data?.picks ?? {}) as Record<string, string>), members.map((m) => m.id));
+
   if (spec?.kind === "survey" && spec.census && played.length >= 3) {
     r.census = spec.questions.map((q, i) => ({ q, pct: Math.round((100 * played.filter((a) => (a.data!.answers as boolean[])[i]).length) / played.length) }));
   }
   if (spec?.kind === "thisorthat" && played.length >= 3) {
     r.splits = spec.pairs.map(([a, b], i) => ({ a, b, left: Math.round((100 * played.filter((x) => (x.data!.picks as number[])[i] === 0).length) / played.length) }));
   }
-  if (spec?.kind === "chain") r.chainLines = rows.length;
+  if (spec?.kind === "chain") {
+    r.chainLines = rows.length;
+    const { data: readings } = await db.from("chain_readings").select("id, user_id, path, ready, reading_fires(user_id)").eq("drop_id", drop.id);
+    const best = ((readings ?? []) as { id: string; user_id: string; path: string; ready: boolean; reading_fires: { user_id: string }[] }[])
+      .filter((x) => x.ready && memberIds.has(x.user_id))
+      .sort((a, b) => b.reading_fires.length - a.reading_fires.length)[0];
+    if (best && best.reading_fires.length >= 1) r.reading = { user_id: best.user_id, path: best.path, fires: best.reading_fires.length };
+  }
   if (spec?.kind === "blinddate") r.blindDates = Math.floor(rows.filter((a) => a.data?.status === "paired").length / 2);
   return r;
 }
@@ -161,6 +175,7 @@ export async function lockWeek(db: SupabaseClient, circle: { id: string; season_
   award("detective", result.detective?.user_id);
   award("caption", result.caption?.user_id);
   award("story", result.story?.user_id);
+  for (const [uid, t] of Object.entries(result.superlatives?.titles ?? {})) award("superlative", uid, t.category);
   if (rows.length) await db.from("badges").upsert(rows.map((x) => ({ ...base, ...x })), { onConflict: "user_id,circle_id,season_no,week,badge", ignoreDuplicates: true });
   return result;
 }
@@ -198,4 +213,42 @@ export async function awardSeason(db: SupabaseClient, circle: { id: string; seas
     const base = { circle_id: circle.id, season_no: circle.season_no, week: 9 };
     await db.from("badges").upsert(rows.map((x) => ({ ...base, ...x })), { onConflict: "user_id,circle_id,season_no,week,badge", ignoreDuplicates: true });
   }
+}
+
+// Every guy gets a title. Each category's winner is the guy with the most
+// votes, but a guy can only win one title: if he tops two, he takes the one
+// he leads by more and the other goes to the runner-up. Guys with no title
+// after that get the category they got the most votes in. Anyone left with
+// no votes at all is "Most mysterious", which is kinder than it sounds.
+export function superlatives(categories: string[], ballots: Record<string, string>[], members: string[]) {
+  const votes = categories.map(() => new Map<string, number>());
+  for (const b of ballots) for (const [k, v] of Object.entries(b)) {
+    const i = Number(k);
+    if (votes[i] && members.includes(v)) votes[i].set(v, (votes[i].get(v) ?? 0) + 1);
+  }
+  const titled = new Map<string, { category: string; votes: number }>();
+  const winners: { category: string; user_id: string; votes: number }[] = [];
+  // Hand out the strongest leads first.
+  const order = categories
+    .map((c, i) => ({ c, i, top: Math.max(0, ...votes[i].values()) }))
+    .sort((a, b) => b.top - a.top);
+  for (const { c, i } of order) {
+    const ranked = [...votes[i].entries()].sort((a, b) => b[1] - a[1]);
+    const pick = ranked.find(([uid]) => !titled.has(uid));
+    if (pick && pick[1] > 0) {
+      titled.set(pick[0], { category: c, votes: pick[1] });
+      winners.push({ category: c, user_id: pick[0], votes: pick[1] });
+    }
+  }
+  for (const uid of members) {
+    if (titled.has(uid)) continue;
+    let best: { category: string; votes: number } | null = null;
+    categories.forEach((c, i) => {
+      const n = votes[i].get(uid) ?? 0;
+      if (n > 0 && (!best || n > best.votes)) best = { category: c, votes: n };
+    });
+    titled.set(uid, best ?? { category: "Most mysterious", votes: 0 });
+  }
+  winners.sort((a, b) => categories.indexOf(a.category) - categories.indexOf(b.category));
+  return { winners, titles: Object.fromEntries(titled) };
 }

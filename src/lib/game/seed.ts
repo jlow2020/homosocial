@@ -91,7 +91,9 @@ export async function seedThrough(
             data:
               drop.spec!.kind === "rank"
                 ? { order: drop.spec!.guys.filter((g) => g !== id).sort(() => Math.random() - 0.5), me: id }
-                : demoPlay(drop.spec!, slug),
+                : drop.spec!.kind === "ranknight"
+                  ? demoRankNight(drop.spec!.categories.length, [...ids.values(), playerId].filter((x) => x !== id))
+                  : demoPlay(drop.spec!, slug),
             created_at: new Date(now - (ids.size - i) * 31 * MIN).toISOString(),
           }))
           .filter((r) => r.data)
@@ -307,7 +309,15 @@ function demoPlay(spec: PlaySpec, slug: string): Record<string, unknown> | null 
     case "voice":
     case "owner":
     case "blinddate":
+    case "ranknight":
       return null;
   }
+}
+
+// A fake guy's Rank Night ballot. He votes for the real player now and then, so the player gets a title.
+function demoRankNight(n: number, others: string[]): { picks: Record<string, string> } {
+  const picks: Record<string, string> = {};
+  for (let i = 0; i < n; i++) if (Math.random() < 0.85) picks[String(i)] = others[Math.floor(Math.random() * others.length)];
+  return { picks };
 }
 

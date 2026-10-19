@@ -3,7 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { PROMPTS, PROMPT_BY_ID, modeOf, type Mode } from "./prompts";
 import { FORMATS } from "./templates";
 import { DEMO_PROMPT } from "./demo";
-import { PLAYS, PLAY_BY_ID, type PlaySpec } from "./plays";
+import { PLAYS, PLAY_BY_ID, RANK_NIGHTS, type PlaySpec } from "./plays";
 
 // The drop engine. Each layer tries to produce a drop this Circle has never
 // seen, at this week's heat. If it can't, the next layer takes over, so there's
@@ -209,6 +209,14 @@ function fromPlay(circle: CircleLike, week: number, heat: number, seen: Set<stri
   return { key: `play:${p.id}`, body: p.body, hint: p.hint ?? null, mode: p.mode, heat: p.heat, source: "play", credit: null, spec };
 }
 
+// Week 7 special: Rank Night, if there's a room for it and a version he hasn't played.
+function fromRankNight(circle: CircleLike, week: number, seen: Set<string>, members: string[]): Chosen | null {
+  if (week !== 7 || members.length < 6) return null;
+  const p = RANK_NIGHTS.find((r) => !seen.has(`play:${r.id}`));
+  if (!p) return null;
+  return { key: `play:${p.id}`, body: p.body, hint: p.hint ?? null, mode: p.mode, heat: p.heat, source: "play", credit: null, spec: p.spec };
+}
+
 // Layer 4: the house bank.
 function fromHouse(circle: CircleLike, week: number, heat: number, seen: Set<string>): Chosen | null {
   const pool = PROMPTS.filter((p) => p.week === week && !seen.has(p.id)).map((p) => ({ ...p, heat: p.heat ?? 2 }));
@@ -260,6 +268,7 @@ export async function chooseDrop(db: SupabaseClient, circle: CircleLike, week: n
     ? (fromPlay(circle, week, heat, seen, last, members) ?? fromTemplate(circle, week, heat, seen, last))
     : (fromTemplate(circle, week, heat, seen, last) ?? fromPlay(circle, week, heat, seen, last, members));
   return (
+    fromRankNight(circle, week, seen, members) ??
     (await fromBank(db, circle, week, heat, seen)) ??
     (await fromFollowup(db, circle, week, heat, seen)) ??
     (mediaFirst ? await fromCaption(db, circle, week, seen) : null) ??

@@ -28,7 +28,8 @@ export default async function Agree({ searchParams }: { searchParams: Promise<{ 
         <ul>
           <li>You&apos;re 18 or older, you&apos;re really you, and you have one account.</li>
           <li>You own what you post. You let us show it to your Circle and run the game with it.</li>
-          <li>Nothing explicit where the whole Circle can see. Explicit in DMs only when you both turn photos on, and only of yourself.</li>
+          <li>Nothing explicit where the whole Circle can see (a bare butt is fine). Explicit in DMs only when you both turn photos on, and only of yourself.</li>
+          <li>Posts and messages get checked automatically for the serious stuff. Nothing comes down without a person deciding.</li>
           <li>Never share anyone&apos;s photos, messages or identity outside Homosocial. Outing someone gets you banned.</li>
           <li>We never sell your data. Your face scans are used only to prove you&apos;re real and are never stored as face data.</li>
           <li>We don&apos;t run background checks. Meet in public the first time.</li>

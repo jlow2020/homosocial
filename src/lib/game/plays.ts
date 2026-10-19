@@ -2,7 +2,7 @@
 // game changes shape every week, not just its wording. Never rename an id:
 // used ones are remembered by id so nobody plays the same one twice.
 
-export type PlayMode = "survey" | "thisorthat" | "madlibs" | "speed" | "twotruths" | "video" | "rank" | "owner" | "chain" | "hotseat" | "voice" | "blinddate";
+export type PlayMode = "survey" | "thisorthat" | "madlibs" | "speed" | "twotruths" | "video" | "rank" | "owner" | "chain" | "hotseat" | "voice" | "blinddate" | "ranknight";
 
 // anon: only the Census shows, nobody's card does. For the questions guys lie about under their own name.
 export type SurveySpec = { kind: "survey"; questions: string[]; title: string; census: boolean; anon?: boolean };
@@ -24,9 +24,12 @@ export type VoiceSpec = { kind: "voice"; seconds: number };
 export type BlindDateSpec = { kind: "blinddate" };
 // Caption This: the Circle's most-reacted photo, captioned by everyone. Made by the engine, not listed here.
 export type CaptionSpec = { kind: "caption"; photo_path: string; by: string };
+// Rank Night: Week 7's superlatives. Pick one guy per category. When the week
+// locks, every guy in the Circle walks away with a title. Compliments only.
+export type RankNightSpec = { kind: "ranknight"; categories: string[] };
 export type PlaySpec =
   | SurveySpec | ThisOrThatSpec | MadLibsSpec | SpeedSpec | TwoTruthsSpec | VideoSpec
-  | RankSpec | OwnerSpec | ChainSpec | HotSeatSpec | VoiceSpec | BlindDateSpec | CaptionSpec;
+  | RankSpec | OwnerSpec | ChainSpec | HotSeatSpec | VoiceSpec | BlindDateSpec | CaptionSpec | RankNightSpec;
 
 export type Play = {
   id: string;
@@ -392,5 +395,28 @@ export const PLAYS: Play[] = [
   { id: "blinddate-1", weeks: [4, 5, 6], heat: 4, mode: "blinddate", body: "Blind Date. Tap in and get paired with another guy in this Circle. No names, no faces, one week to talk. Faces come out when the week ends.", hint: "Photos are off in the blind thread. Use your words.", spec: { kind: "blinddate" } },
 ];
 
-export const PLAY_BY_ID = new Map(PLAYS.map((p) => [p.id, p]));
-export const PLAY_MODES: PlayMode[] = ["survey", "thisorthat", "madlibs", "speed", "twotruths", "video", "rank", "owner", "chain", "hotseat", "voice", "blinddate"];
+// Rank Night versions, one per Season, so nobody gets the same superlatives twice.
+export const RANK_NIGHTS: Play[] = [
+  {
+    id: "ranknight-1", weeks: [7], heat: 2, mode: "ranknight",
+    body: "Rank Night. Superlatives, compliments only. Pick one guy for each.",
+    hint: "Results Sunday night. Everyone in the Circle walks away with a title.",
+    spec: { kind: "ranknight", categories: ["Best smile", "Best laugh", "Most likely to become famous", "Best hug, probably", "The one you'd call in a crisis", "Best taste in music", "Most likely to make you blush", "Best dressed"] },
+  },
+  {
+    id: "ranknight-2", weeks: [7], heat: 3, mode: "ranknight",
+    body: "Rank Night, round two. Superlatives, compliments only. One guy per title.",
+    hint: "Results Sunday night. Everyone gets one.",
+    spec: { kind: "ranknight", categories: ["Best eyes", "Funniest in the group chat", "Best cook, allegedly", "Most likely to start a dance floor", "Best advice", "Most underrated", "Best wingman", "Hottest voice"] },
+  },
+  {
+    id: "ranknight-3", weeks: [7], heat: 3, mode: "ranknight",
+    body: "Rank Night is back. Superlatives, compliments only. Pick one guy for each.",
+    hint: "Results Sunday night. Nobody leaves empty-handed.",
+    spec: { kind: "ranknight", categories: ["Best energy", "Main character", "Best storyteller", "Most likely to adopt a dog with you", "Best texter", "Kindest", "Best at a party", "Most likely to surprise you"] },
+  },
+];
+
+export const PLAY_MODES: PlayMode[] = ["survey", "thisorthat", "madlibs", "speed", "twotruths", "video", "rank", "owner", "chain", "hotseat", "voice", "blinddate", "ranknight"];
+
+export const PLAY_BY_ID = new Map([...PLAYS, ...RANK_NIGHTS].map((p) => [p.id, p]));

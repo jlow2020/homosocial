@@ -1,28 +1,41 @@
 import Link from "next/link";
 import { LEGAL } from "@/lib/legal";
 
+const COLUMNS: { title: string; links: [string, string][] }[] = [
+  { title: "Homosocial", links: [["/about", "About"], ["/contact", "Help and contact"]] },
+  { title: "Community", links: [["/guidelines", "Community Guidelines"], ["/safety", "Safety"]] },
+  { title: "Legal", links: [["/terms", "Terms"], ["/privacy", "Privacy"], ["/biometrics", "Biometric and ID Notice"], ["/copyright", "Copyright"]] },
+];
+
 export default function SiteFooter() {
   const year = new Date().getFullYear();
   return (
     <footer className="footer">
-      <div className="wrap footer-inner">
+      <div className="wrap footer-grid">
         <div className="footer-brand">
-          <span className="wordmark">Homosocial</span>
+          <span className="wordmark">
+            <span className="onair" aria-hidden="true" />
+            Homosocial
+          </span>
           <span className="fine">Good company. Questionable behavior.</span>
         </div>
-        <nav className="footer-links" aria-label="About and legal">
-          <Link href="/about">About</Link>
-          <Link href="/guidelines">Community Guidelines</Link>
-          <Link href="/safety">Safety</Link>
-          <Link href="/contact">Help and contact</Link>
-          <Link href="/terms">Terms</Link>
-          <Link href="/privacy">Privacy</Link>
-          <Link href="/biometrics">Biometric and ID Notice</Link>
-          <Link href="/copyright">Copyright</Link>
-        </nav>
-        <p className="fine footer-legal">
-          © {year} {LEGAL.company}. 18+ only. Homosocial is a social game, not a background check service. In an emergency, call 911.
-        </p>
+        {COLUMNS.map((c) => (
+          <nav key={c.title} className="footer-col" aria-label={c.title}>
+            <p className="footer-h">{c.title}</p>
+            <ul>
+              {c.links.map(([href, label]) => (
+                <li key={href}>
+                  <Link href={href}>{label}</Link>
+                </li>
+              ))}
+            </ul>
+          </nav>
+        ))}
+      </div>
+      <div className="wrap footer-bottom">
+        <span>© {year} {LEGAL.company}</span>
+        <span>18+ only · Made in Sarasota, Florida</span>
+        <span>In an emergency, call 911</span>
       </div>
     </footer>
   );

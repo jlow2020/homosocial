@@ -13,6 +13,7 @@ import { etLabel, untilLabel } from "@/lib/game/clock";
 import { Avatar, GuyName, Shell, timeAgo, weekTitle } from "./ui";
 import HeatVote from "./HeatVote";
 import { targetHeat } from "@/lib/game/engine";
+import { myRecap } from "@/lib/game/recap";
 
 export const metadata: Metadata = { title: "Your Circle | Homosocial" };
 export const dynamic = "force-dynamic";
@@ -28,13 +29,24 @@ export default async function CirclePage() {
       Profile
     </Link>
   );
+  const pp = p as typeof p & { paused_until?: string | null; pause_reason?: string | null };
+  // A timed pause ends on its own.
+  if (p.status === "paused" && pp.paused_until && new Date(pp.paused_until) <= new Date()) {
+    await getSupabaseAdmin()!.from("profiles").update({ status: "active", paused_until: null, pause_reason: null, paused_at: null }).eq("id", p.id);
+    redirect("/circle");
+  }
   if (p.status === "paused" || p.status === "banned") {
+    const until = pp.paused_until ? new Date(pp.paused_until).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", timeZone: "America/New_York" }) : null;
     return (
       <main className="apply-page">
         <PageHead title="Your account is paused" right={nav}>
-          {p.status === "paused"
-            ? "Several members reported your account, so it's paused while it gets reviewed."
-            : "Your account was removed for breaking the house rules."}
+          {p.status === "banned"
+            ? "Your account was removed for breaking the house rules."
+            : pp.pause_reason === "strikes"
+              ? until
+                ? `You got a second strike for breaking the house rules, so your account is paused until ${until}. You'll be back in your Circle after that.`
+                : "You got a third strike for breaking the house rules. Your account is paused until a person reviews it. Questions? Email support@homosocial.net."
+              : "Several members reported your account, so it's paused while it gets reviewed."}
         </PageHead>
       </main>
     );
@@ -159,7 +171,7 @@ async function Home({ pl }: { pl: Player }) {
 
   const [{ data: answers }, { data: lounge }, { data: plans }, { data: requests }] = await Promise.all([
     db.from("answers").select("user_id").eq("drop_id", drop.id),
-    db.from("lounge_messages").select("id, user_id, body, created_at").eq("circle_id", circle.id).order("created_at", { ascending: false }).limit(3),
+    db.from("lounge_messages").select("id, user_id, body, created_at").eq("circle_id", circle.id).eq("held", false).order("created_at", { ascending: false }).limit(3),
     db
       .from("plans")
       .select("id, title, place, starts_at, plan_rsvps(user_id)")
@@ -182,9 +194,27 @@ async function Home({ pl }: { pl: Player }) {
   const answered = (answers ?? []).some((a) => a.user_id === pl.profile.id);
   const answerCount = (answers ?? []).length;
   const loungePhotos = await photoUrls(db, (lounge ?? []).map((l) => byId.get(l.user_id)?.photo_path));
+  const recap = week >= 2 ? await myRecap(db, circle, pl.profile.id, pl.members, revealed ? 9 : week) : [];
 
   return (
     <Shell pl={pl}>
+      {recap.length > 0 && (
+        <section className="recap" aria-label="Previously on your Circle">
+          <p className="recap-eyebrow">
+            <span className="recap-dot" aria-hidden="true" />
+            Previously on Circle {circle.number}
+          </p>
+          <ul className="recap-reel">
+            {recap.map((m, i) => (
+              <li key={i} className={`recap-card recap-${m.tone}`}>
+                <span className="recap-chy">{m.label}</span>
+                <span className="recap-stat">{m.stat}</span>
+                <span className="recap-line">{m.line}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
       <div className="home-grid">
         <section className="drop-card">
           <p className="eyebrow">

@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { getMe, getSupabaseAdmin } from "@/lib/supabase-server";
 import { SEASON, ageFrom, regionForZip } from "@/lib/season";
 import { purgeAllMedia } from "@/lib/retention";
+import { moderateImage, moderateText, enqueue } from "@/lib/moderation";
 
 export type ProfileState = { error?: string };
 
@@ -49,12 +50,25 @@ export async function saveProfile(_prev: ProfileState, form: FormData): Promise<
     if (photo.size > MAX_PHOTO_BYTES) return { error: "That photo is too big. Try a smaller one." };
   }
 
+  // Your profile is public to your Circle, so the same house rules apply.
+  const words = [firstName, interests, hotTake].join("\n");
+  const said = await moderateText(words, "profile");
+  if (said.action === "hold") {
+    return { error: `Something in your profile breaks the house rules (${(said.reason ?? "").toLowerCase()}). Edit it and try again. Think we got it wrong? Email support@homosocial.net.` };
+  }
+
   let photoPath = existing?.photo_path ?? "";
+  let photoCheck: Awaited<ReturnType<typeof moderateImage>> | null = null;
   if (hasPhoto) {
+    const buf = Buffer.from(await photo.arrayBuffer());
+    photoCheck = await moderateImage(buf, "a profile photo his whole group sees");
+    if (photoCheck.action === "hold") {
+      return { error: "Your profile photo shows more than the house rules allow. Underwear's fine, nothing more. Pick another one." };
+    }
     photoPath = `${me.userId}/${randomUUID()}.jpg`;
     const up = await db.storage
       .from("photos")
-      .upload(photoPath, photo, { contentType: "image/jpeg", upsert: false });
+      .upload(photoPath, buf, { contentType: "image/jpeg", upsert: false });
     if (up.error) return { error: "Your photo didn't upload. Try again." };
   }
 
@@ -82,6 +96,12 @@ export async function saveProfile(_prev: ProfileState, form: FormData): Promise<
   }
   if (hasPhoto && existing?.photo_path && existing.photo_path !== photoPath) {
     await db.storage.from("photos").remove([existing.photo_path]);
+  }
+  if (said.action === "flag") {
+    await enqueue(db, { user_id: me.userId, circle_id: existing?.circle_id ?? null, surface: "profile", content: words, verdict: "flagged", category: said.category, reason: said.reason, urgent: said.urgent, detail: said.detail });
+  }
+  if (photoCheck && photoCheck.action === "veil") {
+    await enqueue(db, { user_id: me.userId, circle_id: existing?.circle_id ?? null, surface: "profile_photo", media_bucket: "photos", media_path: photoPath, verdict: "flagged", category: "nudity", reason: photoCheck.reason, detail: { scores: photoCheck.scores, ai: photoCheck.ai } });
   }
 
   redirect(hasPhoto || !existing?.verified_at ? "/verify" : "/circle");

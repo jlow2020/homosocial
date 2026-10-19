@@ -1,5 +1,7 @@
 import "server-only";
 import { purgeStaleVerifications } from "@/lib/retention";
+import { alertAdmins } from "@/lib/moderation";
+import { warmImageModels } from "@/lib/moderation/image";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { WEEKS } from "@/lib/season";
 import { claimNotice, notify, teaser } from "@/lib/notify";
@@ -18,6 +20,9 @@ const READ_BEFORE_DROP = 11 * HOUR; // Sunday 8pm, when the next drop is Monday 
 export async function tickAll(db: SupabaseClient): Promise<{ circles: number; sent: string[] }> {
   // Housekeeping the Privacy Policy promises: stale Realness Check frames go after 90 days.
   await purgeStaleVerifications(db).catch((e) => console.error("purge failed", e));
+  await moderationDigest(db).catch((e) => console.error("digest failed", e));
+  // Keep the nudity models loaded so the first borderline photo doesn't wait on them.
+  void warmImageModels();
   const { data } = await db.from("circles").select("*").not("kickoff_at", "is", null);
   const sent: string[] = [];
   for (const c of (data ?? []) as Circle[]) {
@@ -132,3 +137,17 @@ function readNotice(week: number) {
 }
 
 export type { Member };
+
+// Once a day, after 9am Eastern: if anything is waiting in moderation, tell staff.
+async function moderationDigest(db: SupabaseClient) {
+  const now = new Date();
+  const et = new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", hourCycle: "h23" }).formatToParts(now);
+  const part = (t: string) => et.find((x) => x.type === t)?.value ?? "";
+  if (Number(part("hour")) < 9) return;
+  const { count } = await db.from("mod_queue").select("id", { count: "exact", head: true }).eq("status", "pending");
+  if (!count) return;
+  const key = `digest:${part("year")}-${part("month")}-${part("day")}`;
+  const { data } = await db.from("admin_notices").upsert({ key }, { onConflict: "key", ignoreDuplicates: true }).select("key");
+  if (!data?.length) return;
+  await alertAdmins(db, `${count} ${count === 1 ? "thing needs" : "things need"} a look`, "Your moderation queue. Two minutes, tops.", "/admin/moderation");
+}

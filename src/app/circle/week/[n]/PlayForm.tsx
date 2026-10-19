@@ -30,6 +30,8 @@ export default function PlayForm({ week, spec, guys = [], meId = "", myRow = nul
   switch (spec.kind) {
     case "rank":
       return <Rank week={week} spec={spec} guys={guys} meId={meId} />;
+    case "ranknight":
+      return <RankNight week={week} spec={spec} guys={guys} meId={meId} />;
     case "chain":
       return ending ? (
         <OneLine week={week} field="line" max={spec.maxLen} placeholder="You're writing the ending. Land it." button="End the story" />
@@ -405,6 +407,55 @@ function Rank({ week, spec, guys, meId }: { week: number; spec: Extract<PlaySpec
       {error && <p className="error">{error}</p>}
       <button className="btn btn-pink" disabled={pending || left.length > 0} onClick={() => submit({ order })}>
         {pending ? "Posting..." : left.length ? `${left.length} to go` : "Lock in my ranking"}
+      </button>
+    </div>
+  );
+}
+
+function RankNight({ week, spec, guys, meId }: { week: number; spec: Extract<PlaySpec, { kind: "ranknight" }>; guys: { id: string; name: string; photo: string | null }[]; meId: string }) {
+  const pool = guys.filter((g) => g.id !== meId).sort((a, b) => a.name.localeCompare(b.name));
+  const [picks, setPicks] = useState<Record<string, string>>({});
+  const { pending, error, submit } = useSubmit(week);
+  const filled = Object.values(picks).filter(Boolean).length;
+  const need = Math.min(5, spec.categories.length);
+  return (
+    <div className="play">
+      <p className="fine">One guy per title. Skip any you can&apos;t call. Nobody sees your ballot, only the results.</p>
+      <ol className="ranknight">
+        {spec.categories.map((c, i) => {
+          const g = pool.find((x) => x.id === picks[i]);
+          return (
+            <li key={c} className={g ? "rn-row on" : "rn-row"}>
+              <label className="rn-cat" htmlFor={`rn-${i}`}>
+                {c}
+              </label>
+              <div className="rn-pick">
+                {g?.photo ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={g.photo} alt="" className="avatar" style={{ width: 32, height: 32 }} />
+                ) : (
+                  <span className="avatar avatar-empty" style={{ width: 32, height: 32 }} />
+                )}
+                <select id={`rn-${i}`} className="input" value={picks[i] ?? ""} onChange={(e) => setPicks({ ...picks, [i]: e.target.value })}>
+                  <option value="">Pick a guy</option>
+                  {pool.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </li>
+          );
+        })}
+      </ol>
+      {error && <p className="error">{error}</p>}
+      <button
+        className="btn btn-pink"
+        disabled={pending || filled < need}
+        onClick={() => submit({ picks: Object.fromEntries(Object.entries(picks).filter(([, v]) => v)) })}
+      >
+        {pending ? "Casting..." : filled < need ? `Pick at least ${need - filled} more` : "Cast my ballot"}
       </button>
     </div>
   );

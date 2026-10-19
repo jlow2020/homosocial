@@ -182,8 +182,8 @@ const sections: Section[] = [
       <>
         <ul>
           <li>
-            <b>Shared spaces</b> (drops, the Lounge, Plans, Roses, your profile and anything your Circle can see): no nudity of
-            genitals or buttocks and no sexual acts. Underwear and thirst traps are fine.
+            <b>Shared spaces</b> (drops, the Lounge, Plans, Roses, your profile and anything your Circle can see): no visible
+            genitals or anus, and no sexual acts. Underwear, thirst traps and a bare butt are fine.
           </li>
           <li>
             <b>Private messages:</b> explicit photos and videos are allowed only after both of you have turned on photos and
@@ -258,6 +258,14 @@ const sections: Section[] = [
           You can block or report any member, and report any answer or message. Reports are confidential: the person you report
           isn&apos;t told who reported him. When enough different members report an account or an answer, it may be paused or
           hidden automatically until a moderator reviews it.
+        </p>
+        <p>
+          We use automated tools to help keep the Service safe. They check photos and videos posted to shared spaces for nudity
+          the rules don&apos;t allow, and check posts and messages for a short list of serious problems: selling sex, drugs,
+          minors, threats, hate, and spam. When a tool is unsure, it lets your post through and a person may look later. When it
+          is confident, your post is held, visible only to you, until a person reviews it. Tools never remove content or give
+          strikes on their own. A strike only comes from a person: one is a warning, a second within 90 days pauses your
+          account for 7 days, and a third pauses it until staff review it.
         </p>
         <p>
           We may warn you, remove content, limit features, pause, or permanently ban your account, with or without notice, if

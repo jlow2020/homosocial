@@ -56,6 +56,13 @@ export function checkPlayAnswer(spec: PlaySpec, data: unknown, ctx: { ending?: b
       return str(d?.question, 200) ? null : "Ask him something.";
     case "caption":
       return str(d?.caption, 140) ? null : "Give it a caption.";
+    case "ranknight": {
+      const p = d?.picks as Record<string, unknown> | undefined;
+      if (!p || typeof p !== "object") return "Pick a guy for at least five titles.";
+      const filled = Object.entries(p).filter(([k, v]) => /^\d+$/.test(k) && Number(k) < spec.categories.length && typeof v === "string" && v.length > 0);
+      if (filled.length < Math.min(5, spec.categories.length)) return "Pick a guy for at least five titles.";
+      return null;
+    }
   }
 }
 
@@ -100,6 +107,7 @@ export function compile(spec: PlaySpec, data: Record<string, unknown>): { title?
     case "voice":
     case "owner":
     case "blinddate":
+    case "ranknight":
       return { lines: [] };
   }
 }

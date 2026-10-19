@@ -9,6 +9,7 @@ import AcceptButton from "./AcceptButton";
 import { PhotoSwitch } from "./DmPhotos";
 import ChatThread, { type ChatMessage } from "./ChatThread";
 import BlindReveal from "./BlindReveal";
+import { Challenge } from "./SpeedGame";
 import { ageFrom } from "@/lib/season";
 
 export const dynamic = "force-dynamic";
@@ -20,6 +21,8 @@ type Row = {
   photo_path: string | null;
   media_type: "photo" | "video" | null;
   ready: boolean;
+  held: boolean;
+  game_id: string | null;
   created_at: string;
   dm_reactions: { user_id: string; emoji: string }[];
 };
@@ -40,7 +43,7 @@ export default async function Thread({ params }: { params: Promise<{ id: string 
   const [{ data: rows }, { data: otherRow }] = await Promise.all([
     pl.db
       .from("dm_messages")
-      .select("id, user_id, body, photo_path, media_type, ready, created_at, dm_reactions(user_id, emoji)")
+      .select("id, user_id, body, photo_path, media_type, ready, held, game_id, created_at, dm_reactions(user_id, emoji)")
       .eq("thread_id", id)
       .order("created_at"),
     pl.db
@@ -50,7 +53,8 @@ export default async function Thread({ params }: { params: Promise<{ id: string 
       .single(),
   ]);
   const other = pl.members.find((m) => m.id === otherId) ?? (otherRow as (typeof pl.members)[number]);
-  const msgs = (rows ?? []) as Row[];
+  // A held message is only visible to the guy who sent it, until a person clears it.
+  const msgs = ((rows ?? []) as Row[]).filter((m) => !m.held || m.user_id === me);
 
   const photoPaths = msgs.filter((m) => m.photo_path && m.media_type !== "video").map((m) => m.photo_path);
   const clipPaths = msgs.filter((m) => m.photo_path && m.media_type === "video").map((m) => m.photo_path as string);
@@ -61,6 +65,15 @@ export default async function Thread({ params }: { params: Promise<{ id: string 
       : Promise.resolve(new Map<string, string>()),
   ]);
 
+  const gameIds = msgs.map((m) => m.game_id).filter(Boolean) as string[];
+  const { data: gameRows } = gameIds.length ? await pl.db.from("dm_games").select("id, questions, seconds, answers").in("id", gameIds) : { data: [] };
+  const games = new Map(
+    (gameRows ?? []).map((g) => {
+      const ans = (g.answers ?? {}) as Record<string, string[]>;
+      return [g.id as string, { id: g.id as string, questions: g.questions as string[], seconds: g.seconds as number, mine: ans[me] ?? null, theirs: ans[otherId] ?? null }];
+    })
+  );
+
   const messages: ChatMessage[] = msgs.map((m) => ({
     id: m.id,
     mine: m.user_id === me,
@@ -69,6 +82,8 @@ export default async function Thread({ params }: { params: Promise<{ id: string 
       ? { type: m.media_type === "video" ? "video" : "photo", url: m.ready === false ? null : ((m.media_type === "video" ? clips : urls).get(m.photo_path) ?? null), converting: m.ready === false }
       : null,
     at: m.created_at,
+    held: m.held,
+    game: m.game_id ? (games.get(m.game_id) ?? null) : null,
     reactions: m.dm_reactions.map((r) => ({ emoji: r.emoji, mine: r.user_id === me })),
   }));
 
@@ -97,6 +112,7 @@ export default async function Thread({ params }: { params: Promise<{ id: string 
             {blind ? <span className="guy-name">Your blind date</span> : <GuyName pl={pl} m={other} age />}
             <span className="fine">{blind ? `Names and faces come out ${new Date(t.blind_until).toLocaleDateString("en-US", { weekday: "long" })}` : t.accepted_at ? (mineOn && theirsOn ? "Photos and videos on" : "In your Circle") : "Message request"}</span>
           </div>
+          {t.accepted_at && !blind && !revealPending && !incoming && <Challenge threadId={id} />}
         </div>
 
         <ChatThread

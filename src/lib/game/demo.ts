@@ -112,7 +112,7 @@ export const DEMO_PROMPT: Record<number, string> = {
   4: "w4-public",
   5: "survey-scandal",
   6: "w6-baddecisions",
-  7: "w7-underrated",
+  7: "ranknight-1",
   8: "w8-almostdm",
 };
 
