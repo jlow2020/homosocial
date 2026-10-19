@@ -11,6 +11,8 @@ import { loadPlayer, photoUrls, type Player } from "@/lib/game/player";
 import { ensureDrop, promptOf } from "@/lib/game/drops";
 import { etLabel, untilLabel } from "@/lib/game/clock";
 import { Avatar, GuyName, Shell, timeAgo, weekTitle } from "./ui";
+import HeatVote from "./HeatVote";
+import { targetHeat } from "@/lib/game/engine";
 
 export const metadata: Metadata = { title: "Your Circle | Homosocial" };
 export const dynamic = "force-dynamic";
@@ -172,6 +174,8 @@ async function Home({ pl }: { pl: Player }) {
       .is("accepted_at", null)
       .neq("requested_by", pl.profile.id),
   ]);
+  const { data: heatVotes } = await db.from("heat_votes").select("user_id").eq("circle_id", circle.id).eq("season_no", circle.season_no);
+  const heatNeeded = circle.is_test ? 1 : Math.max(5, Math.ceil(pl.members.length * 0.6));
   const answered = (answers ?? []).some((a) => a.user_id === pl.profile.id);
   const answerCount = (answers ?? []).length;
   const loungePhotos = await photoUrls(db, (lounge ?? []).map((l) => byId.get(l.user_id)?.photo_path));
@@ -184,6 +188,7 @@ async function Home({ pl }: { pl: Player }) {
             {revealed ? "Week 8 drop" : `This week's drop`} · {answerCount} of {pl.members.length} answered
           </p>
           <h2 className="drop-prompt">{prompt.body}</h2>
+          {prompt.credit && <p className="drop-credit">This week&apos;s drop by {prompt.credit}</p>}
           {prompt.hint && <p className="drop-hint">{prompt.hint}</p>}
           {prompt.anon && <p className="anon-note">🎭 Anonymous this week. Nobody sees who wrote what.</p>}
           <div className="row">
@@ -287,6 +292,15 @@ async function Home({ pl }: { pl: Player }) {
             </ul>
           )}
         </section>
+
+        {!revealed && week < 8 && (
+          <HeatVote
+            votes={(heatVotes ?? []).length}
+            needed={heatNeeded}
+            mine={(heatVotes ?? []).some((v) => v.user_id === pl.profile.id)}
+            heat={targetHeat(circle, week + 1)}
+          />
+        )}
 
         <section className="mini-card season-strip">
           <h3>Season {circle.season_no}</h3>

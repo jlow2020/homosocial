@@ -1,65 +1,82 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { PROMPTS, PROMPT_BY_ID, type Prompt } from "./prompts";
-import { DEMO_PROMPT } from "./demo";
+import { PROMPT_BY_ID, modeOf, type Mode } from "./prompts";
+import { chooseDrop } from "./engine";
 
-export type Drop = { id: string; circle_id: string; season_no: number; week: number; prompt_id: string; created_at: string };
+export type Drop = {
+  id: string;
+  circle_id: string;
+  season_no: number;
+  week: number;
+  prompt_id: string;
+  body: string | null;
+  hint: string | null;
+  mode: Mode;
+  heat: number;
+  source: string;
+  credit: string | null;
+  created_at: string;
+};
 
-type CircleLike = { id: string; season_no: number; is_test: boolean };
+// What a drop asks, as the player sees it.
+export type DropView = {
+  id: string;
+  body: string;
+  hint: string | null;
+  mode: Mode;
+  kind: "text" | "photo";
+  anon: boolean;
+  heat: number;
+  credit: string | null;
+};
 
-function hash(s: string): number {
-  let h = 2166136261;
-  for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619);
-  return h >>> 0;
-}
+type CircleLike = { id: string; season_no: number; is_test: boolean; heat_boost?: number };
 
-// Prompts anyone in this Circle has already seen, in any Circle, any Season.
-async function seenPrompts(db: SupabaseClient, circleId: string): Promise<Set<string>> {
-  const { data: members } = await db.from("profiles").select("id").eq("circle_id", circleId);
-  const ids = (members ?? []).map((m) => m.id as string);
-  const seen = new Set<string>();
-  const { data: own } = await db.from("drops").select("prompt_id").eq("circle_id", circleId);
-  for (const d of own ?? []) seen.add(d.prompt_id as string);
-  if (ids.length) {
-    const { data: answered } = await db.from("answers").select("drops(prompt_id)").in("user_id", ids);
-    for (const a of (answered ?? []) as unknown as { drops: { prompt_id: string } | null }[]) {
-      if (a.drops?.prompt_id) seen.add(a.drops.prompt_id);
-    }
-  }
-  return seen;
-}
-
-function pickPrompt(circle: CircleLike, week: number, seen: Set<string>): Prompt {
-  // Test Circles use the prompts the fake guys have answers for, in Season 1.
-  if (circle.is_test && circle.season_no === 1) {
-    const p = PROMPT_BY_ID.get(DEMO_PROMPT[week]);
-    if (p) return p;
-  }
-  const pool = PROMPTS.filter((p) => p.week === week);
-  const fresh = pool.filter((p) => !seen.has(p.id));
-  const from = fresh.length ? fresh : pool; // The bank ran dry for this week: time to write more.
-  return from[hash(`${circle.id}:${circle.season_no}:${week}`) % from.length];
-}
-
-// This week's drop for a Circle, created the first time anyone looks.
+// This week's drop for a Circle, chosen by the engine the first time anyone looks.
 export async function ensureDrop(db: SupabaseClient, circle: CircleLike, week: number): Promise<Drop> {
   const find = () =>
     db.from("drops").select("*").eq("circle_id", circle.id).eq("season_no", circle.season_no).eq("week", week).maybeSingle();
   const { data: existing } = await find();
   if (existing) return existing as Drop;
-  const prompt = pickPrompt(circle, week, await seenPrompts(db, circle.id));
-  await db
+  const c = await chooseDrop(db, circle, week);
+  const { data: inserted } = await db
     .from("drops")
     .upsert(
-      { circle_id: circle.id, season_no: circle.season_no, week, prompt_id: prompt.id },
+      {
+        circle_id: circle.id,
+        season_no: circle.season_no,
+        week,
+        prompt_id: c.key,
+        body: c.body,
+        hint: c.hint,
+        mode: c.mode,
+        heat: c.heat,
+        source: c.source,
+        credit: c.credit,
+      },
       { onConflict: "circle_id,season_no,week", ignoreDuplicates: true }
-    );
+    )
+    .select("id");
+  if (inserted?.length && c.bankId) {
+    const { data: row } = await db.from("prompt_bank").select("times_used").eq("id", c.bankId).single();
+    await db.from("prompt_bank").update({ times_used: (row?.times_used ?? 0) + 1 }).eq("id", c.bankId);
+  }
   const { data } = await find();
   return data as Drop;
 }
 
-export function promptOf(drop: Drop): Prompt {
-  return (
-    PROMPT_BY_ID.get(drop.prompt_id) ?? { id: drop.prompt_id, week: drop.week, kind: "text", body: "This week's drop." }
-  );
+export function promptOf(drop: Drop): DropView {
+  // Drops from before the engine kept no snapshot: look them up in code.
+  const legacy = drop.body ? null : PROMPT_BY_ID.get(drop.prompt_id);
+  const mode: Mode = drop.body ? drop.mode : legacy ? modeOf(legacy) : "text";
+  return {
+    id: drop.id,
+    body: drop.body ?? legacy?.body ?? "This week's drop.",
+    hint: drop.hint ?? legacy?.hint ?? null,
+    mode,
+    kind: mode === "photo" ? "photo" : "text",
+    anon: mode === "anon" || mode === "guesswho",
+    heat: drop.heat ?? legacy?.heat ?? 2,
+    credit: drop.credit ?? null,
+  };
 }

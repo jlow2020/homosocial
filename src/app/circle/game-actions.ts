@@ -411,3 +411,87 @@ export async function sendDmClip(threadId: string, path: string): Promise<Result
   return { ok: true };
 }
 
+// The drop engine: Write the Drop, heat votes, Guess Who -------------------------
+
+export async function submitDrop(form: FormData): Promise<Result> {
+  const pl = await player();
+  const body = clean(form.get("body"), 300);
+  const week = Number(form.get("week"));
+  const heat = Number(form.get("heat"));
+  const mode = String(form.get("mode") ?? "text");
+  if (body.length < 15) return { ok: false, error: "Give it a little more than that." };
+  if (!Number.isInteger(week) || week < 1 || week > 8) return { ok: false, error: "Pick a week." };
+  if (!Number.isInteger(heat) || heat < 1 || heat > 5) return { ok: false, error: "Pick a heat." };
+  if (!["text", "anon", "guesswho", "photo", "dare"].includes(mode)) return { ok: false, error: "Pick how answers work." };
+  const { count } = await pl.db
+    .from("prompt_bank")
+    .select("id", { count: "exact", head: true })
+    .eq("author_id", pl.profile.id)
+    .gte("created_at", new Date(Date.now() - 60 * 864e5).toISOString());
+  if ((count ?? 0) >= 3) return { ok: false, error: "Three per Season. You've sent yours, thank you." };
+  const town = pl.circle.is_test ? "Sarasota" : pl.circle.region;
+  const { error } = await pl.db.from("prompt_bank").insert({
+    body,
+    week,
+    heat,
+    mode,
+    author_id: pl.profile.id,
+    credit: `${pl.profile.first_name}, ${town === "test" ? "Sarasota" : regionName(town)}`,
+    source: "member",
+    status: "queued",
+  });
+  if (error) return { ok: false, error: "That didn't send. Try again." };
+  return { ok: true };
+}
+
+function regionName(region: string | null): string {
+  // Three-digit zip prefixes, roughly one metro each. Good enough for a credit line.
+  const names: Record<string, string> = {
+    "320": "Jacksonville", "321": "Daytona", "322": "Jacksonville", "323": "Tallahassee", "324": "Panama City", "325": "Pensacola",
+    "326": "Gainesville", "327": "Orlando", "328": "Orlando", "329": "Melbourne", "330": "Miami", "331": "Miami", "332": "Miami",
+    "333": "Fort Lauderdale", "334": "West Palm Beach", "335": "Tampa", "336": "Tampa", "337": "St. Pete", "338": "Lakeland",
+    "339": "Fort Myers", "341": "Naples", "342": "Sarasota", "344": "Ocala", "346": "Tampa", "347": "Orlando", "349": "West Palm Beach",
+  };
+  return (region && names[region]) || "Florida";
+}
+
+export async function voteHeat(): Promise<Result> {
+  const pl = await player();
+  if (pl.clock.phase !== "season") return { ok: false };
+  const key = { circle_id: pl.circle.id, season_no: pl.circle.season_no, user_id: pl.profile.id };
+  const { count: had } = await pl.db.from("heat_votes").select("user_id", { count: "exact", head: true }).match(key);
+  if (had) await pl.db.from("heat_votes").delete().match(key);
+  else await pl.db.from("heat_votes").insert(key);
+  // Enough votes: the Circle runs one notch hotter from the next drop on.
+  const { count: votes } = await pl.db
+    .from("heat_votes")
+    .select("user_id", { count: "exact", head: true })
+    .eq("circle_id", pl.circle.id)
+    .eq("season_no", pl.circle.season_no);
+  const needed = pl.circle.is_test ? 1 : Math.max(5, Math.ceil(pl.members.length * 0.6));
+  if ((votes ?? 0) >= needed) {
+    await pl.db.from("circles").update({ heat_boost: (pl.circle.heat_boost ?? 0) + 1 }).eq("id", pl.circle.id);
+    await pl.db.from("heat_votes").delete().eq("circle_id", pl.circle.id).eq("season_no", pl.circle.season_no);
+  }
+  revalidatePath("/circle");
+  return { ok: true };
+}
+
+export async function guessWho(dropId: string, answerId: string, guessed: string): Promise<Result> {
+  const pl = await player();
+  if (!UUID.test(dropId) || !UUID.test(answerId)) return { ok: false };
+  const { data: drop } = await pl.db.from("drops").select("circle_id, mode, week").eq("id", dropId).maybeSingle();
+  if (!drop || drop.circle_id !== pl.circle.id || drop.mode !== "guesswho") return { ok: false };
+  if (pl.clock.phase !== "season" || pl.clock.week !== drop.week) return { ok: false, error: "Guessing is closed." };
+  const a = await answerInMyCircle(pl, answerId);
+  if (!a || a.user_id === pl.profile.id) return { ok: false };
+  const key = { drop_id: dropId, guesser: pl.profile.id, answer_id: answerId };
+  if (!guessed) {
+    await pl.db.from("guesses").delete().match(key);
+  } else {
+    if (!UUID.test(guessed) || !isMember(pl, guessed)) return { ok: false };
+    await pl.db.from("guesses").upsert({ ...key, guessed }, { onConflict: "drop_id,guesser,answer_id" });
+  }
+  return { ok: true };
+}
+

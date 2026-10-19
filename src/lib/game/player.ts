@@ -18,6 +18,7 @@ export type Circle = {
   week_override: number | null;
   is_test: boolean;
   demo_seeded: Record<string, boolean>;
+  heat_boost: number;
 };
 
 export type Member = {
