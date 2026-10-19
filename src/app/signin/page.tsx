@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 
 export default async function SignIn() {
   const me = await getMe();
-  if (me) redirect(nextPath(me.profile, me.username));
+  if (me) redirect(nextPath(me.profile, me.username, me.terms));
   return (
     <main>
       <PageHead title="Sign in">Welcome back.</PageHead>

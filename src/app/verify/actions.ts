@@ -4,6 +4,8 @@ import { getMe, getSupabaseAdmin } from "@/lib/supabase-server";
 import { passes, type RealnessResult, MOVES } from "@/lib/realness";
 import { SEASON } from "@/lib/season";
 import { bestMatch, facesIn } from "@/lib/server/vision";
+import { hasConsent } from "@/lib/consent";
+import { BIOMETRIC_VERSION } from "@/lib/legal";
 
 export type VerifyOutcome = { passed: boolean; message: string; retry: boolean };
 
@@ -22,6 +24,9 @@ export async function completeVerification(form: FormData): Promise<VerifyOutcom
   }
   const p = me.profile;
   if (p.verified_at) return { passed: true, message: "", retry: false };
+  if (!(await hasConsent(db, me.userId, "biometric", BIOMETRIC_VERSION))) {
+    return { passed: false, message: "Agree to the face-matching notice first. Reload the page.", retry: false };
+  }
   if (p.status === "paused" || p.status === "banned") {
     return { passed: false, message: "Your account is paused.", retry: false };
   }

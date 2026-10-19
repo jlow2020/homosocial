@@ -7,5 +7,5 @@ export const dynamic = "force-dynamic";
 export default async function Me() {
   const me = await getMe();
   if (!me) redirect("/signin");
-  redirect(nextPath(me.profile, me.username));
+  redirect(nextPath(me.profile, me.username, me.terms));
 }

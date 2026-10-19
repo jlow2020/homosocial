@@ -39,7 +39,7 @@ export default async function CirclePage() {
       </main>
     );
   }
-  if (nextPath(p, me.username) !== "/circle") redirect(nextPath(p, me.username));
+  if (nextPath(p, me.username, me.terms) !== "/circle") redirect(nextPath(p, me.username, me.terms));
   if (p.status === "waitlist" || !p.circle_id) {
     return (
       <main className="apply-page">

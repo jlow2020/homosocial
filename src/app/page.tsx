@@ -204,15 +204,6 @@ export default async function Home() {
         </Link>
       </section>
 
-      <footer className="footer">
-        <div className="wrap footer-inner">
-          <span className="wordmark">Homosocial</span>
-          <span>
-            Good company. Questionable behavior.{" "}
-            <Link href="/rules">House rules</Link>
-          </span>
-        </div>
-      </footer>
     </main>
   );
 }

@@ -3914,3 +3914,85 @@ audio {
   flex: none;
   width: 24px;
 }
+
+/* Legal pages and footer ---------------------------------------------------- */
+.legal .prose h2 {
+  font-size: 30px;
+  margin: 36px 0 12px;
+  scroll-margin-top: 24px;
+}
+.legal-no {
+  color: var(--hot);
+}
+.legal-section p,
+.legal-section li {
+  line-height: 1.6;
+}
+.legal-summary {
+  background: linear-gradient(160deg, var(--studio), #22123a);
+  border: 2px solid var(--gold);
+  padding: 16px 20px;
+  margin: 16px 0 8px;
+}
+.legal-summary ul {
+  margin: 8px 0;
+}
+.legal-toc ol {
+  columns: 2 220px;
+  column-gap: 24px;
+  display: block;
+  font-size: 15px;
+}
+.legal-toc li {
+  margin-bottom: 6px;
+  break-inside: avoid;
+}
+.prose a {
+  color: var(--hot);
+}
+.agree {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  font-size: 15px;
+  color: var(--soft);
+  line-height: 1.45;
+}
+.agree input {
+  width: 20px;
+  height: 20px;
+  margin-top: 1px;
+  flex: none;
+  accent-color: var(--hot);
+}
+.agree a {
+  color: var(--hot);
+}
+.footer-inner {
+  gap: 16px 32px;
+}
+.footer-brand {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.footer-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  font-size: 14px;
+}
+.footer-links a {
+  color: var(--soft);
+  text-decoration: none;
+}
+.footer-links a:hover {
+  color: var(--hot);
+}
+.footer-legal {
+  flex-basis: 100%;
+  margin: 0;
+}
+.legal-section p {
+  margin: 0 0 12px;
+}

@@ -1,4 +1,5 @@
 import "server-only";
+import { TERMS_VERSION } from "@/lib/legal";
 import { cookies } from "next/headers";
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import { createServerClient } from "@supabase/ssr";
@@ -78,6 +79,7 @@ export async function getMe(): Promise<{
   userId: string;
   email: string | null;
   username: string | null;
+  terms: string | null;
   profile: Profile | null;
 } | null> {
   const auth = await getSupabaseAuth();
@@ -87,19 +89,21 @@ export async function getMe(): Promise<{
   if (!data.user) return null;
   const [{ data: profile }, { data: login }] = await Promise.all([
     db.from("profiles").select("*").eq("id", data.user.id).maybeSingle(),
-    db.from("logins").select("username").eq("user_id", data.user.id).maybeSingle(),
+    db.from("logins").select("username, terms_version").eq("user_id", data.user.id).maybeSingle(),
   ]);
   return {
     userId: data.user.id,
     email: data.user.email ?? null,
     username: (login?.username as string | undefined) ?? null,
+    terms: (login?.terms_version as string | undefined) ?? null,
     profile: profile as Profile | null,
   };
 }
 
 // Where a signed-in member belongs right now.
-export function nextPath(profile: Profile | null, username: string | null): string {
+export function nextPath(profile: Profile | null, username: string | null, terms: string | null): string {
   if (!username) return "/account";
+  if (terms !== TERMS_VERSION) return "/agree";
   if (!profile) return "/profile";
   if (profile.status === "paused" || profile.status === "banned") return "/circle";
   if (!profile.verified_at) return "/verify";

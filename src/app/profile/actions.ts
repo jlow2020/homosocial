@@ -4,6 +4,7 @@ import { randomUUID } from "crypto";
 import { redirect } from "next/navigation";
 import { getMe, getSupabaseAdmin } from "@/lib/supabase-server";
 import { SEASON, ageFrom, regionForZip } from "@/lib/season";
+import { purgeAllMedia } from "@/lib/retention";
 
 export type ProfileState = { error?: string };
 
@@ -90,12 +91,7 @@ export async function deleteAccount() {
   const me = await getMe();
   const db = getSupabaseAdmin();
   if (!me || !db) redirect("/");
-  for (const bucket of ["photos", "verifications"]) {
-    const { data } = await db.storage.from(bucket).list(me.userId, { limit: 100 });
-    if (data && data.length) {
-      await db.storage.from(bucket).remove(data.map((f) => `${me.userId}/${f.name}`));
-    }
-  }
+  await purgeAllMedia(db, me.userId);
   await db.auth.admin.deleteUser(me.userId);
   redirect("/?deleted=1");
 }

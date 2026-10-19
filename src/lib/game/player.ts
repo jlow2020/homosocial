@@ -56,7 +56,7 @@ export async function loadPlayer(opts: { needSeat?: boolean } = {}): Promise<Pla
   const p = me.profile;
   if (!p) redirect("/profile");
   if (p.status === "paused" || p.status === "banned") redirect("/circle");
-  const where = nextPath(p, me.username);
+  const where = nextPath(p, me.username, me.terms);
   if (where !== "/circle") redirect(where);
   if (!p.circle_id) redirect("/circle");
 

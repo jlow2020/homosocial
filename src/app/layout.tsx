@@ -3,6 +3,7 @@ import "@fontsource-variable/big-shoulders-display/wght";
 import "@fontsource-variable/instrument-sans/wght.css";
 import "./globals.css";
 import HashSignIn from "@/components/HashSignIn";
+import SiteFooter from "@/components/SiteFooter";
 
 export const metadata: Metadata = {
   title: "Homosocial",
@@ -34,6 +35,7 @@ export default function RootLayout({
       <body>
         <HashSignIn />
         {children}
+        <SiteFooter />
       </body>
     </html>
   );

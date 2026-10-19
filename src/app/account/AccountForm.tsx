@@ -43,6 +43,16 @@ export default function AccountForm({ username }: { username: string | null }) {
           <span className="label">Same password again</span>
           <input className="input" name="confirm" type="password" required minLength={8} maxLength={72} autoComplete="new-password" />
         </label>
+        {isNew && (
+          <label className="agree">
+            <input type="checkbox" name="agree" required />
+            <span>
+              I&apos;m 18 or older and I agree to the <a href="/terms" target="_blank">Terms</a>, the{" "}
+              <a href="/privacy" target="_blank">Privacy Policy</a>, and the{" "}
+              <a href="/guidelines" target="_blank">Community Guidelines</a>.
+            </span>
+          </label>
+        )}
         {state.error && <p className="error" role="alert">{state.error}</p>}
         {state.saved && <p className="notice-inline" role="status">Saved. Use your new password next time you sign in.</p>}
         <button className="btn btn-pink btn-full" type="submit" disabled={pending}>

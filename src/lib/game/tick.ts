@@ -1,4 +1,5 @@
 import "server-only";
+import { purgeStaleVerifications } from "@/lib/retention";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { WEEKS } from "@/lib/season";
 import { claimNotice, notify, teaser } from "@/lib/notify";
@@ -15,6 +16,8 @@ const NUDGE_AFTER = 60 * HOUR; // two and a half days into the week
 const READ_BEFORE_DROP = 11 * HOUR; // Sunday 8pm, when the next drop is Monday 7am
 
 export async function tickAll(db: SupabaseClient): Promise<{ circles: number; sent: string[] }> {
+  // Housekeeping the Privacy Policy promises: stale Realness Check frames go after 90 days.
+  await purgeStaleVerifications(db).catch((e) => console.error("purge failed", e));
   const { data } = await db.from("circles").select("*").not("kickoff_at", "is", null);
   const sent: string[] = [];
   for (const c of (data ?? []) as Circle[]) {

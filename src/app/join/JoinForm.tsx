@@ -58,8 +58,9 @@ export default function JoinForm({ google }: { google: boolean }) {
         Already have a seat? <a href="/signin">Sign in</a>.
       </p>
       <p className="fine">
-        By joining you agree to the <a href="/rules">house rules</a>. Homosocial
-        is for gay, bi, trans and queer men {SEASON.minAge} and up.
+        Homosocial is for gay, bi, trans and queer men {SEASON.minAge} and up. Before you pick a username, you&apos;ll
+        agree to our <a href="/terms">Terms</a>, <a href="/privacy">Privacy Policy</a> and{" "}
+        <a href="/guidelines">Community Guidelines</a>.
       </p>
     </div>
   );

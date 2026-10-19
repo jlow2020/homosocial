@@ -20,7 +20,7 @@ export default async function Join({
   searchParams: Promise<{ error?: string }>;
 }) {
   const me = await getMe();
-  if (me) redirect(nextPath(me.profile, me.username));
+  if (me) redirect(nextPath(me.profile, me.username, me.terms));
   const { error } = await searchParams;
 
   return (

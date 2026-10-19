@@ -43,6 +43,12 @@ export async function setStatus(id: string, status: "active" | "paused" | "banne
 
   // A ban also locks him out of signing in. Restoring lifts it.
   await a.db.auth.admin.updateUserById(id, { ban_duration: status === "banned" ? FOREVER : "none" });
+  // A banned ID can't open a new account. Restoring him frees it.
+  const { data: check } = await a.db.from("id_checks").select("doc_hash").eq("user_id", id).maybeSingle();
+  if (check?.doc_hash) {
+    if (status === "banned") await a.db.from("banned_ids").upsert({ doc_hash: check.doc_hash }, { onConflict: "doc_hash", ignoreDuplicates: true });
+    else await a.db.from("banned_ids").delete().eq("doc_hash", check.doc_hash);
+  }
 
   if (next === "active" && p.region && !p.circle_id) {
     await a.db.rpc("place_member", { p_user: id, p_season: SEASON.id, p_region: p.region, p_capacity: SEASON.spots });

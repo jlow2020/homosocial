@@ -5,6 +5,9 @@ import { getMe, getSupabaseAdmin } from "@/lib/supabase-server";
 import { readDocument } from "@/lib/server/idread";
 import { closestIdentity, identitiesIn, type Identity } from "@/lib/server/vision";
 import { ageFrom, SEASON, FOUNDER_CAP } from "@/lib/season";
+import { hasConsent } from "@/lib/consent";
+import { purgeVerificationFrames } from "@/lib/retention";
+import { BIOMETRIC_VERSION } from "@/lib/legal";
 
 export type IdOutcome = { passed: boolean; message: string; retry: boolean };
 
@@ -33,6 +36,9 @@ export async function checkId(form: FormData): Promise<IdOutcome> {
   const p = me.profile;
   if (p.id_verified_at) return { passed: true, message: "", retry: false };
   if (!p.verified_at) return { passed: false, message: "Do your Realness Check first.", retry: false };
+  if (!(await hasConsent(db, me.userId, "biometric", BIOMETRIC_VERSION))) {
+    return { passed: false, message: "Agree to the face-matching notice first. Reload the page.", retry: false };
+  }
   if (p.status === "paused" || p.status === "banned") return { passed: false, message: "Your account is paused.", retry: false };
   if ((p.id_attempts ?? 0) >= MAX_ATTEMPTS) {
     return { passed: false, message: "That's too many tries for now. Come back tomorrow.", retry: false };
@@ -127,6 +133,8 @@ export async function checkId(form: FormData): Promise<IdOutcome> {
 
   // 4. One ID, one account.
   const hash = fingerprint(doc.kind, doc.issuer, doc.docNumber);
+  const { data: banned } = await db.from("banned_ids").select("doc_hash").eq("doc_hash", hash).maybeSingle();
+  if (banned) return fail("That ID can't be used on Homosocial.", "banned_id", false);
   const { data: existing } = await db.from("id_checks").select("user_id").eq("doc_hash", hash).maybeSingle();
   if (existing && existing.user_id !== p.id) {
     return fail("That ID is already linked to another Homosocial account.", "duplicate", false);
@@ -153,6 +161,8 @@ export async function checkId(form: FormData): Promise<IdOutcome> {
     .update({ id_verified_at: stamp, id_attempts: attempt, birthdate: birth, updated_at: stamp })
     .eq("id", p.id);
   if (error) return { passed: false, message: "Your result didn't save. Try again.", retry: true };
+  // The Realness Check frames did their job. Delete them, as the Biometric Notice promises.
+  await purgeVerificationFrames(db, p.id);
   // One of the first in? He's a Founder now.
   await db.rpc("claim_founder", { p_user: p.id, p_cap: FOUNDER_CAP });
   return { passed: true, message: "", retry: false };

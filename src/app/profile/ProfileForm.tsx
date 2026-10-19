@@ -151,7 +151,7 @@ export default function ProfileForm({ initial, photoUrl }: { initial: Initial; p
         <label className="choice">
           <input type="checkbox" name="agree" required />
           <span>
-            I&apos;m {SEASON.minAge} or older and I agree to the <a href="/rules" target="_blank">house rules</a>.
+            I&apos;m {SEASON.minAge} or older and I agree to the <a href="/guidelines" target="_blank">Community Guidelines</a>.
           </span>
         </label>
       )}

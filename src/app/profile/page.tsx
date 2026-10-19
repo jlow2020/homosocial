@@ -7,6 +7,7 @@ import EmailToggle from "@/components/EmailToggle";
 import { deleteAccount } from "./actions";
 import { signOut } from "@/app/join/actions";
 import { getMe, getSupabaseAdmin } from "@/lib/supabase-server";
+import { TERMS_VERSION } from "@/lib/legal";
 
 export const metadata: Metadata = { title: "Your profile | Homosocial" };
 export const dynamic = "force-dynamic";
@@ -15,6 +16,7 @@ export default async function ProfilePage() {
   const me = await getMe();
   if (!me) redirect("/signin");
   if (!me.username) redirect("/account");
+  if (me.terms !== TERMS_VERSION) redirect("/agree");
   const p = me.profile;
 
   let photoUrl: string | null = null;
