@@ -7,21 +7,23 @@ import { shrinkImage } from "@/lib/image";
 
 export function PhotoSwitch({ threadId, mine, theirs, name }: { threadId: string; mine: boolean; theirs: boolean; name: string }) {
   const [pending, start] = useTransition();
-  const both = mine && theirs;
-  const line = both
-    ? "Photos and videos are on for both of you. Explicit is OK here, only of yourself."
-    : mine
-      ? `You turned photos and videos on. Waiting on ${name}.`
-      : theirs
-        ? `${name} turned photos and videos on. Your call.`
-        : "Photos and videos are off. You both have to turn them on.";
+  const status = mine && theirs ? "On" : mine ? `Waiting on ${name}` : theirs ? `${name} is on` : "Off";
   return (
-    <div className={both ? "photo-switch on" : "photo-switch"}>
-      <span>📷 {line}</span>
-      <button className="link-button" disabled={pending} onClick={() => start(async () => void (await setDmPhotos(threadId, !mine)))}>
-        {mine ? "Turn mine off" : "Turn them on"}
-      </button>
-    </div>
+    <button
+      type="button"
+      className={mine && theirs ? "media-toggle on" : mine ? "media-toggle half" : "media-toggle"}
+      role="switch"
+      aria-checked={mine}
+      disabled={pending}
+      onClick={() => start(async () => void (await setDmPhotos(threadId, !mine)))}
+      title="Photos and videos unlock when you both turn them on"
+    >
+      <span className="media-toggle-track" aria-hidden="true">
+        <span className="media-toggle-knob" />
+      </span>
+      <span>📷 Photos &amp; videos</span>
+      <span className="media-toggle-status">{status}</span>
+    </button>
   );
 }
 
