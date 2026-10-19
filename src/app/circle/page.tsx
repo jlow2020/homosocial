@@ -14,7 +14,6 @@ import { Avatar, GuyName, Shell, timeAgo, weekTitle } from "./ui";
 import HeatVote from "./HeatVote";
 import { targetHeat } from "@/lib/game/engine";
 import { myRecap } from "@/lib/game/recap";
-import { loadExtras, completeness } from "@/lib/profile/data";
 
 export const metadata: Metadata = { title: "Your Circle | Homosocial" };
 export const dynamic = "force-dynamic";
@@ -57,8 +56,7 @@ export default async function CirclePage() {
     return (
       <main className="apply-page">
         <PageHead title="You're on the list" right={nav}>
-          You passed your Realness Check. Season 1 is Florida only, and zip {p.zip} isn&apos;t in Florida. You&apos;re on
-          the list for when we open near you. Typo? Fix your zip on your profile.
+          We&apos;re not in your area yet. You&apos;re on the list. Wrong zip? Fix it on your profile.
         </PageHead>
       </main>
     );
@@ -195,7 +193,6 @@ async function Home({ pl }: { pl: Player }) {
   const answered = (answers ?? []).some((a) => a.user_id === pl.profile.id);
   const answerCount = (answers ?? []).length;
   const loungePhotos = await photoUrls(db, (lounge ?? []).map((l) => byId.get(l.user_id)?.photo_path));
-  const profileDone = completeness(await loadExtras(db, pl.profile.id), !!pl.profile.photo_path);
   const recap = week >= 2 ? await myRecap(db, circle, pl.profile.id, pl.members, revealed ? 9 : week) : [];
 
   return (
@@ -230,7 +227,6 @@ async function Home({ pl }: { pl: Player }) {
             <Link href={`/circle/week/${week}`} className={answered ? "btn btn-outline" : "btn btn-pink"}>
               {answered ? "See everyone's answers" : prompt.spec ? "Play to unlock" : prompt.kind === "photo" ? "Post your photo" : "Answer to unlock"}
             </Link>
-            {!answered && <span className="fine">Answers stay blurred until you post yours.</span>}
           </div>
           {clock.phase === "season" && clock.nextDrop && (
             <p className="fine">
@@ -274,26 +270,10 @@ async function Home({ pl }: { pl: Player }) {
             {lastRead && <Link href={`/circle/read/${lastRead}`}>Week {lastRead}</Link>}
           </div>
           <p className="fine">
-            {lastRead ? `Week ${lastRead} is wrapped: the best answer, the Census, who won. ` : "Every Sunday at 8pm: the week's best answer, the Census, who won, and the standings. "}
+            {lastRead ? `Week ${lastRead} is out. ` : "Sundays, 8pm. "}
             {!revealed && <Link href={`/circle/read/${week}`}>{readAt && clock.phase === "season" && !clock.testMode ? `Week ${week} locks ${etLabel(readAt)}` : `Week ${week} so far`}</Link>}
           </p>
         </section>
-
-        {profileDone.pct < 100 && (
-          <section className="mini-card nudge-card">
-            <div className="mini-head">
-              <h3>Your profile</h3>
-              <span className="fine">{profileDone.pct}%</span>
-            </div>
-            <div className="meter" aria-hidden="true">
-              <span style={{ width: `${profileDone.pct}%` }} />
-            </div>
-            <p className="fine">{profileDone.next ? `${profileDone.next}. Two minutes, mostly taps.` : ""}</p>
-            <Link href="/profile/more" className="btn btn-small btn-pink">
-              Make it yours
-            </Link>
-          </section>
-        )}
 
         {(requests ?? []).length > 0 && (
           <section className="mini-card">

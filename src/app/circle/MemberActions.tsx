@@ -69,7 +69,7 @@ export default function MemberActions({ id, name }: { id: string; name: string }
         ))}
       </fieldset>
       <label className="field">
-        <span className="hint">Anything else we should know? Optional.</span>
+        <span className="hint">Optional.</span>
         <textarea className="textarea" value={details} onChange={(e) => setDetails(e.target.value)} maxLength={1000} />
       </label>
       <p className="hint">

@@ -275,10 +275,10 @@ function demoPlay(spec: PlaySpec, slug: string): Record<string, unknown> | null 
     case "madlibs": {
       const banks: Record<string, string[]> = {
         "a body part": ["forearms", "shoulders", "thighs", "hands", "neck", "calves"],
-        "something sold at Publix": ["a Pub Sub", "key lime pie", "Cuban bread", "a bag of ice", "chicken tenders", "a $4 bouquet"],
+        "something sold at the grocery store": ["a rotisserie chicken", "key lime pie", "boxed wine", "a bag of ice", "chicken tenders", "a $4 bouquet"],
         "an ex's first name": ["Brandon", "Tyler", "Marcus", "Kyle", "Diego", "Chase"],
         "a verb ending in -ing": ["making out", "arguing", "dancing", "crying", "singing Cher", "hiding"],
-        "a place in Florida": ["Siesta Key", "a Wawa", "the Ringling", "Ybor City", "a Buc-ee's", "Key West"],
+        "a place in your town": ["the beach", "a Wawa", "the art museum", "a 24-hour diner", "a Buc-ee's", "the bowling alley"],
         "an adjective": ["humid", "illegal", "romantic", "sticky", "unforgettable", "a mistake"],
         "a number": ["four", "eleven", "two", "nine", "zero", "thirty"],
         "a breakfast food": ["bacon", "a Pop-Tart", "cold pizza", "waffles", "cafecito", "an egg sandwich"],
@@ -291,7 +291,7 @@ function demoPlay(spec: PlaySpec, slug: string): Record<string, unknown> | null 
       return { words: spec.slots.map((s) => { const b = banks[s] ?? ["something"]; return b[Math.floor(Math.random() * b.length)]; }) };
     }
     case "speed": {
-      const pool = ["forearms", "no comment", "a Kia Soul", "Tyler", "him, obviously", "vodka soda", "don't ask", "the beach", "yes", "my ex", "3am", "Publix", "ask Hollis", "once", "twice", "shoulders"];
+      const pool = ["forearms", "no comment", "a Kia Soul", "Tyler", "him, obviously", "vodka soda", "don't ask", "the beach", "yes", "my ex", "3am", "the grocery store", "ask Hollis", "once", "twice", "shoulders"];
       return { answers: spec.questions.map((_, i) => (i < 3 + Math.floor(Math.random() * 7) ? pool[Math.floor(Math.random() * pool.length)] : "")) };
     }
     case "twotruths": {
@@ -316,7 +316,7 @@ function demoPlay(spec: PlaySpec, slug: string): Record<string, unknown> | null 
       return { question: qs[Math.floor(Math.random() * qs.length)] };
     }
     case "caption": {
-      const caps = ["Sir, this is a Publix.", "The audacity. The lighting. The man.", "He knows what he did.", "Florida man, but make it fashion.", "POV: you're about to get a DM.", "I'd let him make me breakfast."];
+      const caps = ["Sir, this is a grocery store.", "The audacity. The lighting. The man.", "He knows what he did.", "Main character, but make it fashion.", "POV: you're about to get a DM.", "I'd let him make me breakfast."];
       return { caption: caps[Math.floor(Math.random() * caps.length)] };
     }
     case "video":

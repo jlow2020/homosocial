@@ -39,7 +39,7 @@ export default function SpeedGame({ game, otherName }: { game: Game; otherName: 
     return (
       <div className="game-card">
         <p className="game-title">⚡ Speed Round</p>
-        <p className="fine">Ten questions, {game.seconds} seconds. Same questions as {otherName}. No edits.</p>
+        <p className="fine">Same ten questions as {otherName}. {game.seconds} seconds.</p>
         {error && <p className="error">{error}</p>}
         <button className="btn btn-pink btn-small" onClick={() => setPlaying(true)}>
           Ready? Start the clock
@@ -52,7 +52,7 @@ export default function SpeedGame({ game, otherName }: { game: Game; otherName: 
     return (
       <div className="game-card">
         <p className="game-title">⚡ Speed Round</p>
-        <p className="fine">You&apos;re done. Waiting on {otherName}. You&apos;ll see both sides when he plays.</p>
+        <p className="fine">Done. Waiting on {otherName}.</p>
       </div>
     );
   }

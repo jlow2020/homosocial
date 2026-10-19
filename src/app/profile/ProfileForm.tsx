@@ -69,8 +69,7 @@ export default function ProfileForm({ initial, photoUrl }: { initial: Initial; p
       <div className="field">
         <span className="label" id="photo-label">Profile photo</span>
         <span className="hint">
-          Face first. Just you, front and center: no sunglasses, no group shots, and no
-          torso standing in for your face. Your Realness Check has to match it.
+          Just your face, front and center. No sunglasses or group shots.
         </span>
         <div className="selfie">
           {preview ? (
@@ -113,7 +112,7 @@ export default function ProfileForm({ initial, photoUrl }: { initial: Initial; p
 
       <label className="field">
         <span className="label">Zip code</span>
-        <span className="hint">Puts you in a Circle near you. Season 1 is Florida only. Nobody sees your zip.</span>
+        <span className="hint">Nobody sees it.</span>
         <input className="input" name="zip" inputMode="numeric" pattern="\d{5}" maxLength={5} required autoComplete="postal-code" defaultValue={initial?.zip} />
       </label>
 
@@ -124,26 +123,24 @@ export default function ProfileForm({ initial, photoUrl }: { initial: Initial; p
 
       <fieldset className="field choices">
         <legend className="label">What are you looking for?</legend>
-        <span className="hint">Private. Nobody else ever sees this answer.</span>
+        <span className="hint">Private.</span>
         <label className="choice">
           <input type="radio" name="looking_for" value="friends" required defaultChecked={initial?.looking_for === "friends"} />
           <span>
             Friends
-            <small>The Finale only asks who you want to keep as friends.</small>
           </span>
         </label>
         <label className="choice">
           <input type="radio" name="looking_for" value="friends_dating" defaultChecked={initial?.looking_for === "friends_dating"} />
           <span>
             Friends, and open to dating
-            <small>The Finale also asks who you&apos;d want to date. Only mutual picks are shown.</small>
+            <small>Only mutual picks are ever shown.</small>
           </span>
         </label>
       </fieldset>
 
       <label className="field">
         <span className="label">Your most controversial opinion</span>
-        <span className="hint">Food, music, movies, whatever. Your Circle sees this.</span>
         <textarea className="textarea" name="hot_take" required maxLength={600} defaultValue={initial?.hot_take} />
       </label>
 

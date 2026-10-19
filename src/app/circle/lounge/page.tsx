@@ -26,7 +26,6 @@ export default async function Lounge() {
       <div className="chat">
         <div className="chat-head">
           <h1 className="game-h1">The Lounge</h1>
-          <p className="fine">Your Circle&apos;s group chat. Everyone in the Circle sees this.</p>
         </div>
         <ul className="chat-list">
           {msgs.map((m, i) => {
@@ -46,7 +45,7 @@ export default async function Lounge() {
             );
           })}
         </ul>
-        {msgs.length === 0 && <p className="fine">Nobody&apos;s said anything yet. Go first.</p>}
+        {msgs.length === 0 && <p className="fine">Quiet in here.</p>}
         <Composer send={postLounge} placeholder="Say something to the Circle" />
       </div>
     </Shell>

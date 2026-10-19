@@ -1,20 +1,22 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import VoiceRecorder from "@/components/VoiceRecorder";
 import Waveform from "@/components/Waveform";
 import { shrinkImage } from "@/lib/image";
-import { DOWN_FOR } from "@/lib/profile/catalog";
-import { PROFILE_PROMPTS, STARTERS, PHOTO_THEMES, PRONOUNS, ZODIAC, RELATIONSHIP, VOICE_SCRIPTS } from "@/lib/profile/prompts";
+import { suggestDown, downLabel } from "@/lib/profile/downfor";
+import { PROMPT_BY_ID, PROFILE_PROMPTS, STARTERS, PHOTO_THEMES, PRONOUNS, ZODIAC, RELATIONSHIP, VOICE_SCRIPTS } from "@/lib/profile/prompts";
 import { suggest, search, labelOf, type Community } from "@/lib/profile/suggest";
 import type { Extras } from "@/lib/profile/data";
-import { addPhoto, pinAnswer, removePhoto, removeVoice, saveAnswers, saveBasics, saveTags, setPhotoTheme, voiceTicket, saveVoice } from "./actions";
+import { addPhoto, pinAnswer, removePhoto, removeVoice, saveAnswers, saveBasics, saveTags, setPhotoTheme, voiceTicket, saveVoice, promptPack, promptDrafts } from "./actions";
 
 type Line = { id: string; body: string; fires: number; week: number; season: number; prompt: string };
 
-const STEPS = ["Into", "Down for", "Prompts", "Voice", "Photos", "Basics", "Greatest Hit"] as const;
+export const STEP_KEYS = ["into", "down", "prompts", "photos", "voice", "details", "hit"] as const;
+export type StepKey = (typeof STEP_KEYS)[number];
+const TITLES: Record<StepKey, string> = { into: "Into", down: "Down for", prompts: "Prompts", photos: "Photos", voice: "Say hi", details: "Details", hit: "Greatest Hit" };
 
 export default function MakeItYours({
   extras,
@@ -22,75 +24,97 @@ export default function MakeItYours({
   seedText,
   seed,
   lines,
-  meId,
   mainPhoto,
-  startAt = 0,
+  startAt,
+  finishHref,
 }: {
   extras: Extras;
   community: Community;
   seedText: string;
   seed: string;
   lines: Line[];
-  meId: string;
   mainPhoto: string | null;
-  startAt?: number;
+  startAt: StepKey | null;
+  finishHref: string;
 }) {
-  const [step, setStepRaw] = useState(startAt);
+  const steps = STEP_KEYS.filter((k) => k !== "hit" || lines.length > 0);
+  const [step, setStepRaw] = useState(Math.max(0, startAt ? steps.indexOf(startAt) : 0));
   const [dir, setDir] = useState<"fwd" | "back">("fwd");
+  const [tags, setTags] = useState<string[]>(extras.interests);
   const router = useRouter();
-  const setStep = (n: number) => {
-    setDir(n >= step ? "fwd" : "back");
-    setStepRaw(n);
-  };
+  const last = step === steps.length - 1;
+
   const go = (n: number) => {
-    setStep(Math.max(0, Math.min(STEPS.length - 1, n)));
+    if (n >= steps.length) {
+      router.push(finishHref);
+      return;
+    }
+    setDir(n >= step ? "fwd" : "back");
+    setStepRaw(Math.max(0, n));
     router.refresh();
-    if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
+  const next = () => go(step + 1);
+  const key = steps[step];
 
   return (
     <div className="miy">
-      <nav className="miy-steps" aria-label="Profile sections">
-        {STEPS.map((s, i) => (
-          <button key={s} className={i === step ? "miy-step on" : "miy-step"} onClick={() => setStep(i)} aria-current={i === step ? "step" : undefined}>
-            <span className="miy-num">{i + 1}</span>
-            {s}
-          </button>
-        ))}
-      </nav>
-      <div key={step} className={`miy-pane ${dir}`}>
-      {step === 0 && <Interests initial={extras.interests} community={community} seedText={seedText} seed={seed} onNext={() => go(1)} />}
-      {step === 1 && <DownFor initial={extras.down} onNext={() => go(2)} />}
-      {step === 2 && <Prompts initial={extras.answers} lines={lines} onNext={() => go(3)} />}
-      {step === 3 && <Voice url={extras.voiceUrl} converting={!extras.voiceReady} onNext={() => go(4)} />}
-      {step === 4 && <Photos photos={extras.photos} mainPhoto={mainPhoto} onNext={() => go(5)} />}
-      {step === 5 && <Basics initial={extras.basics} onNext={() => go(6)} />}
-      {step === 6 && <GreatestHit lines={lines} pinned={extras.pinned} meId={meId} />}
+      <div className="miy-top">
+        <button className="miy-back" onClick={() => go(step - 1)} disabled={step === 0} aria-label="Back">
+          ‹
+        </button>
+        <div className="miy-progress" role="progressbar" aria-valuenow={step + 1} aria-valuemin={1} aria-valuemax={steps.length} aria-label={`${TITLES[key]}, step ${step + 1} of ${steps.length}`}>
+          <span style={{ width: `${((step + 1) / steps.length) * 100}%` }} />
+        </div>
+        <span className="miy-count">
+          {step + 1}/{steps.length}
+        </span>
+      </div>
+      <div key={key} className={`miy-pane ${dir}`}>
+        {key === "into" && <Interests initial={tags} community={community} seedText={seedText} seed={seed} onNext={(t) => (setTags(t), next())} onSkip={next} />}
+        {key === "down" && <DownFor tags={tags} initial={extras.down} onNext={next} />}
+        {key === "prompts" && <Prompts initial={extras.answers} lines={lines} onNext={next} />}
+        {key === "photos" && <Photos photos={extras.photos} mainPhoto={mainPhoto} onNext={next} />}
+        {key === "voice" && <Voice url={extras.voiceUrl} converting={!extras.voiceReady} onNext={next} />}
+        {key === "details" && <Details initial={extras.basics} onNext={next} last={last} />}
+        {key === "hit" && <GreatestHit lines={lines} pinned={extras.pinned} onNext={next} />}
       </div>
     </div>
   );
 }
 
-function Footer({ pending, error, onSave, label = "Save and keep going", skip }: { pending: boolean; error: string; onSave: () => void; label?: string; skip?: () => void }) {
+function Footer({ pending, error, onSave, onSkip, label = "Next" }: { pending?: boolean; error?: string; onSave: () => void; onSkip?: () => void; label?: string }) {
   return (
     <div className="miy-foot">
       {error && <p className="error">{error}</p>}
-      <div className="row">
+      <div className="miy-foot-row">
+        {onSkip ? (
+          <button className="link-button quiet" onClick={onSkip}>
+            Skip
+          </button>
+        ) : (
+          <span />
+        )}
         <button className="btn btn-pink" disabled={pending} onClick={onSave}>
           {pending ? "Saving..." : label}
         </button>
-        {skip && (
-          <button className="link-button quiet" onClick={skip}>
-            Skip for now
-          </button>
-        )}
       </div>
     </div>
   );
 }
 
-// 1. Tags that adapt as he taps.
-function Interests({ initial, community, seedText, seed, onNext }: { initial: string[]; community: Community; seedText: string; seed: string; onNext: () => void }) {
+function Chip({ on, onClick, children, i }: { on?: boolean; onClick: () => void; children: React.ReactNode; i?: number }) {
+  return (
+    <li style={i === undefined ? undefined : ({ "--i": i } as React.CSSProperties)}>
+      <button className={on ? "chip on" : "chip"} aria-pressed={!!on} onClick={onClick}>
+        {children}
+      </button>
+    </li>
+  );
+}
+
+// Into: suggestions rebuild on every tap.
+function Interests({ initial, community, seedText, seed, onNext, onSkip }: { initial: string[]; community: Community; seedText: string; seed: string; onNext: (tags: string[]) => void; onSkip: () => void }) {
   const [picked, setPicked] = useState<string[]>(initial);
   const [custom, setCustom] = useState<{ slug: string; label: string }[]>([]);
   const [q, setQ] = useState("");
@@ -119,9 +143,8 @@ function Interests({ initial, community, seedText, seed, onNext }: { initial: st
   return (
     <section className="miy-card">
       <h2>What are you into?</h2>
-      <p className="fine">Tap anything that&apos;s you. Every tap changes what shows up next. Pick at least five.</p>
       {picked.length > 0 && (
-        <ul className="chips-pick picked" aria-label="Your tags">
+        <ul className="chips-pick picked" aria-label="Your picks">
           {picked.map((s) => (
             <li key={s} className="chip-in">
               <button className="chip on" onClick={() => toggle(s)} aria-label={`Remove ${label(s)}`}>
@@ -131,45 +154,44 @@ function Interests({ initial, community, seedText, seed, onNext }: { initial: st
           ))}
         </ul>
       )}
-      <label className="visually-hidden" htmlFor="tag-search">
-        Search or add your own
-      </label>
-      <input id="tag-search" className="input" placeholder="Search, or type something we missed" value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), found[0] ? (toggle(found[0].slug), setQ("")) : addOwn())} />
+      <input
+        className="input input-search"
+        placeholder="Search or add"
+        aria-label="Search or add your own"
+        value={q}
+        onChange={(e) => setQ(e.target.value)}
+        onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), found[0] ? (toggle(found[0].slug), setQ("")) : addOwn())}
+      />
       {q.trim().length >= 2 && (
         <ul className="chips-pick">
           {found.map((f) => (
-            <li key={f.slug}>
-              <button className="chip" onClick={() => (toggle(f.slug), setQ(""))}>
-                {f.label}
-              </button>
-            </li>
+            <Chip key={f.slug} onClick={() => (toggle(f.slug), setQ(""))}>
+              {f.label}
+            </Chip>
           ))}
           <li>
             <button className="chip chip-add" disabled={pending} onClick={addOwn}>
-              + Add &ldquo;{q.trim()}&rdquo;
+              + {q.trim()}
             </button>
           </li>
         </ul>
       )}
       <ul className="chips-pick ideas">
         {ideas.map((s, i) => (
-          <li key={s.slug} style={{ "--i": i } as React.CSSProperties}>
-            <button className="chip" onClick={() => toggle(s.slug)}>
-              {s.label}
-              <small>{s.why}</small>
-            </button>
-          </li>
+          <Chip key={s.slug} i={i} onClick={() => toggle(s.slug)}>
+            {s.label}
+          </Chip>
         ))}
       </ul>
       <Footer
         pending={pending}
         error={error}
+        onSkip={onSkip}
         onSave={() =>
           start(async () => {
-            if (picked.length < 5) return setError("Pick at least five. The more you pick, the better your matches.");
             const r = await saveTags("interest", picked);
             if (!r.ok) setError(r.error ?? "That didn't save.");
-            else onNext();
+            else onNext(picked);
           })
         }
       />
@@ -177,27 +199,36 @@ function Interests({ initial, community, seedText, seed, onNext }: { initial: st
   );
 }
 
-// 2. Things he's down to do.
-function DownFor({ initial, onNext }: { initial: string[]; onNext: () => void }) {
+// Down for: a few for anybody, the rest from what he's into.
+function DownFor({ tags, initial, onNext }: { tags: string[]; initial: string[]; onNext: () => void }) {
   const [picked, setPicked] = useState<string[]>(initial);
+  const [limit, setLimit] = useState(18);
   const [error, setError] = useState("");
   const [pending, start] = useTransition();
+  const options = useMemo(() => suggestDown(tags, initial, limit), [tags, initial, limit]);
+  const more = suggestDown(tags, initial, limit + 1).length > options.length;
+  const toggle = (s: string) => setPicked(picked.includes(s) ? picked.filter((x) => x !== s) : [...picked, s]);
   return (
     <section className="miy-card">
       <h2>What are you down for?</h2>
-      <p className="fine">When someone in your Circle posts a plan you&apos;re down for, you&apos;ll hear about it.</p>
-      <ul className="chips-pick">
-        {DOWN_FOR.map((d) => (
-          <li key={d.slug}>
-            <button className={picked.includes(d.slug) ? "chip on" : "chip"} aria-pressed={picked.includes(d.slug)} onClick={() => setPicked(picked.includes(d.slug) ? picked.filter((x) => x !== d.slug) : [...picked, d.slug])}>
-              {d.label}
+      <ul className="chips-pick ideas">
+        {options.map((d, i) => (
+          <Chip key={d.slug} i={i} on={picked.includes(d.slug)} onClick={() => toggle(d.slug)}>
+            {downLabel(d.slug)}
+          </Chip>
+        ))}
+        {more && (
+          <li>
+            <button className="chip chip-add" onClick={() => setLimit(limit + 12)}>
+              More
             </button>
           </li>
-        ))}
+        )}
       </ul>
       <Footer
         pending={pending}
         error={error}
+        onSkip={onNext}
         onSave={() =>
           start(async () => {
             const r = await saveTags("down", picked);
@@ -210,85 +241,110 @@ function DownFor({ initial, onNext }: { initial: string[]; onNext: () => void })
   );
 }
 
-// 3. Three prompts, with starters and his own best lines.
+// Prompts: three picked for him, answers drafted from his picks.
 function Prompts({ initial, lines, onNext }: { initial: { prompt_id: string; body: string }[]; lines: Line[]; onNext: () => void }) {
-  const [chosen, setChosen] = useState<{ prompt_id: string; body: string }[]>(initial.map((a) => ({ prompt_id: a.prompt_id, body: a.body })));
-  const [page, setPage] = useState(0);
+  const [chosen, setChosen] = useState<{ id: string; body: string; edited: boolean }[]>(initial.map((a) => ({ id: a.prompt_id, body: a.body, edited: true })));
+  const [ranked, setRanked] = useState<string[]>([]);
+  const [drafts, setDrafts] = useState<Record<string, string[]>>({});
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [pending, start] = useTransition();
-  const per = 8;
-  const pool = PROFILE_PROMPTS.filter((p) => !chosen.some((c) => c.prompt_id === p.id));
-  const shown = pool.slice((page * per) % Math.max(1, pool.length), ((page * per) % Math.max(1, pool.length)) + per);
-  const set = (id: string, body: string) => setChosen(chosen.map((c) => (c.prompt_id === id ? { ...c, body } : c)));
+
+  useEffect(() => {
+    let live = true;
+    const fallback = () => {
+      const ids = PROFILE_PROMPTS.map((p) => p.id);
+      return { ranked: ids, drafts: Object.fromEntries(ids.filter((id) => !initial.some((a) => a.prompt_id === id)).slice(0, 3 - initial.length).concat(initial.map((a) => a.prompt_id)).map((id) => [id, STARTERS[id] ?? []])) };
+    };
+    promptPack(initial.map((a) => a.prompt_id)).catch(() => null).then((got) => {
+      if (!live) return;
+      const pack = got && got.ranked.length ? got : fallback();
+      setRanked(pack.ranked);
+      setDrafts(pack.drafts);
+      setChosen((cur) => {
+        const have = cur.map((c) => c.id);
+        const add = Object.keys(pack.drafts).filter((id) => !have.includes(id));
+        const filled = cur.map((c) => (c.body ? c : { ...c, body: pack.drafts[c.id]?.[0] ?? "" }));
+        return [...filled, ...add.map((id) => ({ id, body: pack.drafts[id]?.[0] ?? "", edited: false }))].slice(0, 3);
+      });
+      setLoading(false);
+    });
+    return () => {
+      live = false;
+    };
+    // Once per visit. Refreshes after saving shouldn't redraft.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const set = (id: string, body: string, edited = true) => setChosen(chosen.map((c) => (c.id === id ? { ...c, body, edited } : c)));
+  const swap = (id: string) => {
+    const taken = new Set(chosen.map((c) => c.id));
+    const after = ranked.slice(ranked.indexOf(id) + 1).concat(ranked.slice(0, ranked.indexOf(id)));
+    const nextId = after.find((r) => !taken.has(r));
+    if (!nextId) return;
+    setChosen(chosen.map((c) => (c.id === id ? { id: nextId, body: drafts[nextId]?.[0] ?? "", edited: false } : c)));
+    if (!drafts[nextId]) {
+      promptDrafts(nextId).catch(() => STARTERS[nextId] ?? []).then((d) => {
+        setDrafts((x) => ({ ...x, [nextId]: d }));
+        setChosen((cur) => cur.map((c) => (c.id === nextId && !c.edited && !c.body ? { ...c, body: d[0] ?? "" } : c)));
+      });
+    }
+  };
 
   return (
     <section className="miy-card">
-      <h2>Three prompts</h2>
-      <p className="fine">Pick three. Each one comes with a few starters: tap one, change a word or two, and it&apos;s yours.</p>
-      {chosen.map((c) => {
-        const p = PROFILE_PROMPTS.find((x) => x.id === c.prompt_id)!;
-        return (
-          <div key={c.prompt_id} className="miy-prompt">
-            <div className="row" style={{ justifyContent: "space-between" }}>
-              <label className="miy-prompt-q" htmlFor={`pa-${c.prompt_id}`}>
-                {p.text}
-              </label>
-              <button className="link-button quiet" onClick={() => setChosen(chosen.filter((x) => x.prompt_id !== c.prompt_id))}>
-                Swap
-              </button>
-            </div>
-            <textarea id={`pa-${c.prompt_id}`} className="textarea" rows={2} maxLength={200} value={c.body} onChange={(e) => set(c.prompt_id, e.target.value)} placeholder={p.hint || "Say it like you'd say it out loud."} />
-            <ul className="starters" aria-label="Starters">
-              {(STARTERS[c.prompt_id] ?? []).map((s) => (
-                <li key={s}>
-                  <button className="starter" onClick={() => set(c.prompt_id, s)}>
-                    {s}
-                  </button>
-                </li>
-              ))}
-            </ul>
-            {lines.length > 0 && (
-              <details className="your-lines">
-                <summary>Or use one of your lines from the game</summary>
-                <ul>
-                  {lines.slice(0, 4).map((l) => (
+      <h2>Pick three.</h2>
+      {loading && chosen.length === 0 ? (
+        <div className="miy-skeleton" aria-label="Loading">
+          <span />
+          <span />
+          <span />
+        </div>
+      ) : (
+        chosen.map((c, i) => {
+          const p = PROMPT_BY_ID.get(c.id);
+          if (!p) return null;
+          const ideas = (drafts[c.id] ?? []).filter((d) => d !== c.body);
+          return (
+            <div key={c.id} className="miy-prompt" style={{ "--i": i } as React.CSSProperties}>
+              <div className="miy-prompt-head">
+                <label className="miy-prompt-q" htmlFor={`pa-${c.id}`}>
+                  {p.text}
+                </label>
+                <button className="link-button quiet" onClick={() => swap(c.id)} aria-label="Different prompt">
+                  ↻
+                </button>
+              </div>
+              <textarea id={`pa-${c.id}`} className="textarea" rows={2} maxLength={200} value={c.body} onChange={(e) => set(c.id, e.target.value)} />
+              {ideas.length > 0 && (
+                <ul className="starters">
+                  {ideas.map((s) => (
+                    <li key={s}>
+                      <button className="starter" onClick={() => set(c.id, s)}>
+                        {s}
+                      </button>
+                    </li>
+                  ))}
+                  {lines.slice(0, 2).map((l) => (
                     <li key={l.id}>
-                      <button className="starter" onClick={() => set(c.prompt_id, l.body.slice(0, 200))}>
-                        &ldquo;{l.body}&rdquo; <small>Week {l.week} · {l.fires} 🔥</small>
+                      <button className="starter starter-line" onClick={() => set(c.id, l.body.slice(0, 200))}>
+                        {l.body} <small>{l.fires} 🔥</small>
                       </button>
                     </li>
                   ))}
                 </ul>
-              </details>
-            )}
-          </div>
-        );
-      })}
-      {chosen.length < 3 && (
-        <>
-          <p className="eyebrow">Pick {3 - chosen.length} more</p>
-          <ul className="chips-pick">
-            {shown.map((p) => (
-              <li key={p.id}>
-                <button className="chip" onClick={() => setChosen([...chosen, { prompt_id: p.id, body: "" }])}>
-                  {p.text}
-                </button>
-              </li>
-            ))}
-            <li>
-              <button className="chip chip-add" onClick={() => setPage(page + 1)}>
-                More prompts
-              </button>
-            </li>
-          </ul>
-        </>
+              )}
+            </div>
+          );
+        })
       )}
       <Footer
         pending={pending}
         error={error}
+        onSkip={onNext}
         onSave={() =>
           start(async () => {
-            const r = await saveAnswers(chosen);
+            const r = await saveAnswers(chosen.map((c) => ({ prompt_id: c.id, body: c.body })));
             if (!r.ok) setError(r.error ?? "That didn't save.");
             else onNext();
           })
@@ -298,7 +354,7 @@ function Prompts({ initial, lines, onNext }: { initial: { prompt_id: string; bod
   );
 }
 
-// 4. A 15-second hello.
+// Say hi: a 15-second hello.
 function Voice({ url, converting, onNext }: { url: string | null; converting: boolean; onNext: () => void }) {
   const [script] = useState(() => VOICE_SCRIPTS[Math.floor(Math.random() * VOICE_SCRIPTS.length)]);
   const [pending, start] = useTransition();
@@ -327,16 +383,12 @@ function Voice({ url, converting, onNext }: { url: string | null; converting: bo
           return r;
         }}
       />
-      <div className="miy-foot">
-        <button className="btn btn-outline" onClick={onNext}>
-          Next
-        </button>
-      </div>
+      <Footer onSave={onNext} onSkip={url ? undefined : onNext} />
     </section>
   );
 }
 
-// 5. Photos with themes.
+// Photos: up to five more, each with a theme.
 function Photos({ photos, mainPhoto, onNext }: { photos: Extras["photos"]; mainPhoto: string | null; onNext: () => void }) {
   const [theme, setTheme] = useState(PHOTO_THEMES[0]);
   const [error, setError] = useState("");
@@ -362,7 +414,6 @@ function Photos({ photos, mainPhoto, onNext }: { photos: Extras["photos"]; mainP
   return (
     <section className="miy-card">
       <h2>More photos</h2>
-      <p className="fine">Up to five more. Give each one a theme so it says something.</p>
       <div className="miy-photos">
         <figure className="miy-photo main">
           {mainPhoto ? (
@@ -371,9 +422,6 @@ function Photos({ photos, mainPhoto, onNext }: { photos: Extras["photos"]; mainP
           ) : (
             <span />
           )}
-          <figcaption>
-            Main photo · <Link href="/profile">change</Link>
-          </figcaption>
         </figure>
         {photos.map((p) => (
           <figure key={p.id} className="miy-photo">
@@ -382,7 +430,7 @@ function Photos({ photos, mainPhoto, onNext }: { photos: Extras["photos"]; mainP
               <img src={p.url} alt={p.theme ?? ""} />
             )}
             <figcaption>
-              <select className="input" defaultValue={p.theme ?? ""} onChange={(e) => start(async () => void (await setPhotoTheme(p.id, e.target.value)))} aria-label="Theme">
+              <select className="input input-small" defaultValue={p.theme ?? ""} onChange={(e) => start(async () => void (await setPhotoTheme(p.id, e.target.value)))} aria-label="Theme">
                 <option value="">No theme</option>
                 {PHOTO_THEMES.map((t) => (
                   <option key={t}>{t}</option>
@@ -394,77 +442,72 @@ function Photos({ photos, mainPhoto, onNext }: { photos: Extras["photos"]; mainP
             </figcaption>
           </figure>
         ))}
+        {photos.length < 5 && (
+          <label className={pending ? "miy-photo miy-photo-add busy" : "miy-photo miy-photo-add"}>
+            <span aria-hidden="true">{pending ? "…" : "+"}</span>
+            <input type="file" accept="image/*" className="visually-hidden" onChange={(e) => pick(e.target.files?.[0])} disabled={pending} aria-label="Add a photo" />
+          </label>
+        )}
       </div>
       {photos.length < 5 && (
-        <div className="miy-add">
-          <label className="field">
-            <span className="label">Theme for the next one</span>
-            <select className="input" value={theme} onChange={(e) => setTheme(e.target.value)}>
-              {PHOTO_THEMES.map((t) => (
-                <option key={t}>{t}</option>
-              ))}
-            </select>
-          </label>
-          <label className="btn btn-pink">
-            {pending ? "Checking..." : "Add a photo"}
-            <input type="file" accept="image/*" className="visually-hidden" onChange={(e) => pick(e.target.files?.[0])} disabled={pending} />
-          </label>
-        </div>
+        <ul className="chips-pick themes" aria-label="Theme for your next photo">
+          {PHOTO_THEMES.map((t) => (
+            <Chip key={t} on={theme === t} onClick={() => setTheme(t)}>
+              {t}
+            </Chip>
+          ))}
+        </ul>
       )}
-      <p className="fine">Underwear and thirst traps are fine. Nothing more, it&apos;s a profile.</p>
       {error && <p className="error">{error}</p>}
-      <div className="miy-foot">
-        <button className="btn btn-outline" onClick={onNext}>
-          Next
-        </button>
-      </div>
+      <Footer onSave={onNext} onSkip={photos.length ? undefined : onNext} />
     </section>
   );
 }
 
-// 6. Basics, all optional, mostly taps.
-function Basics({ initial, onNext }: { initial: Extras["basics"]; onNext: () => void }) {
+// Details: all optional, mostly taps.
+function Details({ initial, onNext, last }: { initial: Extras["basics"]; onNext: () => void; last: boolean }) {
   const [b, setB] = useState({ ...initial, pronouns: initial.pronouns ?? "", hometown: initial.hometown ?? "", work: initial.work ?? "", zodiac: initial.zodiac ?? "", song: initial.song ?? "", spot: initial.spot ?? "", relationship: initial.relationship ?? "" });
   const [error, setError] = useState("");
   const [pending, start] = useTransition();
   const chips = (key: "pronouns" | "zodiac" | "relationship", list: string[]) => (
     <ul className="chips-pick">
       {list.map((v) => (
-        <li key={v}>
-          <button className={b[key] === v ? "chip on" : "chip"} aria-pressed={b[key] === v} onClick={() => setB({ ...b, [key]: b[key] === v ? "" : v })}>
-            {v}
-          </button>
-        </li>
+        <Chip key={v} on={b[key] === v} onClick={() => setB({ ...b, [key]: b[key] === v ? "" : v })}>
+          {v}
+        </Chip>
       ))}
     </ul>
   );
   const field = (key: "hometown" | "work" | "song" | "spot", label: string, ph: string) => (
     <label className="field">
-      <span className="label">{label}</span>
+      <span className="eyebrow">{label}</span>
       <input className="input" maxLength={80} value={b[key]} placeholder={ph} onChange={(e) => setB({ ...b, [key]: e.target.value })} />
     </label>
   );
   return (
     <section className="miy-card">
-      <h2>The basics</h2>
-      <p className="fine">All optional. Skip anything you want.</p>
+      <h2>The details</h2>
       <p className="eyebrow">Pronouns</p>
       {chips("pronouns", PRONOUNS)}
-      {field("hometown", "Hometown", "Or \"Florida since 2015\"")}
-      {field("work", "Work or school", "Nurse, bartender, grad student, retired, figuring it out")}
+      {field("work", "Work or school", "Nurse, bartender, student")}
+      {field("hometown", "Hometown", "Where you grew up")}
       {field("song", "Song on repeat", "Artist, song")}
-      {field("spot", "My spot", "A place in town you'd take someone")}
+      {field("spot", "My spot", "Your favorite place in town")}
       <p className="eyebrow">Sign</p>
       {chips("zodiac", ZODIAC)}
       <p className="eyebrow">Relationship status</p>
       {chips("relationship", RELATIONSHIP)}
-      <label className="agree">
-        <input type="checkbox" checked={b.show_relationship} onChange={(e) => setB({ ...b, show_relationship: e.target.checked })} />
-        <span>Show my relationship status to my Circle</span>
-      </label>
+      {b.relationship && (
+        <label className="agree">
+          <input type="checkbox" checked={b.show_relationship} onChange={(e) => setB({ ...b, show_relationship: e.target.checked })} />
+          <span>Show it on my profile</span>
+        </label>
+      )}
       <Footer
         pending={pending}
         error={error}
+        label={last ? "Finish" : "Next"}
+        onSkip={onNext}
         onSave={() =>
           start(async () => {
             const r = await saveBasics(b);
@@ -477,40 +520,46 @@ function Basics({ initial, onNext }: { initial: Extras["basics"]; onNext: () => 
   );
 }
 
-// 7. His Greatest Hit.
-function GreatestHit({ lines, pinned, meId }: { lines: Line[]; pinned: string | null; meId: string }) {
+// Greatest Hit: the answer pinned to his profile.
+function GreatestHit({ lines, pinned, onNext }: { lines: Line[]; pinned: string | null; onNext: () => void }) {
   const [on, setOn] = useState<string | null>(pinned);
   const [pending, start] = useTransition();
   return (
     <section className="miy-card">
       <h2>Your Greatest Hit</h2>
-      <p className="fine">Your most-fired answer from the game goes on your profile automatically. Want a different one? Pick it.</p>
-      {lines.length === 0 ? (
-        <p className="fine">Play a few drops. Your best line shows up here on its own.</p>
-      ) : (
-        <ul className="hits">
-          <li>
-            <button className={on === null ? "hit on" : "hit"} disabled={pending} onClick={() => start(async () => void (await pinAnswer(null), setOn(null)))}>
-              <b>Automatic</b> <small>Always your most-fired answer</small>
+      <ul className="hits">
+        <li>
+          <button className={on === null ? "hit on" : "hit"} disabled={pending} onClick={() => start(async () => void (await pinAnswer(null), setOn(null)))}>
+            <b>Most 🔥, always</b>
+          </button>
+        </li>
+        {lines.map((l) => (
+          <li key={l.id}>
+            <button className={on === l.id ? "hit on" : "hit"} disabled={pending} onClick={() => start(async () => void (await pinAnswer(l.id), setOn(l.id)))}>
+              &ldquo;{l.body}&rdquo;
+              <small>
+                S{l.season} W{l.week} · {l.fires} 🔥
+              </small>
             </button>
           </li>
-          {lines.map((l) => (
-            <li key={l.id}>
-              <button className={on === l.id ? "hit on" : "hit"} disabled={pending} onClick={() => start(async () => void (await pinAnswer(l.id), setOn(l.id)))}>
-                &ldquo;{l.body}&rdquo;
-                <small>
-                  Season {l.season}, Week {l.week} · {l.fires} 🔥
-                </small>
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-      <div className="miy-foot">
-        <Link href={`/circle/guy/${meId}`} className="btn btn-pink">
-          See your profile
-        </Link>
-      </div>
+        ))}
+      </ul>
+      <Footer onSave={onNext} label="Finish" />
     </section>
+  );
+}
+
+export function SectionLinks() {
+  return (
+    <ul className="profile-sections">
+      {STEP_KEYS.filter((k) => k !== "hit").map((k) => (
+        <li key={k}>
+          <Link href={`/profile/more?step=${k}`}>
+            <span>{TITLES[k]}</span>
+            <span aria-hidden="true">›</span>
+          </Link>
+        </li>
+      ))}
+    </ul>
   );
 }

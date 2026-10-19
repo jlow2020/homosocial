@@ -83,7 +83,7 @@ export default function VoiceRecorder({
     }
   };
 
-  if (done) return <p className="fine">Posted. It shows up in a minute, once it&apos;s converted.</p>;
+  if (done) return <p className="fine">Posted.</p>;
   return (
     <div className="play">
       {!url ? (

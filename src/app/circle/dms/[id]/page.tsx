@@ -139,7 +139,7 @@ export default async function Thread({ params }: { params: Promise<{ id: string 
                 </div>
               </div>
             ) : blind ? (
-              <p className="fine">💘 Blind Date. Photos and videos stay off until the reveal.</p>
+              <p className="fine">💘 Blind Date</p>
             ) : revealPending ? (
               <BlindReveal
                 threadId={id}

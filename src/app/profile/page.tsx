@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import PageHead from "@/components/PageHead";
 import ProfileForm from "./ProfileForm";
-import Link from "next/link";
+import { SectionLinks } from "./more/MakeItYours";
 import PushPrompt from "@/components/PushPrompt";
 import EmailToggle from "@/components/EmailToggle";
 import { deleteAccount } from "./actions";
@@ -58,13 +58,7 @@ export default async function ProfilePage() {
       />
       {p && (
         <div className="wrap account-link">
-          <Link href="/profile/more" className="make-it-yours">
-            <span>
-              <b>Make it yours</b>
-              <span className="fine">Photos, prompts, tags, a voice hello. Two minutes, mostly taps.</span>
-            </span>
-            <span aria-hidden="true">→</span>
-          </Link>
+          <SectionLinks />
         </div>
       )}
       {p && (

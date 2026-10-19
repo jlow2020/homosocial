@@ -4,11 +4,11 @@ import { redirect } from "next/navigation";
 import PageHead from "@/components/PageHead";
 import { getMe, getSupabaseAdmin } from "@/lib/supabase-server";
 import { TERMS_VERSION } from "@/lib/legal";
-import { loadExtras, loadCommunity, bestLines, completeness } from "@/lib/profile/data";
+import { loadExtras, loadCommunity, bestLines } from "@/lib/profile/data";
 import { photoUrls } from "@/lib/game/player";
-import MakeItYours from "./MakeItYours";
+import MakeItYours, { STEP_KEYS, type StepKey } from "./MakeItYours";
 
-export const metadata: Metadata = { title: "Make it yours | Homosocial" };
+export const metadata: Metadata = { title: "Your profile | Homosocial" };
 export const dynamic = "force-dynamic";
 
 export default async function More({ searchParams }: { searchParams: Promise<{ step?: string }> }) {
@@ -25,31 +25,28 @@ export default async function More({ searchParams }: { searchParams: Promise<{ s
     bestLines(db, me.userId, 8),
     photoUrls(db, [p.photo_path]),
   ]);
-  const done = completeness(extras, !!p.photo_path);
   const { step } = await searchParams;
-  const startAt = Math.max(0, Math.min(6, Number(step) || 0));
+  const startAt = (STEP_KEYS as readonly string[]).includes(step ?? "") ? (step as StepKey) : null;
+  // Signing up: this is part two of the profile, then the Realness Check.
+  const setup = !p.verified_at;
 
   return (
     <main className="apply-page">
-      <PageHead title="Make it yours" right={<Link href="/circle" className="topbar-link">Back to my Circle</Link>}>
-        Two minutes, mostly taps. The game fills in the rest as you play.
-      </PageHead>
+      <PageHead
+        title={setup ? "Make your profile" : "Your profile"}
+        tag={setup ? <><span className="chy-hot">Step 2 of 3</span><span className="chy-light">Your profile</span></> : undefined}
+        right={<Link href={setup ? "/verify" : "/profile"} className="topbar-link">{setup ? "Skip all" : "Done"}</Link>}
+      />
       <div className="wrap">
-        <div className="meter" role="progressbar" aria-valuenow={done.pct} aria-valuemin={0} aria-valuemax={100} aria-label="Profile complete">
-          <span style={{ width: `${done.pct}%` }} />
-        </div>
-        <p className="fine">
-          {done.pct}% there{done.next ? `. Next: ${done.next.toLowerCase()}.` : ". Looking good."}
-        </p>
         <MakeItYours
           extras={extras}
           community={community}
           seedText={[p.interests, p.hot_take, extras.basics.work, extras.basics.hometown, ...extras.answers.map((a) => a.body)].filter(Boolean).join(". ")}
           seed={me.userId}
           lines={lines}
-          meId={me.userId}
           mainPhoto={main.get(p.photo_path) ?? null}
           startAt={startAt}
+          finishHref={setup ? "/verify" : p.circle_id ? `/circle/guy/${me.userId}` : "/profile"}
         />
       </div>
     </main>

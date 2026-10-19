@@ -1,5 +1,5 @@
 // Profile prompts. He picks three and answers each in a sentence or two.
-// Never change an id once guys have answered it.
+// Never change an id once guys have answered it (the text can change).
 export const PROFILE_PROMPTS: { id: string; text: string; hint: string }[] = [
   { id: "two-drink", text: "The two-drink version of me…", hint: "Be honest. We'll meet him eventually." },
   { id: "toxic-trait", text: "My toxic trait is…", hint: "Pick a fun one." },
@@ -17,7 +17,7 @@ export const PROFILE_PROMPTS: { id: string; text: string; hint: string }[] = [
   { id: "dealbreaker", text: "Instant dealbreaker…", hint: "" },
   { id: "ask-me", text: "Ask me about…", hint: "Give guys an easy way in." },
   { id: "proud", text: "Something I'm lowkey proud of…", hint: "" },
-  { id: "florida", text: "The most Florida thing about me…", hint: "" },
+  { id: "florida", text: "The most hometown thing about me…", hint: "" },
   { id: "embarrassing", text: "My most embarrassing celebrity crush…", hint: "" },
   { id: "story", text: "The story I tell at every party…", hint: "" },
   { id: "simple-pleasure", text: "A simple pleasure I'd defend with my life…", hint: "" },
@@ -26,7 +26,7 @@ export const PROFILE_PROMPTS: { id: string; text: string; hint: string }[] = [
   { id: "spend-it", text: "If someone gave me $500 to spend today…", hint: "" },
   { id: "pet-peeve", text: "My pettiest pet peeve…", hint: "" },
   { id: "together", text: "We'll get along if you…", hint: "" },
-  { id: "underrated", text: "The most underrated thing in Florida…", hint: "" },
+  { id: "underrated", text: "The most underrated thing about where I live…", hint: "" },
   { id: "dinner-guest", text: "Dinner with anyone, living or dead…", hint: "" },
   { id: "red-flag", text: "My red flag, so you know up front…", hint: "" },
   { id: "soundtrack", text: "The song that's basically about me…", hint: "" },
@@ -35,7 +35,7 @@ export const PROFILE_PROMPTS: { id: string; text: string; hint: string }[] = [
 export const PROMPT_BY_ID = new Map(PROFILE_PROMPTS.map((p) => [p.id, p]));
 
 export const PHOTO_THEMES = [
-  "Me at my most Florida",
+  "Me in my element",
   "My happy place",
   "Proof I can cook",
   "On a good hair day",
@@ -61,7 +61,7 @@ export const STARTERS: Record<string, string[]> = {
   "die-on": ["pineapple belongs on pizza", "the beach is better at sunset than at noon", "the book was better, every time", "brunch is a meal, not an event"],
   "perfect-saturday": ["coffee, a long walk, and nowhere to be", "boat in the morning, nap in the afternoon, out at night", "farmers market, cook something big, people over", "sleep in, gym, tacos, repeat"],
   "known-for": ["always having a snack", "showing up early and staying late", "giving advice I don't take myself", "knowing a guy for everything"],
-  "unpopular": ["the movie is better than the book", "Florida summers aren't that bad", "I don't like brunch", "texting is better than calling"],
+  "unpopular": ["the movie is better than the book", "summer is overrated", "I don't like brunch", "texting is better than calling"],
   "teach-you": ["make a cocktail that'll ruin your Tuesday", "throw a spiral", "parallel park on the first try", "cook rice without a rice cooker"],
   "late-night": ["a philosopher with a snack", "ordering food I didn't need", "deep in a Wikipedia hole", "asleep. I'm sorry. I'm old."],
   "first-date": ["tacos and a long walk", "a dive bar with a good jukebox", "coffee that turns into dinner", "something with a little competition: bowling, mini golf, trivia"],
@@ -70,7 +70,7 @@ export const STARTERS: Record<string, string[]> = {
   "dealbreaker": ["rude to waiters", "never asks a question back", "doesn't like dogs", "too cool to have fun"],
   "ask-me": ["the worst job I ever had", "my plant collection", "the time I got lost in another country", "what I'm reading right now"],
   "proud": ["I finally learned to swim", "I keep a houseplant alive", "I ran my first half marathon", "I made it through nursing school clinicals"],
-  "florida": ["I own more than three pairs of flip-flops", "I've driven through a hurricane for Publix subs", "I know the sunset time every night", "I've been to Disney more than any adult should"],
+  "florida": ["I still say the local slang I swore I'd drop", "I judge every pizza against the one back home", "I know a guy at every gas station", "I wave at strangers and mean it"],
   "embarrassing": ["a cartoon fox, and I'll leave it there", "every single member of a boy band", "a weatherman from my hometown", "a guy from a cooking show"],
   "story": ["the night I accidentally crashed a wedding", "how I met my best friend in a parking lot", "the alligator incident", "the worst flight of my life"],
   "simple-pleasure": ["the first sip of coffee", "fresh sheets", "a perfectly ripe mango", "windows down, good song"],
@@ -79,7 +79,7 @@ export const STARTERS: Record<string, string[]> = {
   "spend-it": ["a really good dinner for my friends", "plants. Too many plants.", "a last-minute flight anywhere", "a massage and absolutely nothing else"],
   "pet-peeve": ["people who don't use their blinker", "\"we should hang out sometime\" with no plan", "loud chewing", "slow walkers in the middle of the aisle"],
   "together": ["like to eat", "laugh at your own jokes", "say yes to a last-minute plan", "can sit in comfortable silence"],
-  "underrated": ["the springs in winter", "a gas station Cuban sandwich", "thunderstorms at 4pm on the dot", "sunrise on the Gulf side"],
+  "underrated": ["the diner nobody talks about", "the park at sunrise", "the gas station food, honestly", "the weather, for about two weeks a year"],
   "dinner-guest": ["my grandmother at 30", "Dolly Parton", "whoever invented air conditioning", "my future self, for advice"],
   "red-flag": ["I will make a playlist for every occasion", "I talk to my dog like he's a person", "I'm competitive about board games", "I narrate my cooking out loud"],
   "soundtrack": ["Dancing On My Own", "Born This Way, unironically", "a sad country song", "something with a key change"],
@@ -89,7 +89,7 @@ export const STARTERS: Record<string, string[]> = {
 // Lines to say in a voice hello, if he doesn't know what to say.
 export const VOICE_SCRIPTS = [
   "Say your name, where you're from, and the last thing that made you laugh.",
-  "Tell us what you'd do with a free Saturday in Florida.",
+  "Tell us what you'd do with a free Saturday.",
   "Say hi, then tell us your go-to karaoke song. Bonus points for singing a line.",
   "Introduce yourself like you're walking into the villa.",
 ];

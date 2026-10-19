@@ -28,7 +28,6 @@ export default function SignInForm() {
         <form action={reset} className="stack">
           <label className="field">
             <span className="label">Email</span>
-            <span className="hint">The one you signed up with. We&apos;ll send a link to reset your password.</span>
             <input className="input" name="email" type="email" required autoComplete="email" />
           </label>
           {resetState.error && <p className="error" role="alert">{resetState.error}</p>}

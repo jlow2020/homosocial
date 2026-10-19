@@ -70,7 +70,6 @@ export default async function Dms() {
   return (
     <Shell pl={pl}>
       <h1 className="game-h1">DMs</h1>
-      <p className="fine">Only guys in your Circle can message you. Start one from any guy&apos;s page.</p>
       {incoming.length > 0 && (
         <section style={{ marginTop: 20 }}>
           <h2 className="admin-h3">Wants to talk</h2>

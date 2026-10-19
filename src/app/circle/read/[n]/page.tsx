@@ -72,7 +72,7 @@ export default async function ReadPage({ params }: { params: Promise<{ n: string
           <h1 className="game-h1">{locked ? "That's a wrap." : "So far this week."}</h1>
           <p className="fine">
             {r.answered} of {r.of} answered.{" "}
-            {locked ? `Locked ${etLabel(new Date(drop.locked_at!))}.` : readAt ? `Locks ${clock.phase === "season" && clock.testMode ? "when the week moves on" : etLabel(readAt)}. Numbers can still move.` : ""}
+            {locked ? `Locked ${etLabel(new Date(drop.locked_at!))}.` : readAt ? `Locks ${clock.phase === "season" && clock.testMode ? "when the week moves on" : etLabel(readAt)}.` : ""}
             {" "}<Link href={`/circle/week/${week}`}>The drop</Link>
           </p>
         </header>
@@ -244,7 +244,6 @@ export default async function ReadPage({ params }: { params: Promise<{ n: string
               </li>
             ))}
           </ol>
-          <p className="fine">Reactions earned, and badges. Badges stick with you into next Season.</p>
         </section>
       </article>
     </Shell>

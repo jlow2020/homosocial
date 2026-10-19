@@ -33,7 +33,7 @@ export default function WriteDrop({ left }: { left: number }) {
       }}
     >
       <p className="eyebrow">Write the drop</p>
-      <p className="fine">The best ones run in Circles across Florida, credited to you. Make it filthy. Make it specific.</p>
+      <p className="fine">Make it filthy. Make it specific.</p>
       <label className="visually-hidden" htmlFor="wd-body">
         Your drop
       </label>

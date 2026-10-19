@@ -61,7 +61,6 @@ export default async function Finale() {
                 </li>
               ))}
             </ul>
-            <p className="fine">The numbers behind eight weeks. Pick with your gut anyway.</p>
           </section>
         )}
         <PicksForm

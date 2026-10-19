@@ -129,7 +129,6 @@ function MadLibs({ week, spec }: { week: number; spec: Extract<PlaySpec, { kind:
   const done = w.every((x) => x.trim());
   return (
     <div className="play">
-      <p className="fine">Don&apos;t read ahead. The story comes after.</p>
       <ol className="madlibs">
         {spec.slots.map((s, i) => (
           <li key={i}>
@@ -209,7 +208,7 @@ function Speed({ week, spec }: { week: number; spec: Extract<PlaySpec, { kind: "
     return (
       <div className="play">
         <p className="fine">
-          {spec.questions.length} questions, {spec.seconds} seconds. Whatever you type is what the Circle sees. No edits, no takebacks. Put your phone on Do Not Disturb first.
+          {spec.questions.length} questions, {spec.seconds} seconds. No edits.
         </p>
         <button className="btn btn-pink" onClick={() => setCount(3)}>
           Ready?
@@ -259,7 +258,7 @@ function TwoTruths({ week }: { week: number }) {
           </li>
         ))}
       </ol>
-      <p className="fine">Only you see which one&apos;s the lie, until the week ends.</p>
+      <p className="fine">Only you know which one&apos;s the lie.</p>
       {error && <p className="error">{error}</p>}
       <button className="btn btn-pink" disabled={pending || lie === null || !s.every((x) => x.trim())} onClick={() => submit({ statements: s.map((x) => x.trim()), lie })}>
         {pending ? "Posting..." : "Post them"}
@@ -378,7 +377,7 @@ function Rank({ week, spec, guys, meId }: { week: number; spec: Extract<PlaySpec
   const left = pool.filter((g) => !order.includes(g.id));
   return (
     <div className="play">
-      <p className="fine">Tap them in order, best first. {spec.category}.</p>
+      <p className="fine">{spec.category}. Best first.</p>
       <ol className="rank-list">
         {order.map((id, i) => {
           const g = pool.find((x) => x.id === id)!;
@@ -420,7 +419,7 @@ function RankNight({ week, spec, guys, meId }: { week: number; spec: Extract<Pla
   const need = Math.min(5, spec.categories.length);
   return (
     <div className="play">
-      <p className="fine">One guy per title. Skip any you can&apos;t call. Nobody sees your ballot, only the results.</p>
+      <p className="fine">Nobody sees your ballot.</p>
       <ol className="ranknight">
         {spec.categories.map((c, i) => {
           const g = pool.find((x) => x.id === picks[i]);
@@ -467,7 +466,7 @@ function HotSeat({ week }: { week: number }) {
   const [error, setError] = useState("");
   return (
     <div className="play">
-      <p className="fine">Nobody&apos;s in the seat yet. First to tap takes it. Everyone asks you one question, you answer the ones you want in the replies.</p>
+      <p className="fine">The seat&apos;s open.</p>
       {error && <p className="error">{error}</p>}
       <button
         className="btn btn-pink"
@@ -500,7 +499,7 @@ function BlindDate({ week, myRow }: { week: number; myRow: Record<string, unknow
       </div>
     );
   }
-  if (myRow?.status === "waiting") return <p className="fine">You&apos;re in. You&apos;ll be paired with the next guy who taps in. Check back.</p>;
+  if (myRow?.status === "waiting") return <p className="fine">You&apos;re in. Waiting on a match.</p>;
   return (
     <div className="play">
       {error && <p className="error">{error}</p>}

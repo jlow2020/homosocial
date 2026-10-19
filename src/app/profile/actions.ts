@@ -104,7 +104,9 @@ export async function saveProfile(_prev: ProfileState, form: FormData): Promise<
     await enqueue(db, { user_id: me.userId, circle_id: existing?.circle_id ?? null, surface: "profile_photo", media_bucket: "photos", media_path: photoPath, verdict: "flagged", category: "nudity", reason: photoCheck.reason, detail: { scores: photoCheck.scores, ai: photoCheck.ai } });
   }
 
-  redirect(hasPhoto || !existing?.verified_at ? "/verify" : "/circle");
+  // New guys go straight into the rest of the profile; it all can be skipped.
+  if (!existing) redirect("/profile/more");
+  redirect(hasPhoto || !existing.verified_at ? "/verify" : "/circle");
 }
 
 export async function deleteAccount() {

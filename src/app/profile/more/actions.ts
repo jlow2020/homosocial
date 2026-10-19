@@ -6,8 +6,10 @@ import { after } from "next/server";
 import { getMe, getSupabaseAdmin } from "@/lib/supabase-server";
 import { moderateImage, moderateText, enqueue } from "@/lib/moderation";
 import { convertClip } from "@/lib/media";
-import { TAG_BY_SLUG, DOWN_FOR, slugOf } from "@/lib/profile/catalog";
+import { TAG_BY_SLUG, slugOf } from "@/lib/profile/catalog";
+import { DOWN_BY_SLUG } from "@/lib/profile/downfor";
 import { PROMPT_BY_ID, PRONOUNS, ZODIAC, RELATIONSHIP } from "@/lib/profile/prompts";
+import { rankPrompts, templateDrafts, aiDrafts, type Me } from "@/lib/profile/drafts";
 
 type Result = { ok: boolean; error?: string };
 const MAX_PHOTOS = 5;
@@ -30,7 +32,7 @@ function done() {
 export async function saveTags(kind: "interest" | "down", slugs: string[], custom: string[] = []): Promise<Result & { added?: { slug: string; label: string }[] }> {
   const m = await me();
   if (!m) return { ok: false, error: "Sign in again." };
-  const allowed = kind === "down" ? new Set(DOWN_FOR.map((d) => d.slug)) : null;
+  const allowed = kind === "down" ? new Set(DOWN_BY_SLUG.keys()) : null;
   const keep = new Set<string>();
   for (const s of slugs.slice(0, MAX_TAGS)) {
     if (typeof s !== "string") continue;
@@ -208,4 +210,45 @@ export async function pinAnswer(answerId: string | null): Promise<Result> {
   await m.db.from("profiles").update({ pinned_answer_id: answerId }).eq("id", m.id);
   done();
   return { ok: true };
+}
+
+// Prompts that fit him, each with answers drafted from what he's told us.
+async function aboutMe(m: NonNullable<Awaited<ReturnType<typeof me>>>): Promise<Me> {
+  const { data: tags } = await m.db.from("user_tags").select("slug, kind").eq("user_id", m.id);
+  const p = m.profile as { first_name: string; interests: string | null; hot_take: string | null; work?: string | null };
+  return {
+    first: p.first_name,
+    tags: (tags ?? []).filter((t) => t.kind === "interest").map((t) => t.slug as string),
+    down: (tags ?? []).filter((t) => t.kind === "down").map((t) => t.slug as string),
+    interests: p.interests ?? "",
+    hotTake: p.hot_take ?? "",
+    work: p.work ?? null,
+  };
+}
+
+async function draftsFor(ids: string[], who: Me): Promise<Record<string, string[]>> {
+  const ai = await aiDrafts(ids, who);
+  const out: Record<string, string[]> = {};
+  for (const id of ids) {
+    const mine = templateDrafts(id, who);
+    // His hot take is already his words, so it leads when it fits.
+    const lead = (id === "die-on" || id === "unpopular") && who.hotTake ? [mine[0]] : [];
+    out[id] = [...new Set([...lead, ...(ai?.[id] ?? []), ...mine])].slice(0, 4);
+  }
+  return out;
+}
+
+export async function promptPack(keep: string[]): Promise<{ ranked: string[]; drafts: Record<string, string[]> }> {
+  const m = await me();
+  if (!m) return { ranked: [], drafts: {} };
+  const who = await aboutMe(m);
+  const ranked = rankPrompts(who, m.id);
+  const first = [...keep.filter((k) => PROMPT_BY_ID.has(k)), ...ranked.filter((r) => !keep.includes(r))].slice(0, 3);
+  return { ranked, drafts: await draftsFor(first, who) };
+}
+
+export async function promptDrafts(id: string): Promise<string[]> {
+  const m = await me();
+  if (!m || !PROMPT_BY_ID.has(id)) return [];
+  return (await draftsFor([id], await aboutMe(m)))[id] ?? [];
 }

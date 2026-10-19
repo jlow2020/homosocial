@@ -6,8 +6,9 @@ import { BADGES } from "@/lib/game/lock";
 import { UUID } from "@/lib/admin";
 import { ageFrom, regionName } from "@/lib/season";
 import { promptOf, type Drop } from "@/lib/game/drops";
-import { loadExtras, greatestHit, ownWords, yearbook, youTwo, completeness } from "@/lib/profile/data";
-import { TAG_BY_SLUG, DOWN_FOR } from "@/lib/profile/catalog";
+import { loadExtras, greatestHit, ownWords, yearbook  , youTwo } from "@/lib/profile/data";
+import { TAG_BY_SLUG } from "@/lib/profile/catalog";
+import { downLabel } from "@/lib/profile/downfor";
 import StaffBadge from "@/components/StaffBadge";
 import FounderBadge from "@/components/FounderBadge";
 import Waveform from "@/components/Waveform";
@@ -53,29 +54,24 @@ export default async function Guy({ params }: { params: Promise<{ id: string }> 
     ? { data: null }
     : await db.from("dm_threads").select("id").eq("a", [id, pl.profile.id].sort()[0]).eq("b", [id, pl.profile.id].sort()[1]).maybeSingle();
   const urls = await photoUrls(db, [m.photo_path, ...hisAnswers.map((a) => a.photo_path)]);
-  const done = self ? completeness(his, !!m.photo_path) : null;
 
   const shots = [
     ...(urls.get(m.photo_path) ? [{ url: urls.get(m.photo_path)!, theme: null, veiled: false }] : []),
     ...his.photos.filter((p) => p.url).map((p) => ({ url: p.url!, theme: p.theme, veiled: p.veiled })),
   ];
   const b = his.basics;
-  const facts = [b.work, b.hometown && (b.hometown.toLowerCase().startsWith("florida") ? b.hometown : `from ${b.hometown}`), b.zodiac, b.show_relationship || self ? b.relationship : null].filter(Boolean) as string[];
+  const facts = [b.work, b.hometown && `from ${b.hometown}`, b.zodiac, b.show_relationship || self ? b.relationship : null].filter(Boolean) as string[];
   const sharedTags = new Set(mine?.interests ?? []);
   const sharedDown = new Set(mine?.down ?? []);
   const tagLabel = (s: string) => TAG_BY_SLUG.get(s)?.label ?? s.replace(/^c-/, "").replace(/-/g, " ");
-  const downLabel = (s: string) => DOWN_FOR.find((d) => d.slug === s)?.label ?? s;
   const seasons = new Set(book.map((p) => `${p.circle}:${p.season}`)).size;
 
   return (
     <Shell pl={pl}>
-      {self && done && (
+      {self && (
         <div className="self-bar">
-          <span>
-            This is how your Circle sees you. <b>{done.pct}% there.</b>
-            {done.next && <span className="fine"> Next: {done.next.toLowerCase()}.</span>}
-          </span>
-          <Link href="/profile/more" className="btn btn-small btn-pink">
+          <span>This is how your Circle sees you.</span>
+          <Link href="/profile" className="btn btn-small btn-pink">
             Edit
           </Link>
         </div>
@@ -171,7 +167,6 @@ export default async function Guy({ params }: { params: Promise<{ id: string }> 
                 </ul>
               </>
             )}
-            {!self && (sharedTags.size > 0 || sharedDown.size > 0) && <p className="fine">Gold means you both picked it.</p>}
           </section>
         )}
 
@@ -212,7 +207,6 @@ export default async function Guy({ params }: { params: Promise<{ id: string }> 
                 ))}
               </dl>
             )}
-            <p className="fine">From the games he&apos;s played. Nobody wrote this. He just played.</p>
           </section>
         )}
 
@@ -272,7 +266,7 @@ export default async function Guy({ params }: { params: Promise<{ id: string }> 
 
         {!self && his.interests.length === 0 && his.answers.length === 0 && !hit && (
           <section className="g-card">
-            <p className="fine">{m.first_name} hasn&apos;t filled in his profile yet. Into {m.interests}. &ldquo;{m.hot_take}&rdquo;</p>
+            <p className="fine">Into {m.interests}. &ldquo;{m.hot_take}&rdquo;</p>
           </section>
         )}
       </div>

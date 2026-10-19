@@ -130,7 +130,7 @@ export default function ChatThread({
             onFailed={(id) => setPending((cur) => cur.filter((x) => x.id !== id))}
           />
         )}
-        {!canSend && waiting && <p className="fine">Sent. You can keep talking once he says yes.</p>}
+        {!canSend && waiting && <p className="fine">Sent.</p>}
       </div>
     </div>
   );

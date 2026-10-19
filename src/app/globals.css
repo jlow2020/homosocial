@@ -1053,12 +1053,31 @@ img {
   color: var(--soft);
 }
 
+/* Reduce Motion (iPhone setting): no sliding, popping or looping. Things still
+   fade in, which is what Apple recommends instead of turning everything off. */
 @media (prefers-reduced-motion: reduce) {
+  @keyframes page-in { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes rise { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes slide-fwd { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes slide-back { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes drop-down { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes chip-pop { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes grow-x { from { opacity: 0; } to { opacity: 1; } }
   *,
   *::before,
   *::after {
-    animation: none !important;
-    transition: none !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+  }
+  .btn:hover:not(:disabled),
+  .btn:active:not(:disabled),
+  .chip:active,
+  .starter:active,
+  .mini-card:hover,
+  .event-card:hover,
+  .recap-card:hover,
+  .read-card:hover {
+    transform: none !important;
   }
 }
 
@@ -4368,11 +4387,11 @@ audio {
   --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 @keyframes page-in {
-  from { opacity: 0; transform: translateY(10px); }
+  from { opacity: 0; transform: translateY(22px); }
   to { opacity: 1; transform: none; }
 }
 @keyframes rise {
-  from { opacity: 0; transform: translateY(14px); }
+  from { opacity: 0; transform: translateY(20px); }
   to { opacity: 1; transform: none; }
 }
 @keyframes fade {
@@ -4385,11 +4404,11 @@ audio {
   100% { transform: none; }
 }
 @keyframes slide-fwd {
-  from { opacity: 0; transform: translateX(48px); }
+  from { opacity: 0; transform: translateX(72px); }
   to { opacity: 1; transform: none; }
 }
 @keyframes slide-back {
-  from { opacity: 0; transform: translateX(-48px); }
+  from { opacity: 0; transform: translateX(-72px); }
   to { opacity: 1; transform: none; }
 }
 @keyframes grow-x {
@@ -4411,7 +4430,7 @@ audio {
 
 /* Pages ease in on every navigation. No fill mode, so nothing keeps a transform afterward. */
 .page-enter {
-  animation: page-in 0.42s var(--ease-out);
+  animation: page-in 0.6s var(--ease-out);
 }
 
 /* Lists cascade in, a beat apart. */
@@ -4546,14 +4565,19 @@ audio {
 
 /* Profile builder: steps slide the way you're going. */
 .miy-pane.fwd {
-  animation: slide-fwd 0.42s var(--ease-out);
+  animation: slide-fwd 0.5s var(--ease-out);
 }
 .miy-pane.back {
-  animation: slide-back 0.42s var(--ease-out);
+  animation: slide-back 0.5s var(--ease-out);
 }
-.chips-pick.ideas > li {
-  animation: chip-pop 0.42s var(--spring) backwards;
-  animation-delay: calc(var(--i, 0) * 28ms);
+.chips-pick.ideas > li,
+.chips-pick.themes > li {
+  animation: chip-pop 0.45s var(--spring) backwards;
+  animation-delay: calc(120ms + var(--i, 0) * 35ms);
+}
+.miy-prompt {
+  animation: rise 0.5s var(--ease-out) backwards;
+  animation-delay: calc(80ms + var(--i, 0) * 90ms);
 }
 .chip-in {
   animation: chip-pop 0.35s var(--spring);
@@ -5129,4 +5153,195 @@ audio {
 .make-it-yours > span:last-child {
   font-size: 26px;
   color: var(--hot);
+}
+
+/* Profile builder, v2 -------------------------------------------------------- */
+.miy-top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.miy-back {
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: var(--studio);
+  color: var(--spot);
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+  transition: opacity 0.2s, transform 0.18s var(--ease-out);
+}
+.miy-back:disabled {
+  opacity: 0;
+  pointer-events: none;
+}
+.miy-back:active {
+  transform: scale(0.9);
+}
+.miy-progress {
+  flex: 1;
+  height: 8px;
+  background: var(--studio);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.miy-progress > span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--hot), var(--gold));
+  transition: width 0.6s var(--ease-out);
+}
+.miy-count {
+  flex: none;
+  font-size: 13px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.miy-foot-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+.miy-foot-row .btn {
+  min-width: 140px;
+}
+.miy-card h2 {
+  font-size: clamp(30px, 8vw, 40px);
+}
+.input-search,
+.input-small {
+  font-size: 16px;
+  padding: 11px 14px;
+}
+.input-search {
+  border-radius: 14px;
+}
+.label-small {
+  font-size: 17px;
+}
+.miy-prompt-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+}
+.miy-prompt-head .link-button {
+  font-size: 22px;
+  line-height: 1;
+  padding: 2px 6px;
+  transition: transform 0.35s var(--ease-out);
+}
+.miy-prompt-head .link-button:active {
+  transform: rotate(180deg);
+}
+.miy-prompt .textarea {
+  min-height: 0;
+  font-size: 17px;
+  border-radius: 12px;
+}
+.starter-line {
+  border-color: var(--gold);
+}
+.miy-photo-add {
+  display: grid;
+  place-items: center;
+  border: 2px dashed var(--line);
+  border-radius: 14px;
+  color: var(--gold);
+  font-size: 40px;
+  cursor: pointer;
+  aspect-ratio: 4 / 5;
+  transition: border-color 0.2s, transform 0.18s var(--ease-out);
+}
+.miy-photo-add:hover {
+  border-color: var(--hot);
+}
+.miy-photo-add:active {
+  transform: scale(0.97);
+}
+.miy-photo-add.busy span {
+  animation: glow 1.2s ease-in-out infinite;
+}
+.miy-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.miy-skeleton > span {
+  display: block;
+  height: 96px;
+  border-radius: 16px;
+  background: linear-gradient(110deg, var(--prime) 30%, #2a1838 50%, var(--prime) 70%);
+  background-size: 200% 100%;
+  animation: shimmer 1.3s linear infinite;
+}
+.profile-sections {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  overflow: hidden;
+}
+.profile-sections li + li {
+  border-top: 1px solid var(--line);
+}
+.profile-sections a {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 18px;
+  color: var(--spot);
+  text-decoration: none;
+  font-weight: 600;
+  background: var(--studio);
+  transition: background-color 0.2s, padding-left 0.25s var(--ease-out);
+}
+.profile-sections a:hover {
+  background: #2a1838;
+  padding-left: 24px;
+}
+.profile-sections a span:last-child {
+  color: var(--hot);
+  font-size: 22px;
+}
+
+/* iPhone: date fields keep their own width unless told otherwise. */
+input[type="date"].input {
+  -webkit-appearance: none;
+  appearance: none;
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+  min-height: 56px;
+  text-align: left;
+}
+input[type="date"].input::-webkit-date-and-time-value {
+  text-align: left;
+}
+.field,
+.field-row > * {
+  min-width: 0;
+}
+.miy-photo-add > span {
+  width: auto;
+  aspect-ratio: auto;
+  background: none;
+  border-radius: 0;
+}
+.miy-back:disabled {
+  display: none;
+}
+.miy-card .input,
+.miy-card .textarea {
+  border-radius: 14px;
+  font-size: 16px;
+}
+.miy-card .field {
+  gap: 8px;
 }

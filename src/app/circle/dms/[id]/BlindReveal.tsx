@@ -46,7 +46,7 @@ export default function BlindReveal({ threadId, me, him, iKept, heKept }: { thre
       {guess === "yes" && <p className="fine">Of course you did.</p>}
       {guess === "no" && <p className="fine">That&apos;s the point.</p>}
       {iKept ? (
-        <p className="fine">{heKept ? "You both said keep talking. The chat is open, faces on." : `You said keep talking. Waiting on ${him.name}. If he says yes, the chat opens with faces on. If not, you won't be told.`}</p>
+        <p className="fine">{heKept ? "You both said yes. Faces on." : `Waiting on ${him.name}.`}</p>
       ) : (
         <>
           <p>

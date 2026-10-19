@@ -166,8 +166,10 @@ const sections: Section[] = [
             (database, sign-in and file storage), Railway (website hosting), Resend (email delivery), and the push services built
             into your browser or phone, such as Apple, Google or Mozilla (delivering notifications; the contents of our
             notifications are encrypted so the push service can&apos;t read them). Google, if you choose to sign in with Google.
-            Anthropic, our AI provider, only for the borderline posts and photos described under &ldquo;Automated safety
-            checks,&rdquo; and only to give us a second opinion on them.
+            Anthropic, our AI provider, for two things only: a second opinion on the borderline posts and photos described
+            under &ldquo;Automated safety checks,&rdquo; and, while you build your profile, drafting prompt answers for you to
+            pick from, using the interests, plans and profile text you&apos;ve entered. You choose what, if anything, gets
+            posted.
           </li>
           <li>
             <b>Law enforcement and others, when required.</b> When the law requires it, such as a valid subpoena or court

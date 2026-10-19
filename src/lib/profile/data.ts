@@ -4,6 +4,7 @@ import { photoUrls } from "@/lib/game/player";
 import { BADGES } from "@/lib/game/lock";
 import { sameAnswer } from "@/lib/game/rematch";
 import { TAG_BY_SLUG } from "./catalog";
+import { downLabel } from "./downfor";
 import { PROMPT_BY_ID } from "./prompts";
 import type { Community } from "./suggest";
 
@@ -185,7 +186,7 @@ export async function youTwo(db: SupabaseClient, me: string, him: string, mine: 
     lines.push(`You're both into ${labels.join(", ").replace(/, ([^,]*)$/, " and $1")}${shared.length > 3 ? `, plus ${shared.length - 3} more` : ""}.`);
   }
   const sharedDown = his.down.filter((t) => mine.down.includes(t));
-  if (sharedDown.length) lines.push(`You're both down for ${sharedDown.slice(0, 2).map((s) => s.replace(/-/g, " ")).join(" and ")}. That's a plan.`);
+  if (sharedDown.length) lines.push(`You're both down for ${sharedDown.slice(0, 2).map((s) => downLabel(s).toLowerCase()).join(" and ")}. That's a plan.`);
   const samePrompt = his.answers.find((a) => mine.answers.some((m) => m.prompt_id === a.prompt_id));
   if (samePrompt) lines.push(`You both answered "${samePrompt.prompt.replace(/…$/, "")}". Compare notes.`);
   if (his.basics.zodiac && mine.basics.zodiac && his.basics.zodiac === mine.basics.zodiac) lines.push(`Two ${his.basics.zodiac}s. Good luck.`);

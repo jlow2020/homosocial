@@ -70,7 +70,7 @@ export const PROMPTS: Prompt[] = [
   { id: "w4-knew", week: 4, kind: "text", body: "When did you know? Not when you came out. When you knew.", heat: 1 },
 
   // Week 5: Type. What gets you stupid.
-  { id: "w5-publix", week: 5, kind: "text", body: "Describe your type using only things sold at Publix.", heat: 2 },
+  { id: "w5-publix", week: 5, kind: "text", body: "Describe your type using only things sold at the grocery store.", heat: 2 },
   { id: "w5-stupid", week: 5, kind: "text", body: "What makes you stupid for a guy? \"Forearms\" isn't specific enough. Try again.", heat: 3 },
   { id: "w5-position", week: 5, kind: "text", body: "Top, bottom, vers, or \"depends on his shoulders\"? Defend your answer.", heat: 4 },
   { id: "w5-nonphysical", week: 5, kind: "text", body: "The non-physical thing that's an instant turn-on. Be uncomfortably specific.", heat: 2 },
@@ -84,7 +84,7 @@ export const PROMPTS: Prompt[] = [
   { id: "w6-hundred", week: 6, kind: "text", body: "The Circle has $100 and one Saturday night. Pitch the plan. The winner goes in Plans.", heat: 1 },
   { id: "w6-baddecisions", week: 6, kind: "text", body: "The bar around here where you've made your worst decisions. Recommend it anyway.", heat: 3 },
   { id: "w6-shootshot", week: 6, kind: "text", body: "Sidequest: give your number to a stranger this week. Or to someone in this Circle. Report back.", heat: 3 },
-  { id: "w6-irl", week: 6, kind: "text", body: "Your best place to meet guys that isn't an app. The Publix produce section counts.", heat: 2 },
+  { id: "w6-irl", week: 6, kind: "text", body: "Your best place to meet guys that isn't an app. The produce section counts.", heat: 2 },
   { id: "w6-teach", week: 6, kind: "text", body: "One thing every man should know how to do. Bonus points if it's useful after midnight.", heat: 2 },
   { id: "w6-sidequest", week: 6, kind: "photo", body: "Sidequest: a photo with a pelican, a drag queen or a stranger's dog by Sunday. All three and you're a legend.", heat: 1 },
 

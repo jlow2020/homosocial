@@ -85,7 +85,7 @@ export default function AnswerForm({ week, kind, canPass }: { week: number; kind
             </button>
           ))}
       </div>
-      {canPass && confirmPass && <p className="fine">You get one Pass a Season. It still unlocks everyone&apos;s answers.</p>}
+      {canPass && confirmPass && <p className="fine">One Pass a Season.</p>}
     </div>
   );
 }

@@ -84,7 +84,7 @@ export function DmPhoto({ src, fromThem, otherId, messageId }: { src: string; fr
           Report this photo
         </button>
       )}
-      {reported && <span className="fine">Reported, and he&apos;s blocked. Thanks for telling us.</span>}
+      {reported && <span className="fine">Reported and blocked.</span>}
     </div>
   );
 }

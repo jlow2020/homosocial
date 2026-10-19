@@ -69,12 +69,12 @@ export default async function Plans() {
       <div className="plans-head">
         <div>
           <h1 className="game-h1">Plans</h1>
-          <p className="fine">Anyone can post a plan. Meet in public the first time, and tell a friend where you&apos;re going.</p>
+          <p className="fine">Meet in public the first time.</p>
         </div>
       </div>
       <PlanForm />
       <ul className="plan-list">{upcoming.map((p) => card(p))}</ul>
-      {upcoming.length === 0 && <p className="fine">Nothing coming up. Trivia, beach, a terrible movie: post it.</p>}
+      {upcoming.length === 0 && <p className="fine">Nothing coming up.</p>}
       {past.length > 0 && (
         <>
           <h2 className="admin-h3" style={{ marginTop: 32 }}>

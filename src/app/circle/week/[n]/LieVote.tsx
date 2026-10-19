@@ -23,7 +23,7 @@ export default function LieVote({ dropId, answerId, statements, current }: { dro
           </button>
         </li>
       ))}
-      <li className="fine">{v === null ? "Which one's the lie?" : "Your vote's in. Reveal when the week ends."}</li>
+      <li className="fine">{v === null ? "Which one's the lie?" : "Vote's in."}</li>
     </ol>
   );
 }

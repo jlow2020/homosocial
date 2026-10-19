@@ -49,7 +49,7 @@ export const PLAYS: Play[] = [
     heat: 4,
     mode: "survey",
     body: "The Scandalous Survey. Ten questions, yes or no, no explaining yourself.",
-    hint: "Anonymous. Nobody sees your answers, only the Circle's totals, and how Florida compares.",
+    hint: "Anonymous. Only the totals get posted.",
     spec: {
       kind: "survey",
       title: "Scandal score",
@@ -75,7 +75,7 @@ export const PLAYS: Play[] = [
     heat: 4,
     mode: "survey",
     body: "The Bedroom Survey. Yes or no. Nobody's checking, but we'll know.",
-    hint: "Anonymous. Only the totals get posted, yours and all of Florida's.",
+    hint: "Anonymous. Only the totals get posted.",
     spec: {
       kind: "survey",
       title: "Bedroom report",
@@ -124,21 +124,21 @@ export const PLAYS: Play[] = [
     weeks: [1, 6],
     heat: 2,
     mode: "survey",
-    body: "The Florida Survey. Yes or no. This state did this to you.",
+    body: "The Hometown Survey. Yes or no. Where you grew up did this to you.",
     spec: {
       kind: "survey",
-      title: "Florida man score",
+      title: "Hometown score",
       census: true,
       questions: [
         "Been on a boat you didn't own",
-        "Seen a gator on a date",
-        "Hooked up on a beach",
+        "Seen wildlife on a date",
+        "Hooked up outdoors",
         "Sunburned somewhere embarrassing",
-        "Been to a Jimmy Buffett concert",
-        "Had a Pub Sub for dinner three days running",
-        "Evacuated for a hurricane",
-        "Ignored an evacuation for a hurricane",
-        "Been on a Key West bar crawl",
+        "Been to a concert you'd never admit to",
+        "Had gas station food for dinner three days running",
+        "Driven through a storm for snacks",
+        "Ignored a weather warning",
+        "Been on a bar crawl in a tourist town",
         "Owns more than four Hawaiian shirts",
       ],
     },
@@ -151,7 +151,7 @@ export const PLAYS: Play[] = [
     heat: 4,
     mode: "thisorthat",
     body: "This or That, bedroom edition. Fifteen pairs. No thinking.",
-    hint: "The Circle's splits get posted. You'll see who agreed with you most.",
+    hint: "See who agrees with you.",
     spec: {
       kind: "thisorthat",
       reveal: false,
@@ -180,7 +180,7 @@ export const PLAYS: Play[] = [
     heat: 2,
     mode: "thisorthat",
     body: "This or That, gay edition. Fifteen pairs, one tap each.",
-    hint: "The Circle's splits get posted. You'll see who agreed with you most.",
+    hint: "See who agrees with you.",
     spec: {
       kind: "thisorthat",
       reveal: false,
@@ -191,7 +191,7 @@ export const PLAYS: Play[] = [
         ["Drag brunch", "Drag show"],
         ["Twink", "Daddy"],
         ["Sarasota", "St. Pete"],
-        ["Key West", "Miami"],
+        ["Beach town", "Big city"],
         ["Grindr", "Hinge"],
         ["Gym at 6am", "Gym at 9pm"],
         ["Tequila", "Vodka"],
@@ -233,7 +233,7 @@ export const PLAYS: Play[] = [
       pairs: [
         ["Only date younger", "Only date older"],
         ["Be the hot one", "Be the funny one"],
-        ["Run into your ex at Publix", "Run into your ex at the gym"],
+        ["Run into your ex at the grocery store", "Run into your ex at the gym"],
         ["Be caught by his roommate", "Be caught by your roommate"],
         ["Rich and boring", "Broke and unforgettable"],
       ],
@@ -247,12 +247,11 @@ export const PLAYS: Play[] = [
     heat: 3,
     mode: "madlibs",
     body: "Mad Libs: the date. Give us seven words. We write the night.",
-    hint: "Your filled-in story is your answer for the week.",
     spec: {
       kind: "madlibs",
-      slots: ["a body part", "something sold at Publix", "an ex's first name", "a verb ending in -ing", "a place in Florida", "an adjective", "a number"],
+      slots: ["a body part", "something sold at the grocery store", "an ex's first name", "a verb ending in -ing", "a place in your town", "an adjective", "a number"],
       template:
-        "He showed up to the date with incredible {0}s and a bag from Publix with nothing in it but {1}. I said my name was {2} because I panicked. By 10pm we were {3} in the parking lot of {4}. It was {5}. I've seen him {6} times since and I still haven't told him my real name.",
+        "He showed up to the date with incredible {0}s and a grocery bag with nothing in it but {1}. I said my name was {2} because I panicked. By 10pm we were {3} in the parking lot of {4}. It was {5}. I've seen him {6} times since and I still haven't told him my real name.",
     },
   },
   {
@@ -261,7 +260,6 @@ export const PLAYS: Play[] = [
     heat: 4,
     mode: "madlibs",
     body: "Mad Libs: the morning after. Seven words. Don't overthink it.",
-    hint: "Your filled-in story is your answer for the week.",
     spec: {
       kind: "madlibs",
       slots: ["a body part", "a breakfast food", "a celebrity", "a verb", "an article of clothing", "a feeling", "a Florida town"],
@@ -361,7 +359,7 @@ export const PLAYS: Play[] = [
   },
 
   // Rank the Circle. Five guys, you order them. Only the winners are announced.
-  { id: "rank-hands", weeks: [5, 7], heat: 3, mode: "rank", body: "Rank the Circle: best hands. Five guys, put them in order. Only the winner finds out.", hint: "Nobody ever sees where he landed. Only who won.", spec: { kind: "rank", category: "best hands", guys: [] } },
+  { id: "rank-hands", weeks: [5, 7], heat: 3, mode: "rank", body: "Rank the Circle: best hands. Five guys, put them in order. Only the winner finds out.", hint: "Winners only.", spec: { kind: "rank", category: "best hands", guys: [] } },
   { id: "rank-breakfast", weeks: [3, 5, 7], heat: 2, mode: "rank", body: "Rank the Circle: most likely to make you breakfast. Put five guys in order.", hint: "Winners only. Nobody sees the rest.", spec: { kind: "rank", category: "most likely to make you breakfast", guys: [] } },
   { id: "rank-trouble", weeks: [4, 5, 7], heat: 4, mode: "rank", body: "Rank the Circle: most likely to get you in trouble. Five guys, in order.", hint: "Winners only.", spec: { kind: "rank", category: "most likely to get you in trouble", guys: [] } },
   { id: "rank-late", weeks: [2, 6, 7], heat: 1, mode: "rank", body: "Rank the Circle: most likely to be late to his own party. Five guys, in order.", hint: "Winners only.", spec: { kind: "rank", category: "most likely to be late", guys: [] } },
@@ -400,19 +398,19 @@ export const RANK_NIGHTS: Play[] = [
   {
     id: "ranknight-1", weeks: [7], heat: 2, mode: "ranknight",
     body: "Rank Night. Superlatives, compliments only. Pick one guy for each.",
-    hint: "Results Sunday night. Everyone in the Circle walks away with a title.",
+    hint: "Results Sunday night.",
     spec: { kind: "ranknight", categories: ["Best smile", "Best laugh", "Most likely to become famous", "Best hug, probably", "The one you'd call in a crisis", "Best taste in music", "Most likely to make you blush", "Best dressed"] },
   },
   {
     id: "ranknight-2", weeks: [7], heat: 3, mode: "ranknight",
     body: "Rank Night, round two. Superlatives, compliments only. One guy per title.",
-    hint: "Results Sunday night. Everyone gets one.",
+    hint: "Results Sunday night.",
     spec: { kind: "ranknight", categories: ["Best eyes", "Funniest in the group chat", "Best cook, allegedly", "Most likely to start a dance floor", "Best advice", "Most underrated", "Best wingman", "Hottest voice"] },
   },
   {
     id: "ranknight-3", weeks: [7], heat: 3, mode: "ranknight",
     body: "Rank Night is back. Superlatives, compliments only. Pick one guy for each.",
-    hint: "Results Sunday night. Nobody leaves empty-handed.",
+    hint: "Results Sunday night.",
     spec: { kind: "ranknight", categories: ["Best energy", "Main character", "Best storyteller", "Most likely to adopt a dog with you", "Best texter", "Kindest", "Best at a party", "Most likely to surprise you"] },
   },
 ];

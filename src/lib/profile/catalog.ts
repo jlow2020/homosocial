@@ -15,9 +15,9 @@ Fishing | fishing, fish, angling | Boat days, Kayaking, Camping, Hunting
 Kayaking | kayak, kayaking, canoe | Paddleboarding, Springs, Fishing, Camping
 Paddleboarding | paddleboard, paddle boarding, sup | Beach days, Kayaking, Surfing
 Surfing | surf, surfing | Beach days, Skateboarding, Paddleboarding
-Snorkeling | snorkel, snorkeling | Scuba diving, Beach days, Keys trips
-Scuba diving | scuba, diving | Snorkeling, Travel, Keys trips
-Springs | springs, spring, rainbow springs, ichetucknee | Kayaking, Tubing, Camping
+Snorkeling | snorkel, snorkeling | Scuba diving, Beach days, Island getaways
+Scuba diving | scuba, diving | Snorkeling, Travel, Island getaways
+Springs | springs, hot springs, swimming hole | Kayaking, Tubing, Camping
 Tubing | tubing | Springs, Lake days
 Lake days | lake | Boat days, Tubing, Wakeboarding
 Wakeboarding | wakeboard, wakeboarding | Lake days, Boat days, Surfing
@@ -88,8 +88,7 @@ Hockey | hockey, nhl, lightning, bolts, panthers | Watching sports
 Soccer | soccer, futbol, premier league, inter miami | World Cup
 World Cup | world cup | Soccer, Travel
 F1 | f1, formula 1, formula one | Racing, Cars
-Racing | racing, nascar, indy | F1, Cars, Daytona
-Daytona | daytona | Racing
+Racing | racing, nascar, indy, daytona | F1, Cars
 WWE | wwe, wrestling, pro wrestling | Wrestling
 Watching tennis | us open, wimbledon | Tennis
 Watching golf | the masters, pga | Golf
@@ -261,7 +260,7 @@ Church | church, faith, christian | Church choir, Volunteering
 Spirituality | spirituality, spiritual | Meditation
 Philosophy | philosophy | Reading
 Space | space, nasa, rocket launches | Stargazing, Sci-fi
-Rocket launches | rocket launch, launches, cape canaveral | Space`,
+Rocket launches | rocket launch, launches, spacex | Space`,
 
   goingout: `
 Bars | bars, bar hopping | Cocktails, Karaoke, Trivia
@@ -270,7 +269,7 @@ Pool parties | pool party, pool parties | Pride events
 Pride events | pride | Drag, Pool parties
 Sandbar parties | sandbar | Boat days
 Halloween | halloween, costumes | Horror movies, Cosplay
-Theme parks | disney, universal, theme parks, busch gardens | Roller coasters, Travel
+Theme parks | disney, universal, theme parks, six flags | Roller coasters, Travel
 Roller coasters | roller coasters, coasters | Theme parks
 Mini golf | mini golf | Bowling
 Bowling | bowling | Mini golf, Game nights
@@ -282,8 +281,8 @@ Hosting | hosting, host | Dinner parties, Game nights`,
 Travel | travel, traveling, travelling, passport | Road trips, Solo travel, Cruises
 Road trips | road trip, road trips | Travel, National parks
 Solo travel | solo travel | Travel, Hostels
-Cruises | cruise, cruises | Travel, Keys trips
-Keys trips | key west, the keys, florida keys | Snorkeling, Boat days
+Cruises | cruise, cruises | Travel, Island getaways
+Island getaways | island, islands, key west, the keys, caribbean, hawaii | Snorkeling, Boat days, Beach days
 Camping trips | camping trip | Camping
 Hostels | hostels, backpacking | Solo travel
 Europe | europe | Travel, Languages
@@ -383,11 +382,7 @@ export const TAGS: Tag[] = build();
 export const TAG_BY_SLUG = new Map(TAGS.map((t) => [t.slug, t]));
 
 // Things to do together. Feeds Plans: post a beach day and the guys "down for" it hear about it.
-export const DOWN_FOR: { slug: string; label: string }[] = [
-  "Coffee", "Gym buddy", "Beach day", "Drinks", "Dinner", "Game night", "Concerts", "Road trips", "Hikes", "Movies",
-  "Karaoke", "Brunch", "Dog walks", "Study sessions", "Pickup games", "Boat days", "Theme parks", "Volunteering",
-  "Watch parties", "Cooking together", "Dancing", "Day trips", "Thrifting", "Running buddy",
-].map((label) => ({ slug: slugOf(label), label }));
+
 
 // A guy's own words: which catalog tags they mention. "boxing, true crime, Sunday tacos" -> Boxing, True crime, Tacos.
 export function tagsInText(text: string): string[] {

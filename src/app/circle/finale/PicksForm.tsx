@@ -85,7 +85,7 @@ export default function PicksForm({
           <h2 className="pick-h">
             Dates <span className="pick-count">{date.length} / 3</span>
           </h2>
-          <p className="fine">Only shows up as a match if he picked you for a date too. Nobody else ever sees this.</p>
+          <p className="fine">Only mutual picks are shown.</p>
           <ul className="pick-grid">
             {guys.map((g) => {
               const on = date.includes(g.id);
@@ -115,7 +115,7 @@ export default function PicksForm({
 
       <section className="pick-section">
         <h2 className="pick-h">Setups</h2>
-        <p className="fine">Who in here should get together, as friends or more? Up to 2. Revealed only to the two of them, and only if 2 or more guys say the same pair.</p>
+        <p className="fine">Up to 2. Only the two of them find out.</p>
         {setups.map(([a, b], i) => (
           <div key={i} className="setup-row">
             <label className="visually-hidden" htmlFor={`s${i}a`}>

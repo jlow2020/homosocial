@@ -13,7 +13,7 @@ export default function AccountForm({ username }: { username: string | null }) {
         {isNew ? (
           <label className="field">
             <span className="label">Username</span>
-            <span className="hint">3 to 20 letters, numbers, periods or underscores. This is how you sign in.</span>
+            <span className="hint">3 to 20 letters, numbers, periods or underscores.</span>
             <input
               className="input"
               name="username"
@@ -36,7 +36,7 @@ export default function AccountForm({ username }: { username: string | null }) {
         )}
         <label className="field">
           <span className="label">{isNew ? "Password" : "New password"}</span>
-          <span className="hint">At least 8 characters. Let your phone suggest a strong one.</span>
+          <span className="hint">At least 8 characters.</span>
           <input className="input" name="password" type="password" required minLength={8} maxLength={72} autoComplete="new-password" />
         </label>
         <label className="field">

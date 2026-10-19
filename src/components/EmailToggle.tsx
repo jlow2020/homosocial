@@ -10,7 +10,7 @@ export default function EmailToggle({ on: initial }: { on: boolean }) {
     <div className="push-row">
       <span>
         <b>Email backup</b>
-        <span className="fine"> · {on ? "On" : "Off"}. Only when push can&apos;t reach you.</span>
+        <span className="fine"> · {on ? "On" : "Off"}</span>
       </span>
       <button
         className="link-button quiet"

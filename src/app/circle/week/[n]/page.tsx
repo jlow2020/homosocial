@@ -305,7 +305,7 @@ export default async function WeekPage({ params }: { params: Promise<{ n: string
         {!mine && spec?.kind === "owner" && <AnswerForm week={week} kind="photo" canPass={(passes ?? 0) < 1} />}
         {spec?.kind === "blinddate" && mine && <PlayForm week={week} spec={spec} myRow={mine.data} />}
         {!mine && !isPlay && spec?.kind !== "caption" && <AnswerForm week={week} kind={prompt.mode === "dare" ? "photo" : prompt.kind} canPass={(passes ?? 0) < 1} />}
-        {mine?.passed && <p className="fine">You used your Pass on this one. Everyone&apos;s answers are unlocked.</p>}
+        {mine?.passed && <p className="fine">You passed on this one.</p>}
       </section>
 
       {chain ? (
@@ -323,7 +323,7 @@ export default async function WeekPage({ params }: { params: Promise<{ n: string
           {chainDone && (
             <div className="read-aloud">
               <p className="eyebrow">🎙️ Read it aloud · {readings.length} {readings.length === 1 ? "reading" : "readings"}</p>
-              <p className="fine">Record yourself reading the whole story. Do the voices. The Circle fires up their favorite, and the best one makes the Sunday Read.</p>
+              <p className="fine">Read it out loud. Do the voices.</p>
               <ul className="readings">
                 {readings.map((r) => (
                   <li key={r.id}>
@@ -374,12 +374,12 @@ export default async function WeekPage({ params }: { params: Promise<{ n: string
                     <span className="census-pct">{c.pct}%</span>
                     <span>
                       {c.q}
-                      {florida && <span className="census-fl"> · Florida {florida.pct[i]}%</span>}
+                      {florida && <span className="census-fl"> · Everyone {florida.pct[i]}%</span>}
                     </span>
                   </li>
                 ))}
               </ul>
-              {florida && <p className="fine">Florida: every Circle that&apos;s played this one, {florida.n} guys.</p>}
+              {florida && <p className="fine">Everyone: {florida.n} guys across every Circle.</p>}
               {anonSurvey && mine.data && <p className="fine">Your card: {compile(spec!, mine.data).score}. Only you see it.</p>}
             </div>
           )}
@@ -425,8 +425,8 @@ export default async function WeekPage({ params }: { params: Promise<{ n: string
               const seatReply = seatId && a.user_id !== seatId ? a.replies.find((r) => r.user_id === seatId) : null;
               return (
                 <li key={a.id} className={[isMine ? "answer answer-mine" : "answer", a.hidden ? "answer-hidden" : ""].join(" ")}>
-                  {a.hidden && <p className="fine">⚠️ Pulled after reports. Only you see it while a mod looks.</p>}
-                  {a.held && !a.hidden && <span className="held-tag">⏳ Waiting on a quick look before your Circle sees it. If it&apos;s fine, it posts with no mark on your account.</span>}
+                  {a.hidden && <p className="fine">⚠️ Pulled after reports. Under review.</p>}
+                  {a.held && !a.hidden && <span className="held-tag">⏳ Quick review before it posts.</span>}
                   <div className="answer-head">
                     {hideName ? (
                       <>
@@ -525,7 +525,7 @@ export default async function WeekPage({ params }: { params: Promise<{ n: string
               );
             })}
           </ul>
-          {others.length === 0 && !anonSurvey && spec?.kind !== "ranknight" && <p className="fine">You&apos;re first. Everyone else is still thinking.</p>}
+          {others.length === 0 && !anonSurvey && spec?.kind !== "ranknight" && <p className="fine">You&apos;re first.</p>}
         </section>
       )}
       {week >= 2 && (
