@@ -9,17 +9,17 @@ export function PhotoSwitch({ threadId, mine, theirs, name }: { threadId: string
   const [pending, start] = useTransition();
   const both = mine && theirs;
   const line = both
-    ? "Photos are on for both of you. Explicit is OK here, only of yourself."
+    ? "Photos and videos are on for both of you. Explicit is OK here, only of yourself."
     : mine
-      ? `You turned photos on. Waiting on ${name}.`
+      ? `You turned photos and videos on. Waiting on ${name}.`
       : theirs
-        ? `${name} turned photos on. Your call.`
-        : "Photos are off. You both have to turn them on.";
+        ? `${name} turned photos and videos on. Your call.`
+        : "Photos and videos are off. You both have to turn them on.";
   return (
     <div className={both ? "photo-switch on" : "photo-switch"}>
       <span>📷 {line}</span>
       <button className="link-button" disabled={pending} onClick={() => start(async () => void (await setDmPhotos(threadId, !mine)))}>
-        {mine ? "Turn mine off" : "Turn photos on"}
+        {mine ? "Turn mine off" : "Turn them on"}
       </button>
     </div>
   );

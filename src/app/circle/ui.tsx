@@ -13,13 +13,16 @@ export function weekTitle(week: number): string {
 
 export async function Shell({ pl, children }: { pl: Player; children: React.ReactNode }) {
   const c = pl.clock;
-  // DM requests waiting on him.
-  const { count: unread } = await pl.db
+  // DM requests waiting on him, plus chats with something he hasn't read.
+  const { data: threads } = await pl.db
     .from("dm_threads")
-    .select("id", { count: "exact", head: true })
-    .or(`a.eq.${pl.profile.id},b.eq.${pl.profile.id}`)
-    .is("accepted_at", null)
-    .neq("requested_by", pl.profile.id);
+    .select("a, requested_by, accepted_at, last_at, read_a, read_b")
+    .or(`a.eq.${pl.profile.id},b.eq.${pl.profile.id}`);
+  const unread = (threads ?? []).filter((t) => {
+    if (!t.accepted_at) return t.requested_by !== pl.profile.id;
+    const read = t.a === pl.profile.id ? t.read_a : t.read_b;
+    return !read || new Date(t.last_at) > new Date(read);
+  }).length;
   const tag =
     c.phase === "filling"
       ? "Filling up"

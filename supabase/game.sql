@@ -171,3 +171,23 @@ alter table public.dm_threads
 alter table public.dm_messages
   add column if not exists photo_path text,
   alter column body drop not null;
+
+-- DMs, Messenger style: video clips, reactions, read receipts.
+alter table public.dm_messages
+  add column if not exists media_type text check (media_type in ('photo', 'video'));
+update public.dm_messages set media_type = 'photo' where photo_path is not null and media_type is null;
+alter table public.dm_threads
+  add column if not exists read_a timestamptz,
+  add column if not exists read_b timestamptz;
+create table if not exists public.dm_reactions (
+  message_id uuid not null references public.dm_messages (id) on delete cascade,
+  user_id uuid not null references public.profiles (id) on delete cascade,
+  emoji text not null check (char_length(emoji) between 1 and 16),
+  created_at timestamptz not null default now(),
+  primary key (message_id, user_id)
+);
+alter table public.dm_reactions enable row level security;
+-- Private bucket for DM video clips, 50 MB max each.
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('clips', 'clips', false, 52428800, array['video/mp4', 'video/quicktime', 'video/webm'])
+on conflict (id) do update set file_size_limit = excluded.file_size_limit, allowed_mime_types = excluded.allowed_mime_types;

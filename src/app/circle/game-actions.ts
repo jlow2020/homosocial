@@ -238,7 +238,7 @@ export async function sendDmPhoto(form: FormData): Promise<Result> {
   const up = await pl.db.storage.from("photos").upload(photo_path, file, { contentType: "image/jpeg" });
   if (up.error) return { ok: false, error: "Your photo didn't send. Try again." };
   const caption = clean(form.get("caption"), 500);
-  await pl.db.from("dm_messages").insert({ thread_id: t.id, user_id: pl.profile.id, body: caption || null, photo_path });
+  await pl.db.from("dm_messages").insert({ thread_id: t.id, user_id: pl.profile.id, body: caption || null, photo_path, media_type: "photo" });
   await pl.db.from("dm_threads").update({ last_at: new Date().toISOString() }).eq("id", t.id);
   const otherId = t.a === pl.profile.id ? t.b : t.a;
   const { data: other } = await pl.db.from("profiles").select("is_demo, email").eq("id", otherId).maybeSingle();
@@ -344,3 +344,70 @@ export async function savePicks(form: FormData): Promise<Result> {
   revalidatePath("/circle/finale");
   return { ok: true };
 }
+
+// DMs, Messenger style -------------------------------------------------------------
+
+const DM_REACTIONS = new Set(["❤️", "😂", "🔥", "😮", "😢", "👑"]);
+
+async function myMessage(pl: Player, messageId: string) {
+  if (!UUID.test(messageId)) return null;
+  const { data } = await pl.db.from("dm_messages").select("id, thread_id").eq("id", messageId).maybeSingle();
+  if (!data) return null;
+  const t = await myThread(pl, data.thread_id as string);
+  return t?.accepted_at ? t : null;
+}
+
+// One reaction per guy per message. Same emoji again takes it off.
+export async function reactDm(messageId: string, emoji: string): Promise<Result> {
+  const pl = await player();
+  if (!DM_REACTIONS.has(emoji)) return { ok: false };
+  const t = await myMessage(pl, messageId);
+  if (!t) return { ok: false };
+  const key = { message_id: messageId, user_id: pl.profile.id };
+  const { data: had } = await pl.db.from("dm_reactions").select("emoji").match(key).maybeSingle();
+  if (had?.emoji === emoji) await pl.db.from("dm_reactions").delete().match(key);
+  else await pl.db.from("dm_reactions").upsert({ ...key, emoji }, { onConflict: "message_id,user_id" });
+  revalidatePath(`/circle/dms/${t.id}`);
+  return { ok: true };
+}
+
+const CLIP_TYPES = new Set(["video/mp4", "video/quicktime", "video/webm"]);
+const MAX_CLIP = 50 * 1024 * 1024;
+
+// Videos go straight from the phone to storage, too big for the server's front door.
+export async function clipTicket(
+  threadId: string,
+  contentType: string,
+  size: number
+): Promise<{ ok: boolean; error?: string; signedUrl?: string; path?: string; apikey?: string }> {
+  const pl = await player();
+  const t = await myThread(pl, threadId);
+  if (!t?.accepted_at) return { ok: false, error: "That chat is gone." };
+  if (!t.photos_a || !t.photos_b) return { ok: false, error: "You both have to turn photos and videos on first." };
+  if (!CLIP_TYPES.has(contentType)) return { ok: false, error: "That video type won't play. Try an .mp4 or .mov." };
+  if (!(size > 0 && size <= MAX_CLIP)) return { ok: false, error: "That clip is too big. Keep it under 30 seconds." };
+  const ext = contentType === "video/quicktime" ? "mov" : contentType === "video/webm" ? "webm" : "mp4";
+  const path = `dms/${t.id}/${pl.profile.id}-${Date.now()}.${ext}`;
+  const { data, error } = await pl.db.storage.from("clips").createSignedUploadUrl(path);
+  if (error || !data) return { ok: false, error: "Couldn't start the upload. Try again." };
+  return { ok: true, signedUrl: data.signedUrl, path, apikey: process.env.SUPABASE_PUBLISHABLE_KEY };
+}
+
+export async function sendDmClip(threadId: string, path: string): Promise<Result> {
+  const pl = await player();
+  const t = await myThread(pl, threadId);
+  if (!t?.accepted_at || !t.photos_a || !t.photos_b) return { ok: false, error: "That chat is gone." };
+  const prefix = `dms/${t.id}/${pl.profile.id}-`;
+  if (!path.startsWith(prefix) || path.includes("..")) return { ok: false, error: "That didn't work." };
+  const name = path.slice(`dms/${t.id}/`.length);
+  const { data: found } = await pl.db.storage.from("clips").list(`dms/${t.id}`, { search: name, limit: 1 });
+  if (!found?.length) return { ok: false, error: "The upload didn't finish. Try again." };
+  await pl.db.from("dm_messages").insert({ thread_id: t.id, user_id: pl.profile.id, photo_path: path, media_type: "video" });
+  await pl.db.from("dm_threads").update({ last_at: new Date().toISOString() }).eq("id", t.id);
+  const otherId = t.a === pl.profile.id ? t.b : t.a;
+  const { data: other } = await pl.db.from("profiles").select("is_demo, email").eq("id", otherId).maybeSingle();
+  if (other?.is_demo) await demoReplyInThread(pl.db, t.id, otherId, other.email as string | null);
+  revalidatePath(`/circle/dms/${t.id}`);
+  return { ok: true };
+}
+

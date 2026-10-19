@@ -192,6 +192,22 @@ export async function demoReplyInThread(db: SupabaseClient, threadId: string, de
   if (!guy) return;
   const { count } = await db.from("dm_messages").select("id", { count: "exact", head: true }).eq("thread_id", threadId).eq("user_id", demoId);
   const body = guy.dmReplies[(count ?? 0) % guy.dmReplies.length];
+
+  // He reads it, reacts to it, then writes back.
+  const { data: t } = await db.from("dm_threads").select("a").eq("id", threadId).single();
+  const readCol = t?.a === demoId ? "read_a" : "read_b";
+  const { data: last } = await db
+    .from("dm_messages")
+    .select("id, media_type")
+    .eq("thread_id", threadId)
+    .neq("user_id", demoId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (last && (last.media_type || Math.random() < 0.5)) {
+    const emoji = last.media_type ? "🔥" : ["❤️", "😂", "👑"][Math.floor(Math.random() * 3)];
+    await db.from("dm_reactions").upsert({ message_id: last.id, user_id: demoId, emoji }, { onConflict: "message_id,user_id" });
+  }
   await db.from("dm_messages").insert({ thread_id: threadId, user_id: demoId, body, created_at: new Date(Date.now() + 1500).toISOString() });
-  await db.from("dm_threads").update({ last_at: new Date().toISOString() }).eq("id", threadId);
+  await db.from("dm_threads").update({ last_at: new Date().toISOString(), [readCol]: new Date(Date.now() + 2000).toISOString() }).eq("id", threadId);
 }
