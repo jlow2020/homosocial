@@ -27,7 +27,7 @@ export async function Shell({ pl, children }: { pl: Player; children: React.Reac
     return !read || new Date(t.last_at) > new Date(read);
   }).length;
   const tag =
-    c.phase === "filling"
+    pl.waiting || c.phase === "filling"
       ? "Starting soon"
       : c.phase === "revealed"
         ? "Finale: revealed"
@@ -58,12 +58,12 @@ export async function Shell({ pl, children }: { pl: Player; children: React.Reac
       />
       <div className="wrap game-head">
         <div className="chyron">
-          <span className={c.phase === "filling" ? "chy-hot" : "chy-gold"}>{tag}</span>
+          <span className={pl.waiting ? "chy-hot" : "chy-gold"}>{tag}</span>
           <span className="chy-light">
             Circle {pl.circle.number}
             {pl.circle.label ? ` · ${pl.circle.label}` : ""} · Season {pl.circle.season_no}
           </span>
-          {c.phase === "season" && (
+          {c.phase === "season" && !pl.waiting && (
             <span className="chy-heat" title={`Heat ${targetHeat(pl.circle, c.week)} of 5`} aria-label={`Heat ${targetHeat(pl.circle, c.week)} of 5`}>
               {"🔥".repeat(targetHeat(pl.circle, c.week))}
             </span>
@@ -71,7 +71,7 @@ export async function Shell({ pl, children }: { pl: Player; children: React.Reac
           {pl.profile.founder_no && <span className="chy-hot">Founder #{pl.profile.founder_no}</span>}
         </div>
       </div>
-      {pl.seated && c.phase !== "filling" && <NavTabs dropWeek={dropWeek} unread={unread ?? 0} />}
+      {!pl.waiting && <NavTabs dropWeek={dropWeek} unread={unread ?? 0} />}
       <div className="wrap game-body">
         <Flash text={flashText} />
         {pl.seated && <PushPrompt />}

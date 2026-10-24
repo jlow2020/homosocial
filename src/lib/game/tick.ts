@@ -6,7 +6,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { WEEKS } from "@/lib/season";
 import { claimNotice, notify, teaser } from "@/lib/notify";
 import { clockFor } from "./clock";
-import { fillGeo, fillCircles, placeMember } from "./place";
+import { fillGeo, fillCircles, placeMember, rehomeLoners } from "./place";
 import { ensureDrop, promptOf } from "./drops";
 import { lockWeek, awardSeason } from "./lock";
 import { loadMembers, type Circle, type Member } from "./player";
@@ -29,6 +29,7 @@ export async function tickAll(db: SupabaseClient): Promise<{ circles: number; se
   await fillGeo(db).catch((e) => console.error("geo backfill failed", e));
   await seatWaitlist(db).catch((e) => console.error("waitlist seating failed", e));
   await fillCircles(db).catch((e) => console.error("circle labels failed", e));
+  await rehomeLoners(db).catch((e) => console.error("rehoming loners failed", e));
   const { data } = await db.from("circles").select("*").not("kickoff_at", "is", null);
   const sent: string[] = [];
   for (const c of (data ?? []) as Circle[]) {

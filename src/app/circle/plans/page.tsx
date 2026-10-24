@@ -20,7 +20,7 @@ type PlanRow = {
 
 export default async function Plans() {
   const pl = await loadPlayer({ needSeat: true });
-  if (pl.clock.phase === "filling") redirect("/circle");
+  if (pl.waiting) redirect("/circle");
   const { data } = await pl.db
     .from("plans")
     .select("id, user_id, title, place, starts_at, details, held, plan_rsvps(user_id)")

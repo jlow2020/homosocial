@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 
 export default async function Lounge() {
   const pl = await loadPlayer({ needSeat: true });
-  if (pl.clock.phase === "filling") redirect("/circle");
+  if (pl.waiting) redirect("/circle");
   const { data } = await pl.db
     .from("lounge_messages")
     .select("id, user_id, body, created_at, held")

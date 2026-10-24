@@ -41,6 +41,8 @@ export type Player = {
   circle: Circle;
   clock: Clock;
   seated: boolean;
+  // Nobody to play with yet: not ID-checked, Circle not started, or he's the only one left.
+  waiting: boolean;
   members: Member[]; // seated, active, not blocked, includes me when seated
   titles: Map<string, string>; // admin titles by member id
 };
@@ -104,7 +106,8 @@ export async function loadPlayer(opts: { needSeat?: boolean } = {}): Promise<Pla
   const { data: staff } = await db.from("admins").select("user_id, role").in("user_id", members.map((m) => m.id));
   const titles = new Map((staff ?? []).map((s) => [s.user_id as string, ROLE_TITLE[s.role as AdminRole]]));
 
-  return { db, me, profile: p as Player["profile"], role, circle, clock, seated, members, titles };
+  const waiting = !seated || clock.phase === "filling" || members.length < SEASON.minToOpen;
+  return { db, me, profile: p as Player["profile"], role, circle, clock, seated, waiting, members, titles };
 }
 
 export async function loadMembers(db: SupabaseClient, circleId: string, meId: string): Promise<Member[]> {

@@ -57,3 +57,38 @@ export async function fillCircles(db: SupabaseClient): Promise<void> {
     await db.from("circles").update({ label: top(guys.map((g) => g.city as string)), tz: top(guys.map((g) => g.tz as string)) }).eq("id", c.id);
   }
 }
+
+// A seated guy alone in his Circle joins the nearest Circle that has guys and room,
+// instead of waiting. Returns true if he moved.
+export async function rehomeIfAlone(db: SupabaseClient, userId: string): Promise<boolean> {
+  const { data: me } = await db.from("profiles").select("circle_id, id_verified_at, status").eq("id", userId).maybeSingle();
+  if (!me?.circle_id || !me.id_verified_at || me.status !== "active") return false;
+  const { count } = await db
+    .from("profiles")
+    .select("id", { count: "exact", head: true })
+    .eq("circle_id", me.circle_id)
+    .eq("status", "active")
+    .neq("id", userId);
+  if (count) return false; // someone else is here, even if he's still finishing sign-up
+  const { data: open } = await db.from("circle_centers").select("id").gt("members", 0).neq("id", me.circle_id).limit(50);
+  const { data: caps } = open?.length ? await db.from("circle_centers").select("id, members, capacity").in("id", open.map((o) => o.id)) : { data: [] };
+  if (!(caps ?? []).some((c) => (c.members as number) < (c.capacity as number))) return false;
+  const old = me.circle_id as string;
+  await db.from("profiles").update({ circle_id: null }).eq("id", userId).eq("circle_id", old);
+  const next = await placeMember(db, userId);
+  if (!next || next === old) {
+    await db.from("profiles").update({ circle_id: old }).eq("id", userId).is("circle_id", null);
+    return false;
+  }
+  await db.from("profiles").update({ moved_from: old }).eq("id", userId);
+  return true;
+}
+
+// Every few minutes: nobody who could be playing sits alone.
+export async function rehomeLoners(db: SupabaseClient): Promise<void> {
+  const { data: lonely } = await db.from("circle_centers").select("id").eq("members", 1).limit(100);
+  for (const c of lonely ?? []) {
+    const { data: guy } = await db.from("profiles").select("id").eq("circle_id", c.id).eq("status", "active").not("id_verified_at", "is", null).maybeSingle();
+    if (guy) await rehomeIfAlone(db, guy.id as string);
+  }
+}

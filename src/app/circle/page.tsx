@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import SeatRing from "@/components/SeatRing";
 import InviteButton from "@/components/InviteButton";
 import { loadExtras } from "@/lib/profile/data";
-import { placeMember } from "@/lib/game/place";
+import { placeMember, rehomeIfAlone } from "@/lib/game/place";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import PageHead from "@/components/PageHead";
@@ -72,8 +72,10 @@ export default async function CirclePage() {
     );
   }
 
-  const pl = await loadPlayer();
-  if (!pl.seated || pl.clock.phase === "filling") return <Lobby pl={pl} />;
+  let pl = await loadPlayer();
+  // Alone in his Circle while another one has room: he joins that one instead of waiting.
+  if (pl.seated && pl.members.length < 2 && (await rehomeIfAlone(pl.db, pl.profile.id))) pl = await loadPlayer();
+  if (pl.waiting) return <Lobby pl={pl} />;
   return <Home pl={pl} />;
 }
 
@@ -87,6 +89,14 @@ async function Lobby({ pl }: { pl: Player }) {
   const capacity = pl.circle.capacity ?? SEASON.spots;
   const [photo, extras] = await Promise.all([photoUrls(db, [p.photo_path, ...others.map((m) => m.photo_path)]), loadExtras(db, p.id)]);
   const thin = extras.answers.length < 3 || extras.photos.length === 0 || extras.interests.length === 0;
+  // Guys already placed here who are still finishing sign-up (ID check).
+  const { count: arriving } = await db
+    .from("profiles")
+    .select("id", { count: "exact", head: true })
+    .eq("circle_id", pl.circle.id)
+    .eq("status", "active")
+    .is("id_verified_at", null)
+    .neq("id", p.id);
 
   return (
     <Shell pl={pl}>
@@ -109,8 +119,12 @@ async function Lobby({ pl }: { pl: Player }) {
             </>
           ) : (
             <>
-              <h1 className="game-h1">{others.length === 0 ? "You're first." : "Almost there."}</h1>
-              <p className="game-lede">Your Circle starts the moment another guy joins.</p>
+              <h1 className="game-h1">{others.length === 0 && pl.clock.phase === "filling" ? "You're first." : "Almost there."}</h1>
+              <p className="game-lede">
+                {arriving
+                  ? `${arriving === 1 ? "Someone is" : `${arriving} guys are`} finishing sign-up now. Your Circle starts the moment one of them is done.`
+                  : "Your Circle starts the moment another guy joins."}
+              </p>
               <div className="waiting-actions">
                 <InviteButton />
                 {thin && (
