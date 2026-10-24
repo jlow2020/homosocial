@@ -28,7 +28,7 @@ export async function Shell({ pl, children }: { pl: Player; children: React.Reac
   }).length;
   const tag =
     c.phase === "filling"
-      ? "Filling up"
+      ? "Starting soon"
       : c.phase === "revealed"
         ? "Finale: revealed"
         : `Week ${c.week}: ${weekTitle(c.week)}`;

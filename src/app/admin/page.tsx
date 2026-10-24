@@ -48,7 +48,7 @@ export default async function AdminHome() {
             <thead>
               <tr>
                 <th>Circle</th>
-                <th>Area</th>
+                <th>Home</th>
                 <th>Season</th>
                 <th>Seats</th>
                 <th>State</th>
@@ -63,7 +63,7 @@ export default async function AdminHome() {
                     <td>
                       <Link href={`/admin/circles/${c.id}`}>Circle {c.number}</Link>
                     </td>
-                    <td>{c.region}</td>
+                    <td>{c.label ?? "Not set yet"}</td>
                     <td>{c.season.toUpperCase()}</td>
                     <td className="num">
                       {n} / {c.capacity}

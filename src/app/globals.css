@@ -5573,3 +5573,69 @@ input[type="date"].input::-webkit-date-and-time-value {
     transform: none;
   }
 }
+
+/* Waiting room ---------------------------------------------------------------- */
+.waiting {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+  align-items: center;
+  gap: 48px;
+  padding: 24px 0 40px;
+}
+.waiting .game-h1 {
+  margin: 0;
+}
+.waiting .game-lede {
+  margin: 14px 0 0;
+  max-width: 34ch;
+}
+.waiting-actions {
+  margin-top: 28px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.seat-ring {
+  position: relative;
+  display: grid;
+  place-items: center;
+}
+.seat-ring .ring {
+  width: min(100%, 380px);
+}
+.seat-ring-photo {
+  position: absolute;
+  width: 34%;
+  max-width: 130px;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid var(--gold);
+  animation: chip-pop 0.6s var(--spring) backwards;
+  animation-delay: 0.15s;
+}
+.seat-open {
+  animation: none;
+  fill: var(--prime);
+  stroke: var(--line);
+}
+.seat-mine {
+  animation-name: seat-first;
+}
+@media (max-width: 760px) {
+  .waiting {
+    grid-template-columns: 1fr;
+    gap: 28px;
+    text-align: center;
+  }
+  .waiting .game-lede {
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .waiting-actions {
+    justify-content: center;
+  }
+  .seat-ring .ring {
+    width: min(80%, 300px);
+  }
+}

@@ -1,21 +1,23 @@
--- Homosocial: remove the test Circle and the fake guys, for good.
--- Run after nationwide.sql. This deletes data and can't be undone.
+-- Homosocial: clean slate for launch. Deletes every Circle (test and old
+-- Florida ones), every fake guy, and the test-era admin log. Real accounts and
+-- profiles stay; each real guy is seated fresh, by distance, the next time he
+-- opens Homosocial. This deletes data and can't be undone.
 
 begin;
 
--- 1. Real guys sitting in a test Circle get freed up. They're seated in a real
---    Circle, by distance, the next time they open Homosocial.
+-- 1. Free every real guy from his Circle.
 update public.profiles
 set circle_id = null, home_circle_id = null, moved_from = null
-where not is_demo
-  and (circle_id in (select id from public.circles where is_test)
-       or home_circle_id in (select id from public.circles where is_test));
+where not is_demo;
 
 -- 2. The fake guys: deleting their logins deletes their profiles and everything they posted.
 delete from auth.users where id in (select id from public.profiles where is_demo);
 
--- 3. The test Circles, with every drop, answer, chat and vote in them.
-delete from public.circles where is_test;
+-- 3. Every Circle, with every drop, answer, chat, plan, vote and badge in it.
+delete from public.circles;
+
+-- 4. Admin log entries from testing.
+delete from public.admin_log where action ilike '%test%' or action ilike '%week%' or action ilike '%season%';
 
 commit;
 

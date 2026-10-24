@@ -1,4 +1,7 @@
 import type { Metadata } from "next";
+import SeatRing from "@/components/SeatRing";
+import InviteButton from "@/components/InviteButton";
+import { loadExtras } from "@/lib/profile/data";
 import { placeMember } from "@/lib/game/place";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -74,94 +77,81 @@ export default async function CirclePage() {
   return <Home pl={pl} />;
 }
 
-// Before kickoff, or before his ID check: the seats and who's in.
+// Before his Circle starts, or before his ID check: a waiting room.
 async function Lobby({ pl }: { pl: Player }) {
   const db = getSupabaseAdmin()!;
   const p = pl.profile;
   const greenRoom = !pl.seated;
-  // Guys in the lobby only see themselves.
-  const ordered = greenRoom
-    ? [
-        ...(await db.from("profiles").select("id, first_name, birthdate, interests, hot_take, photo_path, looking_for, email, founder_no").eq("id", p.id)).data!,
-        ...pl.members,
-      ]
-    : [...pl.members.filter((m) => m.id === p.id), ...pl.members.filter((m) => m.id !== p.id)];
-  const photo = await photoUrls(db, greenRoom ? [p.photo_path] : ordered.map((m) => m.photo_path));
-  const total = pl.members.length;
+  const others = pl.members.filter((m) => m.id !== p.id);
+  const taken = pl.members.length + (greenRoom ? 1 : 0);
   const capacity = pl.circle.capacity ?? SEASON.spots;
-  const need = Math.max(SEASON.minToOpen - total, 0);
+  const [photo, extras] = await Promise.all([photoUrls(db, [p.photo_path, ...others.map((m) => m.photo_path)]), loadExtras(db, p.id)]);
+  const thin = extras.answers.length < 3 || extras.photos.length === 0 || extras.interests.length === 0;
 
   return (
     <Shell pl={pl}>
-      <div className="lobby-intro">
-        <h1 className="game-h1">Circle {pl.circle.number}</h1>
-        <p className="game-lede">
-          {greenRoom
-            ? "Look around. Do your one-time ID check to start playing."
-            : "You're in. Your Circle starts as soon as one more guy joins."}
-        </p>
-      </div>
-
-      {greenRoom && (
-        <div className="greenroom">
-          <h2>Start playing</h2>
-          <p>
-            Faces, the group chat and DMs unlock after a one-time ID check. It takes about a minute.
-          </p>
-          <Link href="/verify/id" className="btn btn-gold">
-            Do my ID check
-          </Link>
-        </div>
-      )}
-
-      <div className="casting">
-        <span className="casting-count">
-          <em>{total}</em> of {capacity} seats taken
-        </span>
-        <div className="seats" aria-hidden="true">
-          {Array.from({ length: capacity }, (_, i) => (
-            <span key={i} className={i < total ? "seat seat-taken" : i < SEASON.minToOpen ? "seat seat-min" : "seat"} />
-          ))}
-        </div>
-        <p>
-          {need > 0
-            ? `${need} more ${need === 1 ? "guy" : "guys"} to start.`
-            : `${capacity - total} open seats.`}
-        </p>
-      </div>
-
-      <section className="members">
-        <h2 className="members-title">Who&apos;s in</h2>
-        <ul className="member-list">
-          {ordered.map((m) => (
-            <li key={m.id} className={greenRoom && m.id !== p.id ? "member member-hidden" : "member"}>
-              {photo.get(m.photo_path) ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={photo.get(m.photo_path)!} alt={m.first_name} className="member-photo" />
-              ) : (
-                <span className="member-photo" aria-hidden="true" />
-              )}
-              <div className="member-body">
-                <p className="member-name">
-                  {m.first_name}, {ageFrom(m.birthdate)}
-                  {m.id === p.id && <span className="member-you"> (you)</span>}
-                </p>
-                <span className="badges">
-                  {pl.titles.get(m.id) && <StaffBadge title={pl.titles.get(m.id)!} />}
-                  {m.founder_no && <FounderBadge no={m.founder_no} />}
-                </span>
-                <p className="member-into">Into {m.interests}</p>
-                {greenRoom && m.id !== p.id ? (
-                  <p className="member-take">Grab your seat to see his face and his hot take.</p>
-                ) : (
-                  <p className="member-take">&ldquo;{m.hot_take}&rdquo;</p>
-                )}
-                {m.id !== p.id && !greenRoom && <MemberActions id={m.id} name={m.first_name} />}
+      <section className="waiting">
+        <SeatRing capacity={capacity} taken={taken} photo={photo.get(p.photo_path) ?? null} />
+        <div className="waiting-copy">
+          {greenRoom ? (
+            <>
+              <h1 className="game-h1">One last step.</h1>
+              <p className="game-lede">
+                {others.length > 0
+                  ? `${others.length} ${others.length === 1 ? "guy is" : "guys are"} already in your Circle. Do your ID check to start playing.`
+                  : "Do your ID check to start playing."}
+              </p>
+              <div className="waiting-actions">
+                <Link href="/verify/id" className="btn btn-gold">
+                  Do my ID check
+                </Link>
               </div>
-            </li>
-          ))}
-        </ul>
+            </>
+          ) : (
+            <>
+              <h1 className="game-h1">{others.length === 0 ? "You're first." : "Almost there."}</h1>
+              <p className="game-lede">Your Circle starts the moment another guy joins.</p>
+              <div className="waiting-actions">
+                <InviteButton />
+                {thin && (
+                  <Link href="/profile" className="btn btn-outline">
+                    Finish your profile
+                  </Link>
+                )}
+              </div>
+            </>
+          )}
+        </div>
       </section>
+
+      {!greenRoom && others.length > 0 && (
+        <section className="members">
+          <h2 className="members-title">Who&apos;s in</h2>
+          <ul className="member-list">
+            {others.map((m) => (
+              <li key={m.id} className="member">
+                {photo.get(m.photo_path) ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={photo.get(m.photo_path)!} alt={m.first_name} className="member-photo" />
+                ) : (
+                  <span className="member-photo" aria-hidden="true" />
+                )}
+                <div className="member-body">
+                  <p className="member-name">
+                    {m.first_name}, {ageFrom(m.birthdate)}
+                  </p>
+                  <span className="badges">
+                    {pl.titles.get(m.id) && <StaffBadge title={pl.titles.get(m.id)!} />}
+                    {m.founder_no && <FounderBadge no={m.founder_no} />}
+                  </span>
+                  <p className="member-into">Into {m.interests}</p>
+                  <MemberActions id={m.id} name={m.first_name} />
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
     </Shell>
   );
 }

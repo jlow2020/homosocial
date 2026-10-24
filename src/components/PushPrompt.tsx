@@ -118,7 +118,7 @@ export default function PushPrompt({ compact = false }: { compact?: boolean }) {
     return (
       <aside className="push-ask">
         <p>
-          <b>Get told when the drop lands.</b> On iPhone: tap <span className="kbd">Share</span>, then <span className="kbd">Add to Home Screen</span>, and open Homosocial from there to turn on notifications.
+          <b>We recommend turning on notifications.</b> On iPhone, first tap <span className="kbd">Share</span>, then <span className="kbd">Add to Home Screen</span>.
         </p>
         <button className="link-button quiet" onClick={dismiss}>
           Not now
@@ -130,7 +130,7 @@ export default function PushPrompt({ compact = false }: { compact?: boolean }) {
   return (
     <aside className="push-ask">
       <p>
-        <b>Get told when the drop lands</b>, when someone DMs you, and when you get a Rose. Nothing else.
+        <b>We recommend turning on notifications.</b>
       </p>
       <div className="row">
         <button className="btn btn-small" disabled={busy} onClick={turnOn}>
