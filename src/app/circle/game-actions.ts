@@ -7,7 +7,6 @@ import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { loadPlayer, isMember, type Player } from "@/lib/game/player";
 import { ensureDrop } from "@/lib/game/drops";
-import { demoReactToAnswer, demoReplyInThread } from "@/lib/game/seed";
 import { checkPlayAnswer } from "@/lib/game/playcheck";
 import { UUID } from "@/lib/admin";
 import { notify, teaser } from "@/lib/notify";
@@ -152,7 +151,6 @@ export async function answerDrop(form: FormData): Promise<Result> {
       detail: { scores: img.scores, ai: img.ai },
     });
   }
-  if (pl.circle.is_test && !pass && saved && !held) await demoReactToAnswer(pl.db, pl.circle.id, saved.id);
   if (saved && !held && drop.spec?.kind === "chain" && data && (data as Record<string, unknown>).ending === true) {
     await notify(pl.db, pl.members.map((m) => m.id).filter((id) => id !== pl.profile.id), {
       title: "⛓️ The Chain is finished",
@@ -225,7 +223,7 @@ export async function postLounge(body: string): Promise<Result> {
   const pl = await player();
   const text = clean(body, 800);
   if (!text) return { ok: false };
-  if (pl.clock.phase === "filling") return { ok: false, error: "The Lounge opens when your Circle kicks off." };
+  if (pl.clock.phase === "filling") return { ok: false, error: "The Lounge opens when your Circle starts." };
   const d = await moderateText(text, "public");
   const held = d.action === "hold";
   const { data: msg } = await pl.db.from("lounge_messages").insert({ circle_id: pl.circle.id, user_id: pl.profile.id, body: text, held }).select("id").single();
@@ -297,12 +295,7 @@ async function threadWith(pl: Player, otherId: string, accept: boolean) {
 export async function startDm(otherId: string): Promise<void> {
   const pl = await player();
   if (!UUID.test(otherId) || otherId === pl.profile.id || !isMember(pl, otherId)) redirect("/circle/dms");
-  const other = pl.members.find((m) => m.id === otherId)!;
-  // Fake guys always say yes.
-  const t = await threadWith(pl, otherId, other.is_demo);
-  if (other.is_demo && !t.accepted_at) {
-    await pl.db.from("dm_threads").update({ accepted_at: new Date().toISOString() }).eq("id", t.id);
-  }
+  const t = await threadWith(pl, otherId, false);
   if (!t.accepted_at && t.requested_by === pl.profile.id) {
     await notify(pl.db, [otherId], { title: `${pl.profile.first_name} wants to DM you`, body: "Say yes and you can both talk.", url: `/circle/dms/${t.id}`, tag: `dm:${t.id}` });
   }
@@ -343,14 +336,7 @@ export async function setDmPhotos(threadId: string, on: boolean): Promise<Result
   if (!t) return { ok: false };
   if (!t.accepted_at) return { ok: false, error: "Accept the chat first." };
   const mine = t.a === pl.profile.id ? "photos_a" : "photos_b";
-  const theirs = mine === "photos_a" ? "photos_b" : "photos_a";
-  const otherId = t.a === pl.profile.id ? t.b : t.a;
-  const { data: other } = await pl.db.from("profiles").select("is_demo").eq("id", otherId).maybeSingle();
-  // Fake guys always say yes.
-  await pl.db
-    .from("dm_threads")
-    .update({ [mine]: on, ...(on && other?.is_demo ? { [theirs]: true } : {}) })
-    .eq("id", t.id);
+  await pl.db.from("dm_threads").update({ [mine]: on }).eq("id", t.id);
   revalidatePath(`/circle/dms/${t.id}`);
   return { ok: true };
 }
@@ -378,9 +364,7 @@ export async function sendDmPhoto(form: FormData): Promise<Result> {
   }
   await pl.db.from("dm_threads").update({ last_at: new Date().toISOString() }).eq("id", t.id);
   const otherId = t.a === pl.profile.id ? t.b : t.a;
-  const { data: other } = await pl.db.from("profiles").select("is_demo, email").eq("id", otherId).maybeSingle();
-  if (other?.is_demo) await demoReplyInThread(pl.db, t.id, otherId, other.email as string | null);
-  else await notify(pl.db, [otherId], { title: pl.profile.first_name, body: "📷 Sent you a photo", url: `/circle/dms/${t.id}`, tag: `dm:${t.id}`, email: false });
+  await notify(pl.db, [otherId], { title: pl.profile.first_name, body: "📷 Sent you a photo", url: `/circle/dms/${t.id}`, tag: `dm:${t.id}`, email: false });
   revalidatePath(`/circle/dms/${t.id}`);
   return { ok: true };
 }
@@ -424,9 +408,7 @@ export async function sendDm(threadId: string, body: string): Promise<Result> {
   await pl.db.from("dm_threads").update({ last_at: new Date().toISOString() }).eq("id", t.id);
 
   const otherId = t.a === pl.profile.id ? t.b : t.a;
-  const { data: other } = await pl.db.from("profiles").select("is_demo, email").eq("id", otherId).maybeSingle();
-  if (other?.is_demo) await demoReplyInThread(pl.db, t.id, otherId, other.email as string | null);
-  else await notify(pl.db, [otherId], { title: t.blind_until && new Date(t.blind_until) > new Date() ? "💘 Your blind date" : pl.profile.first_name, body: teaser(text, 120), url: `/circle/dms/${t.id}`, tag: `dm:${t.id}`, email: false });
+  await notify(pl.db, [otherId], { title: t.blind_until && new Date(t.blind_until) > new Date() ? "💘 Your blind date" : pl.profile.first_name, body: teaser(text, 120), url: `/circle/dms/${t.id}`, tag: `dm:${t.id}`, email: false });
   revalidatePath(`/circle/dms/${t.id}`);
   return { ok: true, notice: await noticeFor(d, false) };
 }
@@ -567,9 +549,7 @@ export async function sendDmClip(threadId: string, path: string): Promise<Result
     after(() => convertClip(db, { table: "dm_messages", id: msg.id, path, kind: "video" }));
   }
   const otherId = t.a === pl.profile.id ? t.b : t.a;
-  const { data: other } = await pl.db.from("profiles").select("is_demo, email").eq("id", otherId).maybeSingle();
-  if (other?.is_demo) await demoReplyInThread(pl.db, t.id, otherId, other.email as string | null);
-  else await notify(pl.db, [otherId], { title: pl.profile.first_name, body: "🎥 Sent you a clip", url: `/circle/dms/${t.id}`, tag: `dm:${t.id}`, email: false });
+  await notify(pl.db, [otherId], { title: pl.profile.first_name, body: "🎥 Sent you a clip", url: `/circle/dms/${t.id}`, tag: `dm:${t.id}`, email: false });
   revalidatePath(`/circle/dms/${t.id}`);
   return { ok: true };
 }
@@ -592,14 +572,14 @@ export async function submitDrop(form: FormData): Promise<Result> {
     .eq("author_id", pl.profile.id)
     .gte("created_at", new Date(Date.now() - 60 * 864e5).toISOString());
   if ((count ?? 0) >= 3) return { ok: false, error: "Three per Season. You've sent yours, thank you." };
-  const town = pl.circle.is_test ? "Sarasota" : pl.circle.region;
+  const town = pl.profile.city ?? pl.circle.label ?? null;
   const { error } = await pl.db.from("prompt_bank").insert({
     body,
     week,
     heat,
     mode,
     author_id: pl.profile.id,
-    credit: `${pl.profile.first_name}, ${town === "test" ? "Sarasota" : regionName(town)}`,
+    credit: town ? `${pl.profile.first_name}, ${town}` : pl.profile.first_name,
     source: "member",
     status: "queued",
   });
@@ -607,17 +587,6 @@ export async function submitDrop(form: FormData): Promise<Result> {
   const d = await moderateText(body, "public");
   await queueFor(pl.db, d, { user_id: pl.profile.id, circle_id: pl.circle.id, surface: "drop_bank", content: body });
   return { ok: true };
-}
-
-function regionName(region: string | null): string {
-  // Three-digit zip prefixes, roughly one metro each. Good enough for a credit line.
-  const names: Record<string, string> = {
-    "320": "Jacksonville", "321": "Daytona", "322": "Jacksonville", "323": "Tallahassee", "324": "Panama City", "325": "Pensacola",
-    "326": "Gainesville", "327": "Orlando", "328": "Orlando", "329": "Melbourne", "330": "Miami", "331": "Miami", "332": "Miami",
-    "333": "Fort Lauderdale", "334": "West Palm Beach", "335": "Tampa", "336": "Tampa", "337": "St. Pete", "338": "Lakeland",
-    "339": "Fort Myers", "341": "Naples", "342": "Sarasota", "344": "Ocala", "346": "Tampa", "347": "Orlando", "349": "West Palm Beach",
-  };
-  return (region && names[region]) || "Florida";
 }
 
 export async function voteHeat(): Promise<Result> {
@@ -633,7 +602,7 @@ export async function voteHeat(): Promise<Result> {
     .select("user_id", { count: "exact", head: true })
     .eq("circle_id", pl.circle.id)
     .eq("season_no", pl.circle.season_no);
-  const needed = pl.circle.is_test ? 1 : Math.max(5, Math.ceil(pl.members.length * 0.6));
+  const needed = Math.max(2, Math.ceil(pl.members.length * 0.6));
   if ((votes ?? 0) >= needed) {
     await pl.db.from("circles").update({ heat_boost: (pl.circle.heat_boost ?? 0) + 1 }).eq("id", pl.circle.id);
     await pl.db.from("heat_votes").delete().eq("circle_id", pl.circle.id).eq("season_no", pl.circle.season_no);
@@ -744,23 +713,8 @@ export async function blindDateIn(week: number): Promise<Result> {
     await pl.db.from("answers").update({ data: { status: "paired", thread: t!.id } }).eq("id", waiting.id);
     await pl.db.from("answers").insert({ drop_id: drop.id, user_id: pl.profile.id, body: "Paired.", data: { status: "paired", thread: t!.id } });
     await notify(pl.db, [waiting.user_id as string], { title: "💘 You've got a blind date", body: "He's in your DMs. No names, no faces, until the reveal.", url: `/circle/dms/${t!.id}`, tag: `dm:${t!.id}` });
-    // Fake guys open with a line.
-    const { data: other } = await pl.db.from("profiles").select("is_demo, email").eq("id", waiting.user_id).maybeSingle();
-    if (other?.is_demo) await demoReplyInThread(pl.db, t!.id, waiting.user_id as string, other.email as string | null);
   } else {
     await pl.db.from("answers").insert({ drop_id: drop.id, user_id: pl.profile.id, body: "Waiting for a date.", data: { status: "waiting" } });
-    if (pl.circle.is_test) {
-      // In a test Circle a fake guy taps in right behind him.
-      const demo = pl.members.find((m) => m.is_demo);
-      if (demo) {
-        const [a, b] = [pl.profile.id, demo.id].sort();
-        await pl.db.from("dm_threads").upsert({ a, b, requested_by: demo.id, accepted_at: new Date().toISOString(), blind_until: until, blind_drop: drop.id }, { onConflict: "a,b" });
-        const { data: t } = await pl.db.from("dm_threads").select("id").eq("a", a).eq("b", b).single();
-        await pl.db.from("answers").update({ data: { status: "paired", thread: t!.id }, body: "Paired." }).eq("drop_id", drop.id).eq("user_id", pl.profile.id);
-        await pl.db.from("answers").upsert({ drop_id: drop.id, user_id: demo.id, body: "Paired.", data: { status: "paired", thread: t!.id } }, { onConflict: "drop_id,user_id", ignoreDuplicates: true });
-        await demoReplyInThread(pl.db, t!.id, demo.id, demo.email);
-      }
-    }
   }
   revalidatePath("/circle", "layout");
   return { ok: true };
@@ -814,9 +768,8 @@ export async function blindKeep(threadId: string, keep: boolean): Promise<Result
   const mine = t.a === pl.profile.id ? "keep_a" : "keep_b";
   const theirs = mine === "keep_a" ? "keep_b" : "keep_a";
   const otherId = t.a === pl.profile.id ? t.b : t.a;
-  const { data: other } = await pl.db.from("profiles").select("is_demo").eq("id", otherId).maybeSingle();
-  await pl.db.from("dm_threads").update({ [mine]: true, ...(other?.is_demo ? { [theirs]: true } : {}) }).eq("id", t.id);
-  if (!other?.is_demo && !t[theirs]) {
+  await pl.db.from("dm_threads").update({ [mine]: true }).eq("id", t.id);
+  if (!t[theirs]) {
     await notify(pl.db, [otherId], { title: `${pl.profile.first_name} wants to keep talking`, body: "Your blind date said yes. Your move.", url: `/circle/dms/${t.id}`, tag: `dm:${t.id}` });
   }
   revalidatePath(`/circle/dms/${t.id}`);
@@ -838,15 +791,7 @@ export async function startRematch(threadId: string): Promise<Result> {
   await pl.db.from("dm_messages").insert({ thread_id: t.id, user_id: pl.profile.id, body: "⚡ Speed Round. Ten questions, sixty seconds, same questions for both of us.", game_id: game.id });
   await pl.db.from("dm_threads").update({ last_at: new Date().toISOString() }).eq("id", t.id);
   const otherId = t.a === pl.profile.id ? t.b : t.a;
-  const { data: other } = await pl.db.from("profiles").select("is_demo").eq("id", otherId).maybeSingle();
-  if (other?.is_demo) {
-    // Fake guys play right away.
-    const pool = ["Pedro Pascal", "brunch", "forearms", "tall", "lol", "Robyn", "smoking", "a car", "vodka soda", "I cried at Pixar", "off", "a Publix", "6 months", "2 weeks", "neck kisses", "pickup lines", "black briefs", "yesterday", "big spoon", "night", "Dancing On My Own", "cheese", "dogs", "Key West", "iced oat latte"];
-    const answers = questions.map((_, i) => (i < 8 ? pool[Math.floor(Math.random() * pool.length)] : ""));
-    await pl.db.from("dm_games").update({ answers: { [otherId]: answers } }).eq("id", game.id);
-  } else {
-    await notify(pl.db, [otherId], { title: `${pl.profile.first_name} challenged you`, body: "⚡ Speed Round. Ten questions, sixty seconds.", url: `/circle/dms/${t.id}`, tag: `dm:${t.id}`, email: false });
-  }
+  await notify(pl.db, [otherId], { title: `${pl.profile.first_name} challenged you`, body: "⚡ Speed Round. Ten questions, sixty seconds.", url: `/circle/dms/${t.id}`, tag: `dm:${t.id}`, email: false });
   revalidatePath(`/circle/dms/${t.id}`);
   return { ok: true };
 }

@@ -1,7 +1,6 @@
 import Link from "next/link";
 import TopBar from "@/components/TopBar";
-import Countdown from "@/components/Countdown";
-import { WEEKS, SEASON, FOUNDER_CAP } from "@/lib/season";
+import { SEASON, FOUNDER_CAP } from "@/lib/season";
 import { getSupabaseAdmin } from "@/lib/supabase-server";
 import type { Metadata } from "next";
 import { pickCard, shareMetadata } from "@/lib/og";
@@ -14,48 +13,17 @@ export async function generateMetadata({ searchParams }: { searchParams: Promise
   return shareMetadata(pickCard(card));
 }
 
-const plays = [
-  { title: "Monday drops", tone: "hot", body: "A new prompt every week. Hot takes, thirst traps, anonymous confessions. Answer to see everyone else's." },
-  { title: "The Lounge", tone: "gold", body: "Your Circle's group chat. It gets chaotic by week three. That's the point." },
-  { title: "Plans", tone: "mint", body: "Trivia night, beach day, a terrible movie. Anyone can post a plan and see who's in." },
-  { title: "DMs", tone: "hot", body: "Slide in, but only inside your Circle. Photos unlock when you both say yes." },
-  { title: "Roses", tone: "gold", body: "Week seven, everyone says something kind about someone, out loud, by name. It hits harder than you think." },
-  { title: "The Finale", tone: "mint", body: "Sunday, 8pm. Private picks, only mutuals revealed. Your phone will be in your hand at 7:59." },
+const steps = [
+  { title: "Join", body: "Make a profile and pass a quick photo check. You're put in a Circle with guys near you." },
+  { title: "Play", body: "A new game drops every Monday. Answer it, see everyone else's, talk in the group chat and DMs." },
+  { title: "Pick", body: "Week 8 is the Finale. Pick who you want to keep as friends, or more. Only mutual picks are revealed." },
 ];
 
 const faq = [
-  {
-    q: "Is this a TV show?",
-    a: "No. Nothing is filmed, recorded or posted anywhere. It's a game played in seasons, like one: your Circle, a new drop every week, a Finale. Everything stays inside your Circle.",
-  },
-  {
-    q: "Who can join?",
-    a: `Gay, bi, trans and queer men, ${SEASON.minAge} and up, anywhere in Florida. More states after Season 1.`,
-  },
-  {
-    q: "What does it cost?",
-    a: "Nothing.",
-  },
-  {
-    q: "What's a Founder?",
-    a: `The first ${FOUNDER_CAP} guys in Florida to grab a seat are Founders, for good. You get a numbered Founder badge on your card, a free Season Pass for as long as Homosocial runs once it launches (two Circles at once), and first dibs on new cities and features. When the spots are gone, they're gone.`,
-  },
-  {
-    q: "Who's in my Circle?",
-    a: `Up to ${SEASON.spots} guys who live near you. Your Circle kicks off once ${SEASON.minToOpen} are in, and guys can still join late.`,
-  },
-  {
-    q: "Do I have to meet anyone in person?",
-    a: "No. The season happens on your phone. If you click with someone, meeting up is between you two. Nobody gets assigned to a dinner with strangers.",
-  },
-  {
-    q: "How do you keep it safe?",
-    a: "Every guy passes a Realness Check, a 20-second camera check that he's a real, live person who matches his photo, and a one-time ID check before he gets his seat. We delete the ID photos right after. Nobody's location is ever shown. Block or report anyone, and three reports pauses an account automatically.",
-  },
-  {
-    q: "What happens after the Finale?",
-    a: "Your Circle can run it back for another season, or you get mixed into a new Circle. Everyone you matched with stays yours either way.",
-  },
+  { q: "Who can play?", a: `Gay, bi, trans and queer men, ${SEASON.minAge} and up, anywhere in the US.` },
+  { q: "What does it cost?", a: "Nothing." },
+  { q: "Is it a dating app?", a: "It's for making friends. If you want more, flip one private switch and the Finale asks a second question. Nobody else ever sees it." },
+  { q: "Is everyone real?", a: "Yes. Every guy passes a live photo check and a one-time ID check before he can talk to anyone. ID photos are deleted right after." },
 ];
 
 async function foundersLeft(): Promise<number | null> {
@@ -66,10 +34,34 @@ async function foundersLeft(): Promise<number | null> {
   return Math.max(FOUNDER_CAP - (count ?? 0), 0);
 }
 
+// Thirty seats around a ring. They light up one at a time on load.
+function Ring() {
+  const n = SEASON.spots;
+  const r = 150;
+  return (
+    <svg className="ring" viewBox="-180 -180 360 360" role="img" aria-label={`A Circle: ${n} seats`}>
+      <circle className="ring-track" r={r} />
+      {Array.from({ length: n }, (_, i) => {
+        const a = (i / n) * Math.PI * 2 - Math.PI / 2;
+        return (
+          <circle
+            key={i}
+            className={i < 2 ? "seat-dot seat-first" : "seat-dot"}
+            cx={Math.round(Math.cos(a) * r * 100) / 100}
+            cy={Math.round(Math.sin(a) * r * 100) / 100}
+            r={11}
+            style={{ animationDelay: `${300 + i * 70}ms` }}
+          />
+        );
+      })}
+    </svg>
+  );
+}
+
 export default async function Home() {
   const left = await foundersLeft();
   return (
-    <main>
+    <main className="home">
       <TopBar
         right={
           <Link href="/me" className="topbar-link">
@@ -78,117 +70,54 @@ export default async function Home() {
         }
       />
 
-      <section className="wrap hero">
-        <div className="chyron">
-          <span className="chy-hot">Doors open</span>
-          <span className="chy-light">{SEASON.name}, Florida</span>
-        </div>
-        <h1>Your favorite people are still strangers.</h1>
-        <div className="hero-row">
-          <p className="lede">
-            A social game played in seasons, like your favorite reality show,
-            minus the cameras. Just you and {SEASON.spots} guys near you, one new
-            drop a week, for eight weeks. It&apos;s a game for making friends, doing fun stuff
-            together, and maybe finding a boyfriend.
-          </p>
-          <div className="cta">
+      <section className="wrap home-hero">
+        <div className="home-hero-copy">
+          <h1>
+            <span>Meet {SEASON.spots} guys.</span> <span>Play for 8 weeks.</span>
+          </h1>
+          <p className="home-lede">A social game for gay, bi, trans and queer men. Same group, a new game every Monday.</p>
+          <div className="home-cta">
             <Link href="/join" className="btn btn-pink btn-big">
-              Grab a seat
+              Join a Circle
             </Link>
-            <span className="cta-meta">
-              Free. {SEASON.minAge} and up. Gay, bi, trans and queer men.
-            </span>
-            {left !== null && left > 0 && (
-              <span className="founder-count">
-                ★ {left} of {FOUNDER_CAP} Founder spots left
-              </span>
-            )}
+            <span className="home-meta">Free. {SEASON.minAge}+. Anywhere in the US.</span>
           </div>
+          {left !== null && left > 0 && <p className="home-founders">★ {left} Founder spots left</p>}
+        </div>
+        <div className="home-ring">
+          <Ring />
         </div>
       </section>
 
-      <section className="wrap plays">
-        <h2 className="big-h2">What you&apos;ll actually do</h2>
-        <ul className="play-grid">
-          {plays.map((x) => (
-            <li key={x.title} className={`play play-${x.tone}`}>
-              <h3>{x.title}</h3>
-              <p>{x.body}</p>
+      <section className="wrap home-steps" aria-label="How it works">
+        <ol>
+          {steps.map((s, i) => (
+            <li key={s.title}>
+              <span className="home-step-n">{i + 1}</span>
+              <h2>{s.title}</h2>
+              <p>{s.body}</p>
             </li>
           ))}
-        </ul>
+        </ol>
       </section>
 
-      <section className="guide">
-        <div className="wrap guide-inner">
-          <div className="section-head">
-            <h2>The season</h2>
-            <p>A new drop every Monday. Every week gets a little closer.</p>
-          </div>
-          <ol className="episodes">
-            {WEEKS.map((e) => (
-              <li
-                key={e.n}
-                className={e.n === 8 ? "episode episode-finale" : "episode"}
-              >
-                <span className="ep-num">Week {e.n}</span>
-                <span className="ep-title">{e.title}</span>
-                <span className="ep-blurb">{e.blurb}</span>
-              </li>
-            ))}
-          </ol>
+      <section className="wrap home-drop" aria-label="An example game">
+        <div className="home-drop-card">
+          <p className="home-drop-week">Week 2</p>
+          <p className="home-drop-q">Who in your Circle would you call at 2am?</p>
+          <ul className="home-drop-answers" aria-hidden="true">
+            <li />
+            <li />
+            <li />
+          </ul>
+          <p className="home-drop-lock">Answers unlock when you post yours.</p>
         </div>
       </section>
 
-      <section className="wrap rules-show">
-        <h2 className="big-h2">The rules of this show</h2>
-        <div className="rule-grid">
-          <div className="rule">
-            <h3>No browsing</h3>
-            <p>
-              No grid, no search, no strangers. The only guys you see are the
-              ones in your Circle. You can&apos;t scroll past someone, so you
-              actually meet him.
-            </p>
-          </div>
-          <div className="rule">
-            <h3>Nobody gets voted off</h3>
-            <p>
-              No eliminations, no polls about each other, no drama for
-              drama&apos;s sake. It&apos;s the fun of a reality show without the
-              cruelty.
-            </p>
-          </div>
-          <div className="rule rule-gold">
-            <h3>Roses only go up</h3>
-            <p>
-              At the Finale you only ever see who picked you back. Nobody finds
-              out who didn&apos;t. Nobody leaves the season empty-handed.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      <section className="dating">
-        <div className="wrap dating-inner">
-          <div className="dating-copy">
-            <h2>Friends. And maybe more.</h2>
-            <p>
-              Dating is one private switch. Flip it and the Finale asks you a
-              second question. Nobody else ever knows you flipped it. Eight
-              weeks of watching a guy be funny and kind beats eight seconds of
-              looking at his torso.
-            </p>
-          </div>
-          <Countdown />
-        </div>
-      </section>
-
-      <section className="wrap faq">
-        <h2 className="big-h2">Questions</h2>
-        <dl className="faq-list">
+      <section className="wrap home-faq">
+        <dl>
           {faq.map((f) => (
-            <div key={f.q} className="faq-item">
+            <div key={f.q}>
               <dt>{f.q}</dt>
               <dd>{f.a}</dd>
             </div>
@@ -196,21 +125,11 @@ export default async function Home() {
         </dl>
       </section>
 
-      <section className="wrap closer">
-        <h2>
-          {SEASON.spots === 30 ? "Thirty" : SEASON.spots} guys. Eight weeks.
-          Grab a seat.
-        </h2>
-        <p>
-          Sign up, pass a 20-second Realness Check, and look around the lobby.
-          One quick ID check and the seat is yours, in a Circle full of guys
-          who are exactly who they say they are.
-        </p>
+      <section className="wrap home-close">
         <Link href="/join" className="btn btn-pink btn-big">
-          Grab a seat
+          Join a Circle
         </Link>
       </section>
-
     </main>
   );
 }

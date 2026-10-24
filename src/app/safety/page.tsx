@@ -50,7 +50,7 @@ const sections: Section[] = [
     body: (
       <p>
         Know your status and talk about it. Free and low-cost HIV and STI testing, PrEP, and DoxyPEP are available through
-        county health departments and LGBTQ+ health centers across Florida.
+        county health departments and LGBTQ+ health centers across the country.
       </p>
     ),
   },

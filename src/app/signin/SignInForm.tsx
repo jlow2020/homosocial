@@ -70,7 +70,7 @@ export default function SignInForm() {
         </button>
       </form>
       <p className="fine">
-        New here? <Link href="/join">Grab a seat</Link>.
+        New here? <Link href="/join">Join a Circle</Link>.
       </p>
     </div>
   );

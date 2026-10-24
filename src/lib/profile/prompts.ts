@@ -91,5 +91,5 @@ export const VOICE_SCRIPTS = [
   "Say your name, where you're from, and the last thing that made you laugh.",
   "Tell us what you'd do with a free Saturday.",
   "Say hi, then tell us your go-to karaoke song. Bonus points for singing a line.",
-  "Introduce yourself like you're walking into the villa.",
+  "Introduce yourself like it's the first night of something good.",
 ];

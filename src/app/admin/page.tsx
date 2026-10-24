@@ -70,7 +70,7 @@ export default async function AdminHome() {
                     </td>
                     <td>
                       <span className={n >= SEASON.minToOpen ? "pill pill-mint" : "pill pill-gold"}>
-                        {n >= SEASON.minToOpen ? "Kicked off" : `Needs ${SEASON.minToOpen - n}`}
+                        {n >= SEASON.minToOpen ? "Started" : `Needs ${SEASON.minToOpen - n}`}
                       </span>
                     </td>
                     <td>{when(c.created_at)}</td>

@@ -154,23 +154,23 @@ export type YearbookPage = { season: number; circle: number; region: string; ans
 // One page per Season he's played.
 export async function yearbook(db: SupabaseClient, userId: string): Promise<YearbookPage[]> {
   const [{ data: answers }, { data: badges }] = await Promise.all([
-    db.from("answers").select("body, passed, held, reactions(user_id), drops(season_no, mode, spec, circle_id, circles(number, region))").eq("user_id", userId).limit(1000),
-    db.from("badges").select("badge, label, season_no, circle_id, circles(number, region)").eq("user_id", userId),
+    db.from("answers").select("body, passed, held, reactions(user_id), drops(season_no, mode, spec, circle_id, circles(number, label))").eq("user_id", userId).limit(1000),
+    db.from("badges").select("badge, label, season_no, circle_id, circles(number, label)").eq("user_id", userId),
   ]);
   const pages = new Map<string, YearbookPage>();
-  type A = { body: string | null; passed: boolean; held: boolean; reactions: { user_id: string }[]; drops: { season_no: number; mode: string; spec: { anon?: boolean } | null; circle_id: string; circles: { number: number; region: string } | null } | null };
+  type A = { body: string | null; passed: boolean; held: boolean; reactions: { user_id: string }[]; drops: { season_no: number; mode: string; spec: { anon?: boolean } | null; circle_id: string; circles: { number: number; label: string | null } | null } | null };
   for (const a of (answers ?? []) as unknown as A[]) {
     if (!a.drops || a.passed) continue;
     const key = `${a.drops.circle_id}:${a.drops.season_no}`;
-    const page = pages.get(key) ?? { season: a.drops.season_no, circle: a.drops.circles?.number ?? 0, region: a.drops.circles?.region ?? "", answered: 0, best: null, badges: [] };
+    const page = pages.get(key) ?? { season: a.drops.season_no, circle: a.drops.circles?.number ?? 0, region: a.drops.circles?.label ?? "", answered: 0, best: null, badges: [] };
     page.answered++;
     const anon = ANON_MODES.has(a.drops.mode) || !!a.drops.spec?.anon;
     if (!anon && !a.held && a.body && a.body.length <= 200 && (!page.best || a.reactions.length > page.best.fires)) page.best = { body: a.body, fires: a.reactions.length };
     pages.set(key, page);
   }
-  for (const b of (badges ?? []) as unknown as { badge: string; label: string; season_no: number; circle_id: string; circles: { number: number; region: string } | null }[]) {
+  for (const b of (badges ?? []) as unknown as { badge: string; label: string; season_no: number; circle_id: string; circles: { number: number; label: string | null } | null }[]) {
     const key = `${b.circle_id}:${b.season_no}`;
-    const page = pages.get(key) ?? { season: b.season_no, circle: b.circles?.number ?? 0, region: b.circles?.region ?? "", answered: 0, best: null, badges: [] };
+    const page = pages.get(key) ?? { season: b.season_no, circle: b.circles?.number ?? 0, region: b.circles?.label ?? "", answered: 0, best: null, badges: [] };
     page.badges.push({ emoji: BADGES[b.badge]?.emoji ?? "🏅", label: b.label });
     pages.set(key, page);
   }

@@ -1,14 +1,14 @@
-// The game. Seasons run per Circle: a Circle kicks off once enough seats are
-// taken, then runs 8 weeks and ends with the Finale.
+// The game. Seasons run per Circle: a Circle starts once two guys are in,
+// then runs 8 weeks and ends with the Finale.
 export const SEASON = {
   id: "s1",
   name: "Season 1",
   spots: 30, // seats in a full Circle
-  minToOpen: 9, // a Circle kicks off once this many seats are taken
+  minToOpen: 2, // a Circle starts as soon as two guys are in
   minAge: 18,
 };
 
-// The first guys in Florida to grab a seat are Founders, for good.
+// The first guys to join are Founders, for good.
 export const FOUNDER_CAP = 300;
 
 export const WEEKS = [
@@ -22,18 +22,8 @@ export const WEEKS = [
   { n: 8, title: "The Finale", blurb: "Sunday, 8pm. Private picks. Only mutuals revealed." },
 ];
 
-// Season 1 is Florida only. Florida zips run 320xx to 349xx, except 340xx,
-// which is military mail. Until matchmaking placement is built, guys are
-// grouped by the first three digits of their zip, roughly one metro.
-// A zip outside Florida gets no region, which puts him on the waitlist.
-export const LAUNCH_AREA = "Florida";
-
-export function regionForZip(zip: string): string | null {
-  if (!/^\d{5}$/.test(zip)) return null;
-  const prefix = Number(zip.slice(0, 3));
-  if (prefix < 320 || prefix > 349 || prefix === 340) return null;
-  return zip.slice(0, 3);
-}
+// Anyone with a US zip can play. Where he lives decides his Circle (see place_member_geo).
+export const MIN_SEAT_MILES = 150; // "close to home" when grouping guys
 
 export function ageFrom(birthdate: string): number {
   const b = new Date(birthdate + "T00:00:00Z");
@@ -42,16 +32,4 @@ export function ageFrom(birthdate: string): number {
   const m = now.getUTCMonth() - b.getUTCMonth();
   if (m < 0 || (m === 0 && now.getUTCDate() < b.getUTCDate())) age--;
   return age;
-}
-
-// Three-digit zip prefixes, roughly one metro each. Good enough for a label.
-const REGION_NAMES: Record<string, string> = {
-  "320": "Jacksonville", "321": "Daytona", "322": "Jacksonville", "323": "Tallahassee", "324": "Panama City", "325": "Pensacola",
-  "326": "Gainesville", "327": "Orlando", "328": "Orlando", "329": "Melbourne", "330": "Miami", "331": "Miami", "332": "Miami",
-  "333": "Fort Lauderdale", "334": "West Palm Beach", "335": "Tampa", "336": "Tampa", "337": "St. Pete", "338": "Lakeland",
-  "339": "Fort Myers", "341": "Naples", "342": "Sarasota", "344": "Ocala", "346": "Tampa", "347": "Orlando", "349": "West Palm Beach",
-};
-export function regionName(region: string | null): string {
-  if (region === "test") return "Sarasota";
-  return (region && REGION_NAMES[region]) || "Florida";
 }

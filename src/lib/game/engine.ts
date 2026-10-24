@@ -1,8 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { PROMPTS, PROMPT_BY_ID, modeOf, type Mode } from "./prompts";
+import { PROMPTS, modeOf, type Mode } from "./prompts";
 import { FORMATS } from "./templates";
-import { DEMO_PROMPT } from "./demo";
 import { PLAYS, PLAY_BY_ID, RANK_NIGHTS, type PlaySpec } from "./plays";
 
 // The drop engine. Each layer tries to produce a drop this Circle has never
@@ -31,7 +30,7 @@ export type Chosen = {
   spec?: PlaySpec | null;
 };
 
-type CircleLike = { id: string; season_no: number; is_test: boolean; heat_boost?: number };
+type CircleLike = { id: string; season_no: number; heat_boost?: number };
 
 // How hot each week runs in a Circle's first Season. Climbs one notch per Season
 // and one per heat vote, capped at 5.
@@ -125,7 +124,7 @@ async function fromFollowup(db: SupabaseClient, circle: CircleLike, week: number
   if (!prev || prev.mode !== "text") return null;
   const { data: answers } = await db
     .from("answers")
-    .select("id, body, user_id, passed, reactions(user_id), profiles!answers_user_id_fkey(first_name, is_demo)")
+    .select("id, body, user_id, passed, reactions(user_id), profiles!answers_user_id_fkey(first_name)")
     .eq("drop_id", prev.id);
   type Row = { id: string; body: string | null; passed: boolean; reactions: unknown[]; profiles: { first_name: string } | null };
   const ranked = ((answers ?? []) as unknown as Row[])
@@ -250,13 +249,6 @@ function fromRepeat(circle: CircleLike, week: number): Chosen {
 }
 
 export async function chooseDrop(db: SupabaseClient, circle: CircleLike, week: number): Promise<Chosen> {
-  // Test Circles in their first Season use the prompts the fake guys have lines for.
-  if (circle.is_test && circle.season_no === 1) {
-    const p = PROMPT_BY_ID.get(DEMO_PROMPT[week]);
-    if (p) return { key: p.id, body: p.body, hint: p.hint ?? null, mode: modeOf(p), heat: p.heat ?? 3, source: "house", credit: null };
-    const pl = PLAY_BY_ID.get(DEMO_PROMPT[week]);
-    if (pl) return { key: `play:${pl.id}`, body: pl.body, hint: pl.hint ?? null, mode: pl.mode, heat: pl.heat, source: "play", credit: null, spec: pl.spec };
-  }
   const heat = targetHeat(circle, week);
   const { seen, last } = await seenKeys(db, circle.id);
   const { data: seated } = await db.from("profiles").select("id").eq("circle_id", circle.id).eq("status", "active").not("id_verified_at", "is", null);

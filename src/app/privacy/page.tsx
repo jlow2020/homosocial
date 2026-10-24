@@ -108,7 +108,7 @@ const sections: Section[] = [
         </li>
         <li>to keep the Service working, secure, and fix problems;</li>
         <li>to follow the law and respond to valid legal requests;</li>
-        <li>to work out totals across Circles (like the Florida Census), which never show any one person&apos;s answers.</li>
+        <li>to work out totals across Circles (like the Census), which never show any one person&apos;s answers.</li>
       </ul>
     ),
   },
@@ -269,7 +269,7 @@ const sections: Section[] = [
     title: "Where your data is",
     body: (
       <p>
-        Homosocial operates from the United States, and is currently only open in Florida. Your information is processed in the
+        Homosocial operates from the United States, and is currently only open in the United States. Your information is processed in the
         United States and wherever our service providers run their systems, with protections required by our contracts with
         them.
       </p>

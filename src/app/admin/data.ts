@@ -13,7 +13,7 @@ export type Person = {
   stage: Stage;
 };
 
-export type CircleRow = { id: string; season: string; region: string; number: number; capacity: number; created_at: string };
+export type CircleRow = { id: string; season: string; region: string; number: number; capacity: number; created_at: string; label: string | null };
 
 // Everyone with a login, joined with his username and profile.
 export async function loadPeople(db: SupabaseClient): Promise<Person[]> {
@@ -51,7 +51,7 @@ export async function loadPeople(db: SupabaseClient): Promise<Person[]> {
 export async function loadCircles(db: SupabaseClient): Promise<CircleRow[]> {
   const { data } = await db
     .from("circles")
-    .select("id, season, region, number, capacity, created_at")
+    .select("id, season, region, number, capacity, created_at, label")
     .order("season", { ascending: false })
     .order("region")
     .order("number");
@@ -59,5 +59,5 @@ export async function loadCircles(db: SupabaseClient): Promise<CircleRow[]> {
 }
 
 export function circleLabel(c: CircleRow): string {
-  return `Circle ${c.number} · ${c.region} · ${c.season.toUpperCase()}`;
+  return `Circle ${c.number}${c.label ? ` · ${c.label}` : ""} · ${c.season.toUpperCase()}`;
 }

@@ -262,7 +262,7 @@ export const PLAYS: Play[] = [
     body: "Mad Libs: the morning after. Seven words. Don't overthink it.",
     spec: {
       kind: "madlibs",
-      slots: ["a body part", "a breakfast food", "a celebrity", "a verb", "an article of clothing", "a feeling", "a Florida town"],
+      slots: ["a body part", "a breakfast food", "a celebrity", "a verb", "an article of clothing", "a feeling", "a town"],
       template:
         "I woke up with his {0} on my face and the smell of {1} coming from the kitchen. He looked like {2} if {2} could {3}. I couldn't find my {4} anywhere. I felt {5}. Then I remembered we were in {6} and neither of us lives there.",
     },

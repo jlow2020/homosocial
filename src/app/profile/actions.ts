@@ -4,7 +4,8 @@ import { randomUUID } from "crypto";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { getMe, getSupabaseAdmin } from "@/lib/supabase-server";
-import { SEASON, ageFrom, regionForZip } from "@/lib/season";
+import { SEASON, ageFrom } from "@/lib/season";
+import { placeForZip } from "@/lib/geo";
 import { purgeAllMedia } from "@/lib/retention";
 import { moderateImage, moderateText, enqueue } from "@/lib/moderation";
 
@@ -39,6 +40,8 @@ export async function saveProfile(_prev: ProfileState, form: FormData): Promise<
   if (!Number.isFinite(age) || age < SEASON.minAge) return { error: `Homosocial is for guys ${SEASON.minAge} and up.` };
   if (age > 99) return { error: "Check your birthday." };
   if (!/^\d{5}$/.test(zip)) return { error: "Add your five-digit zip code." };
+  const place = placeForZip(zip);
+  if (!place) return { error: "We couldn't find that zip. Homosocial is US only for now." };
   if (!interests) return { error: "Tell us three things you're into." };
   if (lookingFor !== "friends" && lookingFor !== "friends_dating")
     return { error: "Pick what you're looking for." };
@@ -73,14 +76,18 @@ export async function saveProfile(_prev: ProfileState, form: FormData): Promise<
     if (up.error) return { error: "Your photo didn't upload. Try again." };
   }
 
-  const region = regionForZip(zip);
   const row = {
     id: me.userId,
     email: me.email,
     first_name: firstName,
     birthdate,
     zip,
-    region,
+    region: "us",
+    lat: place.lat,
+    lng: place.lng,
+    city: place.city,
+    state: place.state,
+    tz: place.tz,
     interests,
     looking_for: lookingFor,
     hot_take: hotTake,

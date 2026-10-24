@@ -5,7 +5,6 @@ import FounderBadge from "@/components/FounderBadge";
 import { WEEKS, ageFrom } from "@/lib/season";
 import type { Player, Member } from "@/lib/game/player";
 import NavTabs from "./NavTabs";
-import TestBar from "./TestBar";
 import PushPrompt from "@/components/PushPrompt";
 import Flash from "@/components/Flash";
 import { cookies } from "next/headers";
@@ -34,7 +33,12 @@ export async function Shell({ pl, children }: { pl: Player; children: React.Reac
         ? "Finale: revealed"
         : `Week ${c.week}: ${weekTitle(c.week)}`;
   const rawFlash = (await cookies()).get("hs_flash")?.value;
-  const flashText = rawFlash ? decodeURIComponent(rawFlash).slice(0, 400) : null;
+  let flashText = rawFlash ? decodeURIComponent(rawFlash).slice(0, 400) : null;
+  // Moved to a Circle closer to home: tell him once.
+  if (pl.profile.moved_from) {
+    flashText = `Guys near you just joined, so you've got a new Circle closer to home: Circle ${pl.circle.number}${pl.circle.label ? `, ${pl.circle.label}` : ""}.`;
+    await pl.db.from("profiles").update({ moved_from: null }).eq("id", pl.profile.id);
+  }
   const dropWeek = c.phase === "season" ? c.week : c.phase === "revealed" ? 8 : null;
   return (
     <main className="game">
@@ -52,13 +56,12 @@ export async function Shell({ pl, children }: { pl: Player; children: React.Reac
           </div>
         }
       />
-      {pl.role && pl.circle.is_test && <TestBar circleId={pl.circle.id} clock={c} seasonNo={pl.circle.season_no} />}
       <div className="wrap game-head">
         <div className="chyron">
           <span className={c.phase === "filling" ? "chy-hot" : "chy-gold"}>{tag}</span>
           <span className="chy-light">
             Circle {pl.circle.number}
-            {pl.circle.is_test ? " · Test" : ""} · Season {pl.circle.season_no}
+            {pl.circle.label ? ` · ${pl.circle.label}` : ""} · Season {pl.circle.season_no}
           </span>
           {c.phase === "season" && (
             <span className="chy-heat" title={`Heat ${targetHeat(pl.circle, c.week)} of 5`} aria-label={`Heat ${targetHeat(pl.circle, c.week)} of 5`}>

@@ -72,7 +72,7 @@ export default async function ReadPage({ params }: { params: Promise<{ n: string
           <h1 className="game-h1">{locked ? "That's a wrap." : "So far this week."}</h1>
           <p className="fine">
             {r.answered} of {r.of} answered.{" "}
-            {locked ? `Locked ${etLabel(new Date(drop.locked_at!))}.` : readAt ? `Locks ${clock.phase === "season" && clock.testMode ? "when the week moves on" : etLabel(readAt)}.` : ""}
+            {locked ? `Locked ${etLabel(new Date(drop.locked_at!), circle.tz ?? undefined)}.` : readAt ? `Locks ${etLabel(readAt, circle.tz ?? undefined)}.` : ""}
             {" "}<Link href={`/circle/week/${week}`}>The drop</Link>
           </p>
         </header>

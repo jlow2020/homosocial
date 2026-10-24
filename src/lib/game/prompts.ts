@@ -35,7 +35,7 @@ export const PROMPTS: Prompt[] = [
   { id: "w1-exes", week: 1, kind: "text", body: "What would your exes say you're like in a relationship? What would they say you're like in bed? Answer one. We'll notice which one you dodged.", heat: 3 },
   { id: "w1-unhinged", week: 1, kind: "photo", body: "The most unhinged message you've ever gotten on an app. Screenshot it.", hint: "Blur the name and face. We want the message, not the man.", heat: 3 },
   { id: "w1-secondlook", week: 1, kind: "photo", body: "Post the photo you'd use to get a second look.", hint: "Faces welcome. Underwear yes. Explicit no. Save that for the DMs.", heat: 3 },
-  { id: "w1-florida", week: 1, kind: "text", body: "The most Florida thing that's ever happened to you on a date.", heat: 1 },
+  { id: "w1-florida", week: 1, kind: "text", body: "The most chaotic thing that's ever happened to you on a date.", heat: 1 },
 
   // Week 2: Hot Takes. Pick a side and defend it.
   { id: "w2-open", week: 2, kind: "text", body: "Settle it: open relationships. The future, or a group project nobody wants to finish?", heat: 3 },

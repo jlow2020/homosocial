@@ -2,7 +2,7 @@
 
 import { getMe, getSupabaseAdmin } from "@/lib/supabase-server";
 import { passes, type RealnessResult, MOVES } from "@/lib/realness";
-import { SEASON } from "@/lib/season";
+import { placeMember } from "@/lib/game/place";
 import { bestMatch, facesIn } from "@/lib/server/vision";
 import { hasConsent } from "@/lib/consent";
 import { BIOMETRIC_VERSION } from "@/lib/legal";
@@ -121,14 +121,11 @@ export async function completeVerification(form: FormData): Promise<VerifyOutcom
   };
   if (passed) {
     update.verified_at = new Date().toISOString();
-    if (!p.region) update.status = "waitlist";
   }
   const { error } = await db.from("profiles").update(update).eq("id", p.id);
   if (error) return { passed: false, message: "Your result didn't save. Try again.", retry: true };
 
-  if (passed && p.region && !p.circle_id) {
-    await db.rpc("place_member", { p_user: p.id, p_season: SEASON.id, p_region: p.region, p_capacity: SEASON.spots });
-  }
+  if (passed && !p.circle_id) await placeMember(db, p.id);
 
   if (passed) return { passed: true, message: "", retry: false };
 

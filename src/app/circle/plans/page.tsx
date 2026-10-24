@@ -40,7 +40,7 @@ export default async function Plans() {
     return (
       <li key={p.id} className={done ? "plan plan-past" : "plan"}>
         <div className="plan-main">
-          <p className="eyebrow">{p.starts_at ? etLabel(new Date(p.starts_at)) : "Time TBD"}</p>
+          <p className="eyebrow">{p.starts_at ? etLabel(new Date(p.starts_at), pl.circle.tz ?? undefined) : "Time TBD"}</p>
           <h2 className="plan-title">{p.title}</h2>
           {p.held && <span className="held-tag">⏳ Waiting on a quick look. Only you see this for now.</span>}
           {p.place && <p className="plan-place">📍 {p.place}</p>}

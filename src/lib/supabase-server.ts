@@ -73,6 +73,12 @@ export type Profile = {
   verification_attempts: number;
   status: "active" | "waitlist" | "paused" | "banned";
   circle_id: string | null;
+  city?: string | null;
+  state?: string | null;
+  tz?: string | null;
+  lat?: number | null;
+  lng?: number | null;
+  moved_from?: string | null;
 };
 
 export async function getMe(): Promise<{

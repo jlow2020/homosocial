@@ -47,7 +47,7 @@ export default async function Finale() {
             ways get revealed.
           </p>
           <p className="fine">
-            Picks lock at the Finale: {clock.testMode ? "whenever Daddy hits the star" : `${etLabel(clock.finaleAt)} (${untilLabel(clock.finaleAt)})`}.
+            Picks lock at the Finale: {`${etLabel(clock.finaleAt, circle.tz ?? undefined)} (${untilLabel(clock.finaleAt)})`}.
           </p>
         </div>
         {lines.length > 0 && (

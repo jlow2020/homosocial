@@ -14,7 +14,7 @@ export default function SiteFooter() {
       <div className="wrap footer-grid">
         <div className="footer-brand">
           <span className="wordmark">
-            <span className="onair" aria-hidden="true" />
+            <span className="mark-ring" aria-hidden="true" />
             Homosocial
           </span>
           <span className="fine">Good company. Questionable behavior.</span>

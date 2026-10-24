@@ -48,7 +48,7 @@ export default async function Thread({ params }: { params: Promise<{ id: string 
       .order("created_at"),
     pl.db
       .from("profiles")
-      .select("id, first_name, birthdate, interests, hot_take, photo_path, looking_for, is_demo, email, founder_no")
+      .select("id, first_name, birthdate, interests, hot_take, photo_path, looking_for, email, founder_no")
       .eq("id", otherId)
       .single(),
   ]);

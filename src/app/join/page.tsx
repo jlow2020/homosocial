@@ -4,11 +4,10 @@ import { redirect } from "next/navigation";
 import PageHead from "@/components/PageHead";
 import JoinForm from "./JoinForm";
 import { getMe, nextPath } from "@/lib/supabase-server";
-import { SEASON } from "@/lib/season";
 
 export async function generateMetadata({ searchParams }: { searchParams: Promise<{ card?: string }> }): Promise<Metadata> {
   const { card } = await searchParams;
-  return { title: "Grab a seat | Homosocial", ...shareMetadata(pickCard(card), "Grab a seat | Homosocial", undefined, "/join") };
+  return { title: "Join a Circle | Homosocial", ...shareMetadata(pickCard(card), "Join a Circle | Homosocial", undefined, "/join") };
 }
 export const dynamic = "force-dynamic";
 
@@ -30,17 +29,10 @@ export default async function Join({
   return (
     <main className="apply-page">
       <PageHead
-        title="Grab a seat"
-        tag={
-          <>
-            <span className="chy-hot">Doors open</span>
-            <span className="chy-light">{SEASON.name}</span>
-          </>
-        }
+        title="Join a Circle"
+        tag={<span className="chy-light">Free · About 3 minutes</span>}
       >
-        Free. Takes about three minutes: confirm your email, pick a username
-        and password, make your profile, and do a quick Realness Check with
-        your camera. Then you&apos;re in a Circle.
+        Confirm your email, pick a username, make your profile, and do a quick photo check. Then you&apos;re in.
       </PageHead>
       {error && errors[error] && (
         <div className="wrap" style={{ paddingBottom: 24 }}>

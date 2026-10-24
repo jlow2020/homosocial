@@ -6,7 +6,7 @@ import { SEASON } from "@/lib/season";
 
 export const metadata: Metadata = {
   title: "About | Homosocial",
-  description: "A social game for gay, bi, trans and queer men, played in Seasons. Like your favorite reality show, minus the cameras.",
+  description: "A social game for gay, bi, trans and queer men, played in Seasons.",
 };
 
 const sections: Section[] = [
@@ -16,7 +16,7 @@ const sections: Section[] = [
     body: (
       <>
         <p>
-          Homosocial is a social game for gay, bi, trans and queer men. Like your favorite reality show, minus the cameras.
+          Homosocial is an online social game for gay, bi, trans and queer men.
         </p>
         <p>
           You join a Circle of up to {SEASON.spots} real, verified guys near you. For eight weeks there&apos;s a new drop every
@@ -54,7 +54,7 @@ const sections: Section[] = [
     title: "Who's behind it",
     body: (
       <p>
-        Homosocial is made by {LEGAL.company}, a small, independent company in Sarasota, Florida. Season 1 is Florida only. Say
+        Homosocial is made by {LEGAL.company}, a small, independent company in Sarasota, Florida. Say
         hi at <Mail to={LEGAL.support} />.
       </p>
     ),

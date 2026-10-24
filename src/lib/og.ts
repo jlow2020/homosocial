@@ -4,16 +4,16 @@ import type { Metadata } from "next";
 // fresh share can look different. Add ?card=show, ?card=tease or ?card=seats
 // to a link to pin one (handy for a specific post).
 const CARDS = {
-  show: { url: "/og/show.png?v=1", alt: "Homosocial: now casting. 30 guys, 8 weeks, 1 Finale." },
+  show: { url: "/og/show.png?v=2", alt: "Homosocial. A social game for gay, bi, trans and queer men. 30 guys, 8 weeks, 1 Finale." },
   tease: { url: "/og/tease.png?v=1", alt: "This week's drop: Who in your Circle would you call at 2am? Answers hidden until you post yours." },
-  seats: { url: "/og/seats.png?v=1", alt: "Grab a seat. 30 seats, kicks off at 9." },
+  seats: { url: "/og/seats.png?v=2", alt: "Join a Circle. Starts with 2, up to 30." },
 } as const;
 type CardName = keyof typeof CARDS;
 const NAMES = Object.keys(CARDS) as CardName[];
 
 const TITLE = "Homosocial";
 const DESCRIPTION =
-  "A social game for gay, bi, trans and queer men, played in Seasons. Like your favorite reality show, minus the cameras. Make friends, do fun stuff, maybe find a boyfriend.";
+  "A social game for gay, bi, trans and queer men. Meet 30 guys, play a new game every Monday for 8 weeks. Make friends, maybe find a boyfriend.";
 
 export function pickCard(choice?: string | string[]): CardName {
   const c = Array.isArray(choice) ? choice[0] : choice;

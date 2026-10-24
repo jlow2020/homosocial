@@ -35,7 +35,7 @@ export type DropView = {
   spec: PlaySpec | null;
 };
 
-type CircleLike = { id: string; season_no: number; is_test: boolean; heat_boost?: number };
+type CircleLike = { id: string; season_no: number; heat_boost?: number };
 
 // This week's drop for a Circle, chosen by the engine the first time anyone looks.
 export async function ensureDrop(db: SupabaseClient, circle: CircleLike, week: number): Promise<Drop> {

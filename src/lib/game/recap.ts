@@ -4,7 +4,7 @@ import { BADGES, type WeekResult } from "./lock";
 import { chemistryFor } from "./chemistry";
 import type { Member } from "./player";
 
-// "Previously on your Circle": his own season so far, in a few big numbers.
+// "Your Season so far": his own season, in a few big numbers.
 // Only things about him, only things he'd be glad to see.
 
 export type Moment = { week: number | null; label: string; stat: string; line: string; tone: "hot" | "gold" | "mint" };

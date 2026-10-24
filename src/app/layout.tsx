@@ -9,7 +9,7 @@ import { shareMetadata } from "@/lib/og";
 export const metadata: Metadata = {
   title: "Homosocial",
   description:
-    "A social game for gay, bi, trans and queer men, played in seasons, like your favorite reality show, minus the cameras. Thirty guys near you, eight weeks, one Finale.",
+    "A social game for gay, bi, trans and queer men. Meet 30 guys, play a new game every Monday for 8 weeks. Make friends, maybe find a boyfriend.",
   metadataBase: new URL("https://homosocial.net"),
   ...shareMetadata("show"),
 };

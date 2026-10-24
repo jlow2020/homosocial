@@ -6,6 +6,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { WEEKS } from "@/lib/season";
 import { claimNotice, notify, teaser } from "@/lib/notify";
 import { clockFor } from "./clock";
+import { fillGeo, fillCircles, placeMember } from "./place";
 import { ensureDrop, promptOf } from "./drops";
 import { lockWeek, awardSeason } from "./lock";
 import { loadMembers, type Circle, type Member } from "./player";
@@ -23,6 +24,11 @@ export async function tickAll(db: SupabaseClient): Promise<{ circles: number; se
   await moderationDigest(db).catch((e) => console.error("digest failed", e));
   // Keep the nudity models loaded so the first borderline photo doesn't wait on them.
   void warmImageModels();
+  // Nationwide: guys who signed up before get coordinates, and anyone who was
+  // was waitlisted before nationwide gets a seat.
+  await fillGeo(db).catch((e) => console.error("geo backfill failed", e));
+  await seatWaitlist(db).catch((e) => console.error("waitlist seating failed", e));
+  await fillCircles(db).catch((e) => console.error("circle labels failed", e));
   const { data } = await db.from("circles").select("*").not("kickoff_at", "is", null);
   const sent: string[] = [];
   for (const c of (data ?? []) as Circle[]) {
@@ -75,13 +81,11 @@ export async function tickCircle(db: SupabaseClient, circle: Circle, now = new D
   if (await claimNotice(db, circle.id, `drop:${s}:${w}`)) {
     const drop = await ensureDrop(db, circle, w);
     const p = promptOf(drop);
-    const title = w === 1 ? "Your Circle is on 🎬" : `Week ${w}: ${WEEKS[w - 1].title}`;
+    const title = w === 1 ? "Your Circle is live" : `Week ${w}: ${WEEKS[w - 1].title}`;
     const extra = w === 7 ? " Roses are open." : w === 8 ? " Finale picks are open." : "";
     await notify(db, ids, { title, body: teaser(p.body) + extra, url: `/circle/week/${w}`, tag: "drop" });
     sent.push(`drop:${s}:${w}`);
   }
-
-  if (clock.testMode) return sent;
 
   // Midweek nudge for the guys who haven't answered.
   if (now.getTime() - clock.weekStart.getTime() >= NUDGE_AFTER && (await claimNotice(db, circle.id, `nudge:${s}:${w}`))) {
@@ -150,4 +154,12 @@ async function moderationDigest(db: SupabaseClient) {
   const { data } = await db.from("admin_notices").upsert({ key }, { onConflict: "key", ignoreDuplicates: true }).select("key");
   if (!data?.length) return;
   await alertAdmins(db, `${count} ${count === 1 ? "thing needs" : "things need"} a look`, "Your moderation queue. Two minutes, tops.", "/admin/moderation");
+}
+
+async function seatWaitlist(db: SupabaseClient): Promise<void> {
+  const { data } = await db.from("profiles").select("id").eq("status", "waitlist").not("verified_at", "is", null).not("lat", "is", null).limit(100);
+  for (const p of data ?? []) {
+    await db.from("profiles").update({ status: "active", updated_at: new Date().toISOString() }).eq("id", p.id).eq("status", "waitlist");
+    await placeMember(db, p.id as string);
+  }
 }

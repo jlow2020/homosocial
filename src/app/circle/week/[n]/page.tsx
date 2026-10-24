@@ -108,7 +108,7 @@ export default async function WeekPage({ params }: { params: Promise<{ n: string
     return { of: v.length, fooled: v.filter((x) => x.choice !== (a.data?.lie as number)).length };
   };
 
-  // Circle Census: the totals, once he's answered. Plus all of Florida.
+  // Circle Census: the totals, once he's answered. Plus everyone's.
   const spec = prompt.spec;
   const answeredPlays = rows.filter((a) => !a.passed && a.data);
   const census =
@@ -117,8 +117,8 @@ export default async function WeekPage({ params }: { params: Promise<{ n: string
       : null;
   let florida: { pct: number[]; n: number } | null = null;
   if (census && spec?.kind === "survey") {
-    const { data: sameDrops } = await db.from("drops").select("id, circles!inner(is_test)").eq("prompt_id", drop.prompt_id);
-    const ids = (sameDrops ?? []).filter((d) => !(d.circles as unknown as { is_test: boolean }).is_test || circle.is_test).map((d) => d.id as string);
+    const { data: sameDrops } = await db.from("drops").select("id").eq("prompt_id", drop.prompt_id);
+    const ids = (sameDrops ?? []).map((d) => d.id as string);
     if (ids.length) {
       const { data: fl } = await db.from("answers").select("data").in("drop_id", ids).eq("passed", false).not("data", "is", null);
       const list = (fl ?? []).map((a) => (a.data as { answers?: boolean[] }).answers).filter((x): x is boolean[] => Array.isArray(x));
@@ -158,7 +158,7 @@ export default async function WeekPage({ params }: { params: Promise<{ n: string
         })()
       : null;
   const captionUrl = spec?.kind === "caption" ? (await photoUrls(db, [spec.photo_path])).get(spec.photo_path) : undefined;
-  const lockLabel = clock.phase === "season" && clock.testMode ? "when the week moves on" : clock.phase === "season" && clock.nextDrop && week === clock.week ? etLabel(new Date(clock.nextDrop.getTime() - 11 * 3600e3)) : "Sunday at 8pm";
+  const lockLabel = clock.phase === "season" && clock.nextDrop && week === clock.week ? etLabel(new Date(clock.nextDrop.getTime() - 11 * 3600e3), circle.tz ?? undefined) : "Sunday at 8pm";
 
   // Mad Libs votes.
   const { data: storyRows } = spec?.kind === "madlibs" ? await db.from("story_votes").select("voter, answer_id").eq("drop_id", drop.id) : { data: [] };

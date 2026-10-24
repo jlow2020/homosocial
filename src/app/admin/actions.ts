@@ -1,8 +1,9 @@
 "use server";
 
+import { placeMember } from "@/lib/game/place";
 import { revalidatePath } from "next/cache";
 import { getAdmin, logAdmin, UUID } from "@/lib/admin";
-import { SEASON } from "@/lib/season";
+
 
 type Result = { ok: boolean; message: string };
 const FORBIDDEN: Result = { ok: false, message: "Not allowed." };
@@ -29,8 +30,7 @@ export async function setStatus(id: string, status: "active" | "paused" | "banne
   const { data: p } = await a.db.from("profiles").select("region, circle_id, status").eq("id", id).maybeSingle();
   if (!p) return { ok: false, message: "He has no profile yet." };
 
-  // "Active" for a guy outside Florida means back on the waitlist.
-  const next = status === "active" && !p.region ? "waitlist" : status;
+  const next = status;
   const { error } = await a.db
     .from("profiles")
     .update({
@@ -50,8 +50,9 @@ export async function setStatus(id: string, status: "active" | "paused" | "banne
     else await a.db.from("banned_ids").delete().eq("doc_hash", check.doc_hash);
   }
 
-  if (next === "active" && p.region && !p.circle_id) {
-    await a.db.rpc("place_member", { p_user: id, p_season: SEASON.id, p_region: p.region, p_capacity: SEASON.spots });
+  if (next === "active" && !p.circle_id) {
+    const { data: v } = await a.db.from("profiles").select("verified_at").eq("id", id).maybeSingle();
+    if (v?.verified_at) await placeMember(a.db, id);
   }
   await logAdmin(a.me.userId, `status: ${next}`, id, { from: p.status });
   return done(id, next === "banned" ? "Banned. He can't sign in." : next === "paused" ? "Paused." : `Restored (${next}).`);
@@ -60,7 +61,7 @@ export async function setStatus(id: string, status: "active" | "paused" | "banne
 export async function moveToCircle(id: string, circleId: string): Promise<Result> {
   const a = await guard(id);
   if (!a || !UUID.test(circleId)) return FORBIDDEN;
-  const { data: c } = await a.db.from("circles").select("number, region").eq("id", circleId).maybeSingle();
+  const { data: c } = await a.db.from("circles").select("number, label").eq("id", circleId).maybeSingle();
   if (!c) return { ok: false, message: "That Circle doesn't exist." };
   const { data: before } = await a.db.from("profiles").select("circle_id").eq("id", id).maybeSingle();
   const { error } = await a.db
@@ -68,7 +69,7 @@ export async function moveToCircle(id: string, circleId: string): Promise<Result
     .update({ circle_id: circleId, updated_at: new Date().toISOString() })
     .eq("id", id);
   if (error) return { ok: false, message: error.message };
-  await logAdmin(a.me.userId, `moved to Circle ${c.number} (${c.region})`, id, { from: before?.circle_id ?? null, to: circleId });
+  await logAdmin(a.me.userId, `moved to Circle ${c.number}${c.label ? ` (${c.label})` : ""}`, id, { from: before?.circle_id ?? null, to: circleId });
   return done(id, `Moved to Circle ${c.number}.`);
 }
 

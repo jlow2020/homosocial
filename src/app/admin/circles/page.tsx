@@ -3,7 +3,6 @@ import { requireAdmin } from "@/lib/admin";
 import { SEASON } from "@/lib/season";
 import { loadCircles, loadPeople } from "../data";
 import { when } from "../util";
-import { CreateTestCircle } from "./TestButtons";
 
 export default async function Circles() {
   const { db } = await requireAdmin();
@@ -25,9 +24,8 @@ export default async function Circles() {
     <div className="admin-stack">
       <h2 className="admin-h2">Circles</h2>
       <p className="admin-sub">
-        A Circle kicks off at {SEASON.minToOpen} seated guys. {waitlist} on the out-of-state waitlist.
+        A Circle starts at {SEASON.minToOpen} seated guys. {waitlist} waiting outside the US.
       </p>
-      <CreateTestCircle />
       <div className="circle-cards">
         {circles.map((c) => {
           const t = tally.get(c.id) ?? { seated: 0, lobby: 0, paused: 0 };
@@ -37,12 +35,12 @@ export default async function Circles() {
               <span className="circle-card-top">
                 <b>
                   Circle {c.number}
-                  {c.region === "test" ? " · Test" : ""}
+                  {c.label ? ` · ${c.label}` : ""}
                 </b>
-                <span className={live ? "pill pill-mint" : "pill pill-gold"}>{live ? "Kicked off" : "Filling"}</span>
+                <span className={live ? "pill pill-mint" : "pill pill-gold"}>{live ? "Started" : "Filling"}</span>
               </span>
               <span className="admin-sub">
-                Area {c.region} · {c.season.toUpperCase()} · opened {when(c.created_at)}
+                {c.season.toUpperCase()} · opened {when(c.created_at)}
               </span>
               <span className="seat-bar" aria-hidden="true">
                 <span style={{ width: `${Math.min(100, (t.seated / c.capacity) * 100)}%` }} />

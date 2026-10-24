@@ -4,7 +4,7 @@ import { loadPlayer, photoUrls } from "@/lib/game/player";
 import { badgesFor } from "@/lib/game/standings";
 import { BADGES } from "@/lib/game/lock";
 import { UUID } from "@/lib/admin";
-import { ageFrom, regionName } from "@/lib/season";
+import { ageFrom } from "@/lib/season";
 import { promptOf, type Drop } from "@/lib/game/drops";
 import { loadExtras, greatestHit, ownWords, yearbook  , youTwo } from "@/lib/profile/data";
 import { TAG_BY_SLUG } from "@/lib/profile/catalog";
@@ -247,7 +247,7 @@ export default async function Guy({ params }: { params: Promise<{ id: string }> 
               {book.map((p) => (
                 <li key={`${p.circle}:${p.season}`}>
                   <p className="yb-head">
-                    Season {p.season} <span className="fine">· Circle {p.circle}, {regionName(p.region)}</span>
+                    Season {p.season} <span className="fine">· Circle {p.circle}{p.region ? `, ${p.region}` : ""}</span>
                   </p>
                   {p.best && (
                     <p className="g-quote small">

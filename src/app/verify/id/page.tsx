@@ -28,7 +28,7 @@ export default async function VerifyId({ searchParams }: { searchParams: Promise
         title="One last thing"
         tag={
           <>
-            <span className="chy-gold">Grab your seat</span>
+            <span className="chy-gold">Last step</span>
             <span className="chy-light">One-time ID check</span>
           </>
         }

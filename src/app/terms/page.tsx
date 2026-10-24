@@ -46,7 +46,7 @@ const sections: Section[] = [
         <ul>
           <li>be at least {SEASON.minAge} years old, and old enough to enter a binding contract where you live;</li>
           <li>be a man who is gay, bi, trans, queer, or otherwise into men, as you define yourself;</li>
-          <li>live in an area where the Service is open (during Season 1, Florida);</li>
+          <li>live in the United States;</li>
           <li>never have been convicted of, or pleaded guilty or no contest to, a sex crime or any crime involving violence or a minor;</li>
           <li>not be required to register as a sex offender anywhere;</li>
           <li>not have been banned from the Service before; and</li>
@@ -128,7 +128,7 @@ const sections: Section[] = [
     body: (
       <>
         <p>
-          The first {FOUNDER_CAP} members in Florida to finish their ID check become Founders, with a numbered badge. If we ever
+          The first {FOUNDER_CAP} members to finish their ID check become Founders, with a numbered badge. If we ever
           charge for a membership or Season Pass, Founders get the standard Season Pass free for as long as {C} operates the
           Service, as long as their account stays in good standing. Founder status is personal. It can&apos;t be sold or
           transferred, and it ends if your account is deleted, or banned for breaking these Terms. Founder status doesn&apos;t

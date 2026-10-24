@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { placeMember } from "@/lib/game/place";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import PageHead from "@/components/PageHead";
@@ -52,11 +53,17 @@ export default async function CirclePage() {
     );
   }
   if (nextPath(p, me.username, me.terms) !== "/circle") redirect(nextPath(p, me.username, me.terms));
+  // Nationwide now: anyone waiting for a seat gets one.
+  if ((p.status === "waitlist" || (p.status === "active" && !p.circle_id)) && p.verified_at) {
+    const db = getSupabaseAdmin()!;
+    if (p.status === "waitlist") await db.from("profiles").update({ status: "active" }).eq("id", p.id).eq("status", "waitlist");
+    if (await placeMember(db, p.id)) redirect("/circle");
+  }
   if (p.status === "waitlist" || !p.circle_id) {
     return (
       <main className="apply-page">
-        <PageHead title="You're on the list" right={nav}>
-          We&apos;re not in your area yet. You&apos;re on the list. Wrong zip? Fix it on your profile.
+        <PageHead title="Almost there" right={nav}>
+          We couldn&apos;t find a Circle for you. Check your zip on your profile.
         </PageHead>
       </main>
     );
@@ -75,7 +82,7 @@ async function Lobby({ pl }: { pl: Player }) {
   // Guys in the lobby only see themselves.
   const ordered = greenRoom
     ? [
-        ...(await db.from("profiles").select("id, first_name, birthdate, interests, hot_take, photo_path, looking_for, is_demo, email, founder_no").eq("id", p.id)).data!,
+        ...(await db.from("profiles").select("id, first_name, birthdate, interests, hot_take, photo_path, looking_for, email, founder_no").eq("id", p.id)).data!,
         ...pl.members,
       ]
     : [...pl.members.filter((m) => m.id === p.id), ...pl.members.filter((m) => m.id !== p.id)];
@@ -90,17 +97,16 @@ async function Lobby({ pl }: { pl: Player }) {
         <h1 className="game-h1">Circle {pl.circle.number}</h1>
         <p className="game-lede">
           {greenRoom
-            ? "You're in the lobby. Look around. When you're ready to jump in, do your one-time ID check and the seat is yours."
-            : "Your seat is yours. Your Circle kicks off the moment 9 seats are taken, and Week 1 starts right then."}
+            ? "Look around. Do your one-time ID check to start playing."
+            : "You're in. Your Circle starts as soon as one more guy joins."}
         </p>
       </div>
 
       {greenRoom && (
         <div className="greenroom">
-          <h2>Grab your seat</h2>
+          <h2>Start playing</h2>
           <p>
-            Faces, the group chat and DMs unlock once you have a seat. It&apos;s a one-time ID check that takes about a
-            minute. Every guy in your Circle did it, so everyone you meet is a real, verified adult.
+            Faces, the group chat and DMs unlock after a one-time ID check. It takes about a minute.
           </p>
           <Link href="/verify/id" className="btn btn-gold">
             Do my ID check
@@ -119,8 +125,8 @@ async function Lobby({ pl }: { pl: Player }) {
         </div>
         <p>
           {need > 0
-            ? `${need} more ${need === 1 ? "guy" : "guys"} to kick off. Know someone who needs this? Send him homosocial.net.`
-            : `${capacity - total} open seats left for late arrivals.`}
+            ? `${need} more ${need === 1 ? "guy" : "guys"} to start.`
+            : `${capacity - total} open seats.`}
         </p>
       </div>
 
@@ -189,7 +195,7 @@ async function Home({ pl }: { pl: Player }) {
   const { data: lockedRows } = await db.from("drops").select("week, locked_at").eq("circle_id", circle.id).eq("season_no", circle.season_no).not("locked_at", "is", null).order("week", { ascending: false }).limit(1);
   const lastRead = lockedRows?.[0]?.week as number | undefined;
   const readAt = clock.phase === "season" && clock.nextDrop ? new Date(clock.nextDrop.getTime() - 11 * 3600e3) : null;
-  const heatNeeded = circle.is_test ? 1 : Math.max(5, Math.ceil(pl.members.length * 0.6));
+  const heatNeeded = Math.max(2, Math.ceil(pl.members.length * 0.6));
   const answered = (answers ?? []).some((a) => a.user_id === pl.profile.id);
   const answerCount = (answers ?? []).length;
   const loungePhotos = await photoUrls(db, (lounge ?? []).map((l) => byId.get(l.user_id)?.photo_path));
@@ -198,10 +204,10 @@ async function Home({ pl }: { pl: Player }) {
   return (
     <Shell pl={pl}>
       {recap.length > 0 && (
-        <section className="recap" aria-label="Previously on your Circle">
+        <section className="recap" aria-label="Your Season so far">
           <p className="recap-eyebrow">
             <span className="recap-dot" aria-hidden="true" />
-            Previously on Circle {circle.number}
+            Your Season so far
           </p>
           <ul className="recap-reel">
             {recap.map((m, i) => (
@@ -230,11 +236,11 @@ async function Home({ pl }: { pl: Player }) {
           </div>
           {clock.phase === "season" && clock.nextDrop && (
             <p className="fine">
-              Week {week + 1}, {weekTitle(week + 1)}, drops {clock.testMode ? "when Daddy says so" : `${etLabel(clock.nextDrop)} (${untilLabel(clock.nextDrop)})`}.
+              Week {week + 1}, {weekTitle(week + 1)}, drops {`${etLabel(clock.nextDrop, circle.tz ?? undefined)} (${untilLabel(clock.nextDrop)})`}.
             </p>
           )}
           {clock.phase === "season" && week === 8 && (
-            <p className="fine">The Finale is {clock.testMode ? "one tap away" : `${etLabel(clock.finaleAt)} (${untilLabel(clock.finaleAt)})`}.</p>
+            <p className="fine">The Finale is {`${etLabel(clock.finaleAt, circle.tz ?? undefined)} (${untilLabel(clock.finaleAt)})`}.</p>
           )}
         </section>
 
@@ -271,7 +277,7 @@ async function Home({ pl }: { pl: Player }) {
           </div>
           <p className="fine">
             {lastRead ? `Week ${lastRead} is out. ` : "Sundays, 8pm. "}
-            {!revealed && <Link href={`/circle/read/${week}`}>{readAt && clock.phase === "season" && !clock.testMode ? `Week ${week} locks ${etLabel(readAt)}` : `Week ${week} so far`}</Link>}
+            {!revealed && <Link href={`/circle/read/${week}`}>{readAt && clock.phase === "season" ? `Week ${week} locks ${etLabel(readAt, circle.tz ?? undefined)}` : `Week ${week} so far`}</Link>}
           </p>
         </section>
 
@@ -326,7 +332,7 @@ async function Home({ pl }: { pl: Player }) {
                     <b>{pl2.title}</b>
                     <span className="fine">
                       {" "}
-                      · {pl2.starts_at ? etLabel(new Date(pl2.starts_at)) : "time TBD"} · {(pl2.plan_rsvps as unknown[]).length} going
+                      · {pl2.starts_at ? etLabel(new Date(pl2.starts_at), circle.tz ?? undefined) : "time TBD"} · {(pl2.plan_rsvps as unknown[]).length} going
                     </span>
                   </span>
                 </li>

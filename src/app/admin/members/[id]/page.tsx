@@ -104,7 +104,7 @@ export default async function Member({ params }: { params: Promise<{ id: string 
             <dd>{p?.birthdate ?? "n/a"}</dd>
             <dt>Zip</dt>
             <dd>
-              {p?.zip ?? "n/a"} {p?.region ? `(area ${p.region})` : p ? "(outside Florida)" : ""}
+              {p?.zip ?? "n/a"} {(p as { city?: string | null } | null)?.city ? `(${(p as { city?: string | null; state?: string | null }).city}, ${(p as { state?: string | null }).state})` : p ? "(zip not found)" : ""}
             </dd>
             <dt>Circle</dt>
             <dd>{circle ? <Link href={`/admin/circles/${circle.id}`}>{circleLabel(circle)}</Link> : "none"}</dd>
