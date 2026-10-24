@@ -56,8 +56,8 @@ export default async function Guy({ params }: { params: Promise<{ id: string }> 
   const urls = await photoUrls(db, [m.photo_path, ...hisAnswers.map((a) => a.photo_path)]);
 
   const shots = [
-    ...(urls.get(m.photo_path) ? [{ url: urls.get(m.photo_path)!, theme: null, veiled: false }] : []),
-    ...his.photos.filter((p) => p.url).map((p) => ({ url: p.url!, theme: p.theme, veiled: p.veiled })),
+    ...(urls.get(m.photo_path) ? [{ url: urls.get(m.photo_path)!, theme: null, veiled: false, kind: "photo" as const }] : []),
+    ...his.photos.filter((p) => p.url && p.ready && (self || !p.held)).map((p) => ({ url: p.url!, theme: p.theme, veiled: p.veiled, kind: p.kind })),
   ];
   const b = his.basics;
   const facts = [b.work, b.hometown && `from ${b.hometown}`, b.zodiac, b.show_relationship || self ? b.relationship : null].filter(Boolean) as string[];

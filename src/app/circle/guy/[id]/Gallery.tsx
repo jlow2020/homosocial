@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 
-type Shot = { url: string; theme: string | null; veiled: boolean };
+type Shot = { url: string; theme: string | null; veiled: boolean; kind?: "photo" | "video" };
 
 // Swipe through his photos. Each themed photo shows its theme.
 export default function Gallery({ shots, name, self }: { shots: Shot[]; name: string; self: boolean }) {
@@ -35,6 +35,8 @@ export default function Gallery({ shots, name, self }: { shots: Shot[]; name: st
                   <small>Hidden until a person takes a look</small>
                 </span>
               </button>
+            ) : s.kind === "video" ? (
+              <video src={s.url} playsInline muted loop autoPlay={n === i} controls preload="metadata" aria-label={s.theme ?? `${name}, video`} />
             ) : (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={s.url} alt={n === 0 ? name : (s.theme ?? `${name}, photo ${n + 1}`)} />

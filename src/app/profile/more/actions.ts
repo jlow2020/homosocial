@@ -142,10 +142,10 @@ export async function addPhoto(form: FormData): Promise<Result> {
 export async function removePhoto(id: string): Promise<Result> {
   const m = await me();
   if (!m) return { ok: false };
-  const { data } = await m.db.from("profile_photos").select("path").eq("id", id).eq("user_id", m.id).maybeSingle();
+  const { data } = await m.db.from("profile_photos").select("path, kind").eq("id", id).eq("user_id", m.id).maybeSingle();
   if (!data) return { ok: false };
   await m.db.from("profile_photos").delete().eq("id", id);
-  await m.db.storage.from("photos").remove([data.path as string]);
+  await m.db.storage.from(data.kind === "video" ? "clips" : "photos").remove([data.path as string]);
   done();
   return { ok: true };
 }
@@ -251,4 +251,41 @@ export async function promptDrafts(id: string): Promise<string[]> {
   const m = await me();
   if (!m || !PROMPT_BY_ID.has(id)) return [];
   return (await draftsFor([id], await aboutMe(m)))[id] ?? [];
+}
+
+// Short videos next to the photos: up to 30 seconds, uploaded straight to storage,
+// then converted and checked frame by frame like video answers.
+const VIDEO_TYPES = new Set(["video/mp4", "video/quicktime", "video/webm"]);
+const MAX_VIDEO = 50 * 1024 * 1024;
+
+export async function videoTicket(contentType: string, size: number): Promise<{ ok: boolean; error?: string; signedUrl?: string; path?: string; apikey?: string }> {
+  const m = await me();
+  if (!m) return { ok: false, error: "Sign in again." };
+  if (!VIDEO_TYPES.has(contentType)) return { ok: false, error: "That video type won't play. Try an .mp4 or .mov." };
+  if (!(size > 0 && size <= MAX_VIDEO)) return { ok: false, error: "That video is too big. Keep it under 30 seconds." };
+  const { count } = await m.db.from("profile_photos").select("id", { count: "exact", head: true }).eq("user_id", m.id);
+  if ((count ?? 0) >= MAX_PHOTOS) return { ok: false, error: `Up to ${MAX_PHOTOS} extra photos and videos.` };
+  const ext = contentType === "video/quicktime" ? "mov" : contentType === "video/webm" ? "webm" : "mp4";
+  const path = `profile/${m.id}-${Date.now()}.${ext}`;
+  const { data, error } = await m.db.storage.from("clips").createSignedUploadUrl(path);
+  if (error || !data) return { ok: false, error: "Couldn't start the upload. Try again." };
+  return { ok: true, signedUrl: data.signedUrl, path, apikey: process.env.SUPABASE_PUBLISHABLE_KEY };
+}
+
+export async function addVideo(path: string, theme: string): Promise<Result> {
+  const m = await me();
+  if (!m) return { ok: false, error: "Sign in again." };
+  if (typeof path !== "string" || !path.startsWith(`profile/${m.id}-`) || path.includes("..")) return { ok: false, error: "That didn't upload." };
+  const { count } = await m.db.from("profile_photos").select("id", { count: "exact", head: true }).eq("user_id", m.id);
+  if ((count ?? 0) >= MAX_PHOTOS) return { ok: false, error: `Up to ${MAX_PHOTOS} extra photos and videos.` };
+  const { data: row } = await m.db
+    .from("profile_photos")
+    .insert({ user_id: m.id, path, kind: "video", ready: false, theme: String(theme ?? "").trim().slice(0, 60) || null, position: count ?? 0 })
+    .select("id")
+    .single();
+  if (!row) return { ok: false, error: "That didn't save. Try again." };
+  const db = m.db;
+  after(() => convertClip(db, { table: "profile_photos", id: row.id as string, path, kind: "video" }));
+  done();
+  return { ok: true };
 }

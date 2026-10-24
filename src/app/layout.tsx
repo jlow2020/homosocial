@@ -4,6 +4,7 @@ import "@fontsource-variable/instrument-sans/wght.css";
 import "./globals.css";
 import HashSignIn from "@/components/HashSignIn";
 import SiteFooter from "@/components/SiteFooter";
+import AppBar from "@/components/AppBar";
 import { shareMetadata } from "@/lib/og";
 
 export const metadata: Metadata = {
@@ -16,6 +17,8 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: "#160C24",
+  // Lets the Home Screen app use the space around the notch and home bar.
+  viewportFit: "cover",
 };
 
 metadata.manifest = "/manifest.json";
@@ -31,6 +34,7 @@ export default function RootLayout({
         <HashSignIn />
         {children}
         <SiteFooter />
+        <AppBar />
       </body>
     </html>
   );

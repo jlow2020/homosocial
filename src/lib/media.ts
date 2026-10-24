@@ -22,7 +22,7 @@ async function ffmpegPath(): Promise<string> {
   return p;
 }
 
-export type ClipRef = { table: "answers" | "dm_messages" | "chain_readings" | "profiles"; id: string; path: string; kind: "video" | "audio" };
+export type ClipRef = { table: "answers" | "dm_messages" | "chain_readings" | "profiles" | "profile_photos"; id: string; path: string; kind: "video" | "audio" };
 
 export async function convertClip(db: SupabaseClient, ref: ClipRef): Promise<void> {
   const dir = await mkdtemp(path.join(tmpdir(), "clip-"));
@@ -36,25 +36,39 @@ export async function convertClip(db: SupabaseClient, ref: ClipRef): Promise<voi
     const ffmpeg = await ffmpegPath();
     const args =
       ref.kind === "video"
-        ? ["-y", "-i", inFile, "-map_metadata", "-1", "-vf", "scale='min(720,iw)':-2", "-c:v", "libx264", "-preset", "veryfast", "-crf", "26", "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "96k", "-movflags", "+faststart", "-t", "95", outFile]
+        ? ["-y", "-i", inFile, "-map_metadata", "-1", "-vf", "scale='min(720,iw)':-2", "-c:v", "libx264", "-preset", "veryfast", "-crf", "26", "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "96k", "-movflags", "+faststart", "-t", ref.table === "profile_photos" ? "31" : "95", outFile]
         : ["-y", "-i", inFile, "-map_metadata", "-1", "-vn", "-c:a", "aac", "-b:a", "80k", "-movflags", "+faststart", "-t", "125", outFile];
     const { stderr } = await run(ffmpeg, args, { timeout: 4 * 60 * 1000, maxBuffer: 16 * 1024 * 1024 });
     const out = await readFile(outFile);
     // Videos posted to the Circle get the same nudity check as photos, on a
     // few frames spread across the clip.
     let check: { action: "allow" | "veil" | "hold"; reason?: string; detail?: unknown } = { action: "allow" };
-    if (ref.kind === "video" && ref.table === "answers") check = await checkFrames(ffmpeg, outFile, dir, String(stderr));
+    if (ref.kind === "video" && (ref.table === "answers" || ref.table === "profile_photos")) check = await checkFrames(ffmpeg, outFile, dir, String(stderr));
     const newPath = ref.path.replace(/\.[a-z0-9]+$/i, "") + `-c.${outExt}`;
     const up = await db.storage.from("clips").upload(newPath, out, { contentType: ref.kind === "video" ? "video/mp4" : "audio/mp4", upsert: true });
     if (up.error) throw up.error;
     const flags = check.action === "hold" ? { held: true } : check.action === "veil" ? { veiled: true } : {};
     if (ref.table === "profiles") await db.from("profiles").update({ voice_path: newPath, voice_ready: true }).eq("id", ref.id);
+    else if (ref.table === "profile_photos") await db.from("profile_photos").update({ path: newPath, ready: true, ...flags }).eq("id", ref.id);
     else {
       const col = ref.table === "chain_readings" ? "path" : "photo_path";
       await db.from(ref.table).update({ [col]: newPath, ready: true, ...flags }).eq("id", ref.id);
     }
     await db.storage.from("clips").remove([ref.path]);
-    if (check.action !== "allow") {
+    if (check.action !== "allow" && ref.table === "profile_photos") {
+      const { data: row } = await db.from("profile_photos").select("user_id").eq("id", ref.id).maybeSingle();
+      if (row) {
+        const { data: p } = await db.from("profiles").select("circle_id").eq("id", row.user_id).maybeSingle();
+        await enqueue(db, {
+          user_id: row.user_id as string, circle_id: (p?.circle_id as string) ?? null,
+          surface: "profile_photo", ref_table: "profile_photos", ref_id: ref.id, media_bucket: "clips", media_path: newPath,
+          verdict: check.action === "hold" ? "held" : "veiled", category: "nudity", reason: check.reason ?? null, detail: { frames: check.detail },
+        });
+        if (check.action === "hold") {
+          await notify(db, [row.user_id as string], { title: "Your video is waiting on a quick look", body: HELD_NOTICE, url: "/profile", tag: "held", email: false });
+        }
+      }
+    } else if (check.action !== "allow") {
       const { data: row } = await db.from("answers").select("user_id, drops(circle_id)").eq("id", ref.id).maybeSingle();
       if (row) {
         await enqueue(db, {

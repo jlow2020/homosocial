@@ -21,7 +21,7 @@ export type Basics = {
 
 export type Extras = {
   basics: Basics;
-  photos: { id: string; path: string; url: string | null; theme: string | null; veiled: boolean }[];
+  photos: { id: string; path: string; url: string | null; theme: string | null; veiled: boolean; kind: "photo" | "video"; ready: boolean; held: boolean }[];
   answers: { prompt_id: string; prompt: string; body: string }[];
   interests: string[];
   down: string[];
@@ -35,11 +35,14 @@ const ANON_MODES = new Set(["anon", "guesswho", "twotruths", "owner"]);
 export async function loadExtras(db: SupabaseClient, userId: string): Promise<Extras> {
   const [{ data: p }, { data: photos }, { data: answers }, { data: tags }] = await Promise.all([
     db.from("profiles").select("pronouns, hometown, work, zodiac, song, spot, relationship, show_relationship, voice_path, voice_ready, pinned_answer_id").eq("id", userId).maybeSingle(),
-    db.from("profile_photos").select("id, path, theme, veiled, position").eq("user_id", userId).order("position"),
+    db.from("profile_photos").select("id, path, theme, veiled, position, kind, ready, held").eq("user_id", userId).order("position"),
     db.from("profile_answers").select("prompt_id, body, position").eq("user_id", userId).order("position"),
     db.from("user_tags").select("slug, kind, created_at").eq("user_id", userId).order("created_at"),
   ]);
-  const urls = await photoUrls(db, (photos ?? []).map((x) => x.path as string));
+  const urls = await photoUrls(db, (photos ?? []).filter((x) => x.kind !== "video").map((x) => x.path as string));
+  const vids = (photos ?? []).filter((x) => x.kind === "video" && x.ready);
+  const { data: vurls } = vids.length ? await db.storage.from("clips").createSignedUrls(vids.map((x) => x.path as string), 3600) : { data: [] };
+  for (const v of vurls ?? []) if (v.path && v.signedUrl) urls.set(v.path, v.signedUrl);
   const voiceUrl = p?.voice_path && p.voice_ready ? (await db.storage.from("clips").createSignedUrl(p.voice_path as string, 3600)).data?.signedUrl ?? null : null;
   return {
     basics: {
@@ -52,7 +55,16 @@ export async function loadExtras(db: SupabaseClient, userId: string): Promise<Ex
       relationship: p?.relationship ?? null,
       show_relationship: !!p?.show_relationship,
     },
-    photos: (photos ?? []).map((x) => ({ id: x.id as string, path: x.path as string, url: urls.get(x.path as string) ?? null, theme: (x.theme as string) ?? null, veiled: !!x.veiled })),
+    photos: (photos ?? []).map((x) => ({
+      id: x.id as string,
+      path: x.path as string,
+      url: urls.get(x.path as string) ?? null,
+      theme: (x.theme as string) ?? null,
+      veiled: !!x.veiled,
+      kind: x.kind === "video" ? "video" : "photo",
+      ready: x.ready !== false,
+      held: !!x.held,
+    })),
     answers: (answers ?? []).map((a) => ({ prompt_id: a.prompt_id as string, prompt: PROMPT_BY_ID.get(a.prompt_id as string)?.text ?? "", body: a.body as string })),
     interests: (tags ?? []).filter((t) => t.kind === "interest").map((t) => t.slug as string),
     down: (tags ?? []).filter((t) => t.kind === "down").map((t) => t.slug as string),

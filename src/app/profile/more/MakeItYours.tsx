@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import VoiceRecorder from "@/components/VoiceRecorder";
+import VideoRecorder from "@/components/VideoRecorder";
 import Waveform from "@/components/Waveform";
 import { shrinkImage } from "@/lib/image";
 import { suggestDown, downLabel } from "@/lib/profile/downfor";
@@ -11,7 +12,7 @@ import { PROMPT_BY_ID, PROFILE_PROMPTS, STARTERS, PHOTO_THEMES, PRONOUNS, ZODIAC
 import { suggest, search, labelOf, type Community } from "@/lib/profile/suggest";
 import type { Extras } from "@/lib/profile/data";
 import { STEP_KEYS, STEP_TITLES, type StepKey } from "@/lib/profile/steps";
-import { addPhoto, pinAnswer, removePhoto, removeVoice, saveAnswers, saveBasics, saveTags, setPhotoTheme, voiceTicket, saveVoice, promptPack, promptDrafts } from "./actions";
+import { addPhoto, addVideo, videoTicket, pinAnswer, removePhoto, removeVoice, saveAnswers, saveBasics, saveTags, setPhotoTheme, voiceTicket, saveVoice, promptPack, promptDrafts } from "./actions";
 
 type Line = { id: string; body: string; fires: number; week: number; season: number; prompt: string };
 
@@ -393,9 +394,20 @@ function Voice({ url, converting, onNext }: { url: string | null; converting: bo
 function Photos({ photos, mainPhoto, onNext }: { photos: Extras["photos"]; mainPhoto: string | null; onNext: () => void }) {
   const [theme, setTheme] = useState(PHOTO_THEMES[0]);
   const [error, setError] = useState("");
+  const [busy, setBusy] = useState("");
+  const [recording, setRecording] = useState(false);
   const [pending, start] = useTransition();
   const router = useRouter();
-  const pick = (f: File | undefined) => {
+  const full = photos.length >= 5;
+  // Videos still converting: check back every few seconds until they're ready.
+  const converting = photos.some((p) => p.kind === "video" && !p.ready);
+  useEffect(() => {
+    if (!converting) return;
+    const t = setInterval(() => router.refresh(), 5000);
+    return () => clearInterval(t);
+  }, [converting, router]);
+
+  const pickPhoto = (f: File | undefined) => {
     if (!f) return;
     setError("");
     start(async () => {
@@ -412,9 +424,32 @@ function Photos({ photos, mainPhoto, onNext }: { photos: Extras["photos"]; mainP
       }
     });
   };
+
+  const sendVideo = async (clip: Blob) => {
+    setError("");
+    const raw = clip.type.split(";")[0];
+    const type = raw === "video/quicktime" || raw === "video/webm" ? raw : "video/mp4";
+    if ((await clipLength(clip)) > VIDEO_SECONDS + 1) {
+      setError(`Videos can be up to ${VIDEO_SECONDS} seconds. Trim it in Photos first.`);
+      return;
+    }
+    setBusy("Uploading...");
+    try {
+      const t = await videoTicket(type, clip.size);
+      if (!t.ok || !t.signedUrl || !t.path) return setError(t.error ?? "That didn't upload.");
+      const up = await fetch(t.signedUrl, { method: "PUT", headers: { "content-type": type, "x-upsert": "false", ...(t.apikey ? { apikey: t.apikey } : {}) }, body: clip });
+      if (!up.ok) return setError("The video didn't upload. Try a shorter one.");
+      const r = await addVideo(t.path, theme);
+      if (!r.ok) setError(r.error ?? "That didn't save.");
+      router.refresh();
+    } finally {
+      setBusy("");
+    }
+  };
+
   return (
     <section className="miy-card">
-      <h2>More photos</h2>
+      <h2>Photos and videos</h2>
       <div className="miy-photos">
         <figure className="miy-photo main">
           {mainPhoto ? (
@@ -426,10 +461,19 @@ function Photos({ photos, mainPhoto, onNext }: { photos: Extras["photos"]; mainP
         </figure>
         {photos.map((p) => (
           <figure key={p.id} className="miy-photo">
-            {p.url && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={p.url} alt={p.theme ?? ""} />
+            {p.kind === "video" ? (
+              p.ready && p.url ? (
+                <video src={p.url} playsInline muted loop autoPlay />
+              ) : (
+                <span className="miy-photo-wait">Converting…</span>
+              )
+            ) : (
+              p.url && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={p.url} alt={p.theme ?? ""} />
+              )
             )}
+            {p.held && <span className="miy-photo-flag">Waiting on a quick look</span>}
             <figcaption>
               <select className="input input-small" defaultValue={p.theme ?? ""} onChange={(e) => start(async () => void (await setPhotoTheme(p.id, e.target.value)))} aria-label="Theme">
                 <option value="">No theme</option>
@@ -443,15 +487,47 @@ function Photos({ photos, mainPhoto, onNext }: { photos: Extras["photos"]; mainP
             </figcaption>
           </figure>
         ))}
-        {photos.length < 5 && (
+        {!full && (
           <label className={pending ? "miy-photo miy-photo-add busy" : "miy-photo miy-photo-add"}>
             <span aria-hidden="true">{pending ? "…" : "+"}</span>
-            <input type="file" accept="image/*" className="visually-hidden" onChange={(e) => pick(e.target.files?.[0])} disabled={pending} aria-label="Add a photo" />
+            <input type="file" accept="image/*" className="visually-hidden" onChange={(e) => pickPhoto(e.target.files?.[0])} disabled={pending} aria-label="Add a photo" />
           </label>
         )}
       </div>
-      {photos.length < 5 && (
-        <ul className="chips-pick themes" aria-label="Theme for your next photo">
+      {!full && (
+        <div className="miy-video-row">
+          <label className={busy ? "btn btn-outline btn-small disabled" : "btn btn-outline btn-small"}>
+            {busy || "Upload a video"}
+            <input
+              type="file"
+              accept="video/*"
+              className="visually-hidden"
+              disabled={!!busy}
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                e.target.value = "";
+                if (f) void sendVideo(f);
+              }}
+            />
+          </label>
+          <button className="btn btn-outline btn-small" disabled={!!busy} onClick={() => setRecording(true)}>
+            Record a video
+          </button>
+          <span className="fine">Up to {VIDEO_SECONDS} seconds</span>
+        </div>
+      )}
+      {recording && (
+        <VideoRecorder
+          seconds={VIDEO_SECONDS}
+          onCancel={() => setRecording(false)}
+          onDone={(clip) => {
+            setRecording(false);
+            void sendVideo(clip);
+          }}
+        />
+      )}
+      {!full && (
+        <ul className="chips-pick themes" aria-label="Theme for your next photo or video">
           {PHOTO_THEMES.map((t) => (
             <Chip key={t} on={theme === t} onClick={() => setTheme(t)}>
               {t}
@@ -463,6 +539,21 @@ function Photos({ photos, mainPhoto, onNext }: { photos: Extras["photos"]; mainP
       <Footer onSave={onNext} onSkip={photos.length ? undefined : onNext} />
     </section>
   );
+}
+
+const VIDEO_SECONDS = 30;
+function clipLength(f: Blob): Promise<number> {
+  return new Promise((resolve) => {
+    const v = document.createElement("video");
+    v.preload = "metadata";
+    const url = URL.createObjectURL(f);
+    v.onloadedmetadata = () => {
+      URL.revokeObjectURL(url);
+      resolve(Number.isFinite(v.duration) ? v.duration : 0);
+    };
+    v.onerror = () => resolve(0);
+    v.src = url;
+  });
 }
 
 // Details: all optional, mostly taps.
