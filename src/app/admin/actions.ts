@@ -2,6 +2,8 @@
 
 import { placeMember } from "@/lib/game/place";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
+import { purgeAllMedia } from "@/lib/retention";
 import { getAdmin, logAdmin, UUID } from "@/lib/admin";
 
 
@@ -140,4 +142,32 @@ export async function setAnswerHidden(answerId: string, hidden: boolean): Promis
   revalidatePath("/admin/reports");
   revalidatePath("/circle", "layout");
   return { ok: true, message: hidden ? "Pulled." : "Back up." };
+}
+
+// Delete an account for good: his login, profile, everything he posted and all
+// his media. Daddy only, never yourself or another Daddy. Optionally keeps his
+// ID's fingerprint so the same ID can't open a new account.
+export async function deleteMember(id: string, confirm: string, blockId: boolean): Promise<Result> {
+  const a = await guard(id);
+  if (!a || a.role !== "god") return FORBIDDEN;
+  if (id === a.me.userId) return { ok: false, message: "You can't delete your own account from here." };
+  const { data: role } = await a.db.from("admins").select("role").eq("user_id", id).maybeSingle();
+  if (role?.role === "god") return { ok: false, message: "Remove his Daddy access first." };
+  const [{ data: login }, { data: prof }, { data: user }] = await Promise.all([
+    a.db.from("logins").select("username").eq("user_id", id).maybeSingle(),
+    a.db.from("profiles").select("first_name").eq("id", id).maybeSingle(),
+    a.db.auth.admin.getUserById(id),
+  ]);
+  const name = (login?.username as string | undefined) ?? user?.user?.email ?? "";
+  if (!name || confirm.trim().replace(/^@/, "").toLowerCase() !== name.toLowerCase()) return { ok: false, message: `Type ${login?.username ? "his username" : "his email"} exactly to confirm.` };
+  if (blockId) {
+    const { data: check } = await a.db.from("id_checks").select("doc_hash").eq("user_id", id).maybeSingle();
+    if (check?.doc_hash) await a.db.from("banned_ids").upsert({ doc_hash: check.doc_hash }, { onConflict: "doc_hash", ignoreDuplicates: true });
+  }
+  await purgeAllMedia(a.db, id);
+  const { error } = await a.db.auth.admin.deleteUser(id);
+  if (error) return { ok: false, message: error.message };
+  await logAdmin(a.me.userId, `deleted account ${login?.username ? "@" + login.username : name}${prof?.first_name ? ` (${prof.first_name})` : ""}${blockId ? ", ID blocked" : ""}`, id);
+  revalidatePath("/admin", "layout");
+  redirect("/admin/members?deleted=1");
 }

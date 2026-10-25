@@ -7,10 +7,10 @@ import { STAGES, stageTone, when, type Stage } from "../util";
 export default async function Members({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; stage?: string }>;
+  searchParams: Promise<{ q?: string; stage?: string; deleted?: string }>;
 }) {
   const { db } = await requireAdmin();
-  const { q = "", stage = "" } = await searchParams;
+  const { q = "", stage = "", deleted } = await searchParams;
   const [people, circles] = await Promise.all([loadPeople(db), loadCircles(db)]);
   const circleOf = new Map(circles.map((c) => [c.id, c]));
 
@@ -31,6 +31,7 @@ export default async function Members({
 
   return (
     <div className="admin-stack">
+      {deleted && <p className="notice-inline" role="status">Account deleted.</p>}
       <form className="admin-filter" action="/admin/members">
         <label className="visually-hidden" htmlFor="q">
           Search

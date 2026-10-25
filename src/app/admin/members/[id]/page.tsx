@@ -171,6 +171,7 @@ export default async function Member({ params }: { params: Promise<{ id: string 
           notes={p?.notes ?? ""}
           viewerIsGod={a.role === "god"}
           targetRole={targetRole}
+          confirmName={username ?? user?.email ?? null}
         />
       </section>
 

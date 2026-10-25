@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { moveToCircle, redoCheck, resetAttempts, saveNotes, setAdminRole, setStatus } from "../../actions";
+import { deleteMember, moveToCircle, redoCheck, resetAttempts, saveNotes, setAdminRole, setStatus } from "../../actions";
 
 type Props = {
   id: string;
@@ -13,6 +13,7 @@ type Props = {
   notes: string;
   viewerIsGod: boolean;
   targetRole: "god" | "mod" | null;
+  confirmName: string | null;
 };
 
 export default function AdminActions(p: Props) {
@@ -21,6 +22,9 @@ export default function AdminActions(p: Props) {
   const [confirmBan, setConfirmBan] = useState(false);
   const [circle, setCircle] = useState(p.circleId ?? "");
   const [notes, setNotes] = useState(p.notes);
+  const [delOpen, setDelOpen] = useState(false);
+  const [typed, setTyped] = useState("");
+  const [blockId, setBlockId] = useState(false);
 
   const run = (fn: () => Promise<{ ok: boolean; message: string }>) =>
     start(async () => {
@@ -155,6 +159,43 @@ export default function AdminActions(p: Props) {
               </button>
             )}
           </div>
+        </div>
+      )}
+
+      {p.viewerIsGod && !p.isSelf && p.targetRole !== "god" && p.confirmName && (
+        <div className="act act-danger">
+          <h3>Delete account</h3>
+          {!delOpen ? (
+            <button className="btn btn-danger btn-small" onClick={() => setDelOpen(true)}>
+              Delete this account
+            </button>
+          ) : (
+            <>
+              <p className="admin-sub">Deletes his login, profile, everything he posted and all his photos, videos and voice clips. This can&apos;t be undone.</p>
+              <label className="field">
+                <span className="admin-sub">
+                  Type <b>{p.confirmName}</b> to confirm
+                </span>
+                <input className="input input-small" value={typed} onChange={(e) => setTyped(e.target.value)} autoComplete="off" />
+              </label>
+              <label className="agree">
+                <input type="checkbox" checked={blockId} onChange={(e) => setBlockId(e.target.checked)} />
+                <span>Block his ID from making a new account</span>
+              </label>
+              <div className="row">
+                <button
+                  className="btn btn-danger btn-small"
+                  disabled={pending || typed.trim().replace(/^@/, "").toLowerCase() !== p.confirmName.replace(/^@/, "").toLowerCase()}
+                  onClick={() => run(() => deleteMember(p.id, typed, blockId))}
+                >
+                  {pending ? "Deleting..." : "Delete for good"}
+                </button>
+                <button className="link-button" onClick={() => (setDelOpen(false), setTyped(""))}>
+                  Cancel
+                </button>
+              </div>
+            </>
+          )}
         </div>
       )}
     </div>

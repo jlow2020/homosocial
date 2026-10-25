@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useRef, useState } from "react";
+import { startTransition, useActionState, useEffect, useRef, useState } from "react";
 import { saveProfile, type ProfileState } from "./actions";
 import PhotoCropper from "@/components/PhotoCropper";
 import { preloadFaceDetector } from "@/lib/faceDetect";
@@ -65,7 +65,15 @@ export default function ProfileForm({ initial, photoUrl }: { initial: Initial; p
   }
 
   return (
-    <form action={action} className="form wrap">
+    <form
+      className="form wrap"
+      onSubmit={(e) => {
+        // Submit without React's automatic form reset, so nothing he typed or picked is lost on an error.
+        e.preventDefault();
+        const fd = new FormData(e.currentTarget);
+        startTransition(() => action(fd));
+      }}
+    >
       <div className="field">
         <span className="label" id="photo-label">Profile photo</span>
         <span className="hint">
@@ -94,9 +102,6 @@ export default function ProfileForm({ initial, photoUrl }: { initial: Initial; p
         </div>
         {cropping && <PhotoCropper file={cropping} onDone={onCropped} onCancel={onCropCancel} />}
         {photoError && <p className="error">{photoError}</p>}
-        {!isNew && (
-          <span className="hint">Changing your photo means doing a new Realness Check.</span>
-        )}
       </div>
 
       <div className="field-row">
@@ -157,6 +162,12 @@ export default function ProfileForm({ initial, photoUrl }: { initial: Initial; p
         <p className="error" role="alert">
           {state.error}
         </p>
+      )}
+      {state.offerRecheck && (
+        <label className="choice">
+          <input type="checkbox" name="recheck" />
+          <span>Use this photo and redo my Realness Check</span>
+        </label>
       )}
 
       <div className="submit-row">

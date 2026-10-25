@@ -8,8 +8,9 @@ import { SEASON, ageFrom } from "@/lib/season";
 import { placeForZip } from "@/lib/geo";
 import { purgeAllMedia } from "@/lib/retention";
 import { moderateImage, moderateText, enqueue } from "@/lib/moderation";
+import { samePerson } from "@/lib/server/same-person";
 
-export type ProfileState = { error?: string; saved?: number };
+export type ProfileState = { error?: string; saved?: number; offerRecheck?: boolean };
 
 const MAX_PHOTO_BYTES = 3 * 1024 * 1024;
 
@@ -63,11 +64,23 @@ export async function saveProfile(_prev: ProfileState, form: FormData): Promise<
 
   let photoPath = existing?.photo_path ?? "";
   let photoCheck: Awaited<ReturnType<typeof moderateImage>> | null = null;
+  // A verified guy swapping his photo keeps his Realness Check as long as the new
+  // photo is still him: it's compared with the old photo, which already matched him live.
+  let keepsCheck = false;
+  let unsure = false;
   if (hasPhoto) {
     const buf = Buffer.from(await photo.arrayBuffer());
     photoCheck = await moderateImage(buf, "a profile photo his whole group sees");
     if (photoCheck.action === "hold") {
       return { error: "Your profile photo shows more than the house rules allow. Underwear's fine, nothing more. Pick another one." };
+    }
+    if (existing?.verified_at && existing.photo_path && form.get("recheck") !== "on") {
+      const same = await samePerson(db, existing.photo_path, buf);
+      if (same === "different") {
+        return { error: "That photo doesn't look like the face we have for you. Use a clear photo of your face, or tick the box to redo your Realness Check with it.", offerRecheck: true };
+      }
+      keepsCheck = true;
+      unsure = same === "unknown";
     }
     photoPath = `${me.userId}/${randomUUID()}.jpg`;
     const up = await db.storage
@@ -93,8 +106,8 @@ export async function saveProfile(_prev: ProfileState, form: FormData): Promise<
     hot_take: hotTake,
     photo_path: photoPath,
     updated_at: new Date().toISOString(),
-    // A new photo has to pass a new Realness Check.
-    ...(hasPhoto ? { verified_at: null } : {}),
+    // A new photo of someone else has to pass a new Realness Check.
+    ...(hasPhoto && !keepsCheck ? { verified_at: null } : {}),
   };
 
   const { error } = await db.from("profiles").upsert(row, { onConflict: "id" });
@@ -108,14 +121,18 @@ export async function saveProfile(_prev: ProfileState, form: FormData): Promise<
   if (said.action === "flag") {
     await enqueue(db, { user_id: me.userId, circle_id: existing?.circle_id ?? null, surface: "profile", content: words, verdict: "flagged", category: said.category, reason: said.reason, urgent: said.urgent, detail: said.detail });
   }
+  if (unsure) {
+    // Couldn't compare the faces (no clear face in one of them): a person takes a look.
+    await enqueue(db, { user_id: me.userId, circle_id: existing?.circle_id ?? null, surface: "profile_photo", media_bucket: "photos", media_path: photoPath, verdict: "flagged", category: "identity", reason: "New profile photo couldn't be compared to his old one" });
+  }
   if (photoCheck && photoCheck.action === "veil") {
     await enqueue(db, { user_id: me.userId, circle_id: existing?.circle_id ?? null, surface: "profile_photo", media_bucket: "photos", media_path: photoPath, verdict: "flagged", category: "nudity", reason: photoCheck.reason, detail: { scores: photoCheck.scores, ai: photoCheck.ai } });
   }
 
   // New guys go straight into the rest of the profile; it all can be skipped.
   if (!existing) redirect("/profile/more");
-  // A new face photo means a new Realness Check.
-  if (hasPhoto) redirect("/verify");
+  // A new face that isn't him on file means a new Realness Check.
+  if (hasPhoto && !keepsCheck) redirect("/verify");
   // Still signing up: carry on with the rest of the profile.
   if (!existing.verified_at) redirect("/profile/more");
   revalidatePath("/profile");

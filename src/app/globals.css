@@ -5804,3 +5804,6 @@ input[type="date"].input::-webkit-date-and-time-value {
     padding-top: calc(22px + env(safe-area-inset-top));
   }
 }
+.act-danger {
+  border-color: var(--deep);
+}
