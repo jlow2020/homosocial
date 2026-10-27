@@ -8,4 +8,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Run the clock
-        run: curl -fsS -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" https://homosocial.net/api/tick
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          curl -fsS -H "Authorization: Bearer $CRON_SECRET" https://homosocial.net/api/tick
