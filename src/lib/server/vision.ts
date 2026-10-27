@@ -60,6 +60,9 @@ function load() {
         wasmPath: wasmDir,
         modelBasePath: "file://" + modelDir,
         debug: false,
+        // Every call is a different photo, often a different person. Human's
+        // video cache would reuse the last photo's face and give wrong matches.
+        cacheSensitivity: 0,
         face: {
           enabled: true,
           detector: { rotation: true, maxDetected: 3, minConfidence: 0.3, return: false },

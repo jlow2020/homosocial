@@ -17,6 +17,7 @@ function loadDetector(): Promise<Human> {
         // Old phones without WebGL still get the check, just slower.
         backend: hasWebgl ? "webgl" : "cpu",
         debug: false,
+        cacheSensitivity: 0, // separate photos, not video frames
         face: {
           enabled: true,
           detector: { rotation: false, maxDetected: 5, minConfidence: 0.5, return: false },

@@ -3,7 +3,7 @@
 import { getMe, getSupabaseAdmin } from "@/lib/supabase-server";
 import { passes, type RealnessResult, MOVES } from "@/lib/realness";
 import { placeMember } from "@/lib/game/place";
-import { bestMatch, facesIn } from "@/lib/server/vision";
+import { closestIdentity, identitiesIn, type Identity } from "@/lib/server/vision";
 import { hasConsent } from "@/lib/consent";
 import { BIOMETRIC_VERSION } from "@/lib/legal";
 
@@ -11,6 +11,8 @@ export type VerifyOutcome = { passed: boolean; message: string; retry: boolean }
 
 const MAX_ATTEMPTS = 15;
 const MAX_FRAME_BYTES = 1024 * 1024;
+// Same cutoff as the ID check and photo swaps (lower is more alike).
+const SAME_FACE = 0.52;
 
 function num(v: unknown): number {
   return typeof v === "number" && Number.isFinite(v) ? v : 0;
@@ -82,31 +84,36 @@ export async function completeVerification(form: FormData): Promise<VerifyOutcom
     if (!up.error) neutralPaths.push(path);
   }
 
-  // Don't trust the phone's face match. Redo it here against the profile photo.
-  let serverMatch: number | null = null;
+  // Don't trust the phone's face match. Redo it here against the profile photo,
+  // with the same face fingerprint the ID check uses. (The phone's quick
+  // fingerprint scored real matches as strangers when rerun here.)
+  let serverDistance: number | null = null;
   try {
     const { data: photo } = await db.storage.from("photos").download(p.photo_path);
-    const ref = photo ? (await facesIn(Buffer.from(await photo.arrayBuffer()), 1024))[0] : undefined;
-    if (ref) {
-      const live: number[][] = [];
-      for (const f of neutralFrames.length ? neutralFrames : frames) {
-        const face = (await facesIn(Buffer.from(await f.arrayBuffer()), 1024))[0];
-        if (face) live.push(face.embedding);
+    const buf = photo ? Buffer.from(await photo.arrayBuffer()) : null;
+    const refId = buf ? (await identitiesIn(buf, 1024))[0] : undefined;
+    if (refId) {
+      const liveFrames = neutralFrames.length ? neutralFrames : frames;
+      const liveIds: Identity[] = [];
+      for (const f of liveFrames) {
+        const id = (await identitiesIn(Buffer.from(await f.arrayBuffer()), 1024))[0];
+        if (id) liveIds.push(id);
       }
-      serverMatch = live.length ? await bestMatch(ref.embedding, live) : 0;
+      serverDistance = liveIds.length ? await closestIdentity(refId, liveIds) : 1;
     }
   } catch (e) {
     console.error("realness server match failed", e);
   }
   // If the server check couldn't run at all, fall back to the phone's number
   // rather than lock everyone out. The ID check is the hard gate.
-  const checked: RealnessResult = serverMatch === null ? result : { ...result, match: serverMatch };
+  const checked: RealnessResult =
+    serverDistance === null ? result : { ...result, match: serverDistance <= SAME_FACE ? 1 : 0 };
 
   const passed = frames.length === 3 && paths.length === 3 && passes(checked);
   const record = {
     ...result,
     clientMatch: result.match,
-    serverMatch,
+    serverDistance,
     passed,
     attempt,
     frames: paths,

@@ -11,6 +11,7 @@ import StaffBadge from "@/components/StaffBadge";
 type Verification = {
   clientMatch?: number;
   serverMatch?: number | null;
+  serverDistance?: number | null;
   passed?: boolean;
   attempt?: number;
   frames?: string[];
@@ -130,7 +131,10 @@ export default async function Member({ params }: { params: Promise<{ id: string 
             <dd>{p?.verification_attempts ?? 0}</dd>
             <dt>Face match</dt>
             <dd>
-              server {pct(v?.serverMatch)} · phone {pct(v?.clientMatch)}
+              {typeof v?.serverDistance === "number"
+                ? `server distance ${v.serverDistance.toFixed(2)} (pass under 0.52)`
+                : `server ${pct(v?.serverMatch)}`}{" "}
+              · phone {pct(v?.clientMatch)}
             </dd>
             <dt>ID check</dt>
             <dd>{p?.id_verified_at ? `Passed ${when(p.id_verified_at)}` : "Not passed"}</dd>
