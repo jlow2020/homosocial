@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Human, FaceResult, Result } from "@vladmandic/human";
-import { MOVES, type Move, type RealnessResult } from "@/lib/realness";
+import { MOVES, MOVES_PER_CHECK, type Move, type RealnessResult } from "@/lib/realness";
 import { canvasToJpeg } from "@/lib/image";
 import { completeVerification } from "./actions";
 
@@ -15,7 +15,6 @@ type Phase =
   | { kind: "failed"; message: string; retry: boolean }
   | { kind: "error"; message: string; fix?: { href: string; label: string } };
 
-const HOLD_FRAMES = 4;
 const TIME_LIMIT_MS = 60_000;
 
 function shuffle<T>(a: T[]): T[] {
@@ -27,33 +26,42 @@ function shuffle<T>(a: T[]): T[] {
   return b;
 }
 
-function mouthOpen(result: Result): number {
-  for (const g of result.gesture) {
-    const m = /mouth (\d+)% open/.exec(String(g.gesture));
-    if (m) return Number(m[1]);
-  }
-  return 0;
-}
-
 function happy(face: FaceResult): number {
   return face.emotion?.find((e) => e.emotion === "happy")?.score ?? 0;
 }
 
-function yaw(face: FaceResult): number {
-  return Math.abs(face.rotation?.angle.yaw ?? 0);
+function angles(face: FaceResult) {
+  const a = face.rotation?.angle;
+  return { yaw: a?.yaw ?? 0, pitch: a?.pitch ?? 0, roll: a?.roll ?? 0 };
 }
 
-function doing(move: Move, face: FaceResult, result: Result): boolean {
-  if (move === "turn") return yaw(face) > 0.35;
+function eyesShut(result: Result): boolean {
+  const g = result.gesture.map((x) => String(x.gesture));
+  return g.includes("blink left eye") && g.includes("blink right eye");
+}
+
+// Where his head sits when he's looking straight at the phone. Phones are held
+// at all sorts of angles, so chin-up and tilt count from here, not from level.
+type Base = { pitch: number; roll: number };
+
+function doing(move: Move, face: FaceResult, result: Result, base: Base): boolean {
+  const { pitch, roll } = angles(face);
   if (move === "smile") return happy(face) > 0.6;
-  return mouthOpen(result) >= 30;
+  if (move === "blink") return eyesShut(result);
+  if (move === "up") return Math.abs(pitch - base.pitch) > 0.2;
+  return Math.abs(roll - base.roll) > 0.22; // tilt
 }
 
-// Between moves he has to come back to a plain, straight-on face, so one held
+// Between moves he comes back to a plain, straight-on face, so one held
 // expression can't count twice.
-function neutral(face: FaceResult, result: Result): boolean {
-  return yaw(face) < 0.2 && happy(face) < 0.5 && mouthOpen(result) < 15;
+function neutral(face: FaceResult, result: Result, base: Base | null): boolean {
+  const { yaw, pitch, roll } = angles(face);
+  const level = base ? Math.abs(pitch - base.pitch) < 0.12 && Math.abs(roll - base.roll) < 0.12 : Math.abs(roll) < 0.2;
+  return Math.abs(yaw) < 0.25 && level && happy(face) < 0.5 && !eyesShut(result);
 }
+
+// Shutting your eyes is quick, so it needs fewer frames to count.
+const HOLD: Record<Move, number> = { smile: 4, up: 4, tilt: 4, blink: 2 };
 
 let humanPromise: Promise<Human> | null = null;
 function loadHuman(): Promise<Human> {
@@ -161,7 +169,8 @@ export default function RealnessCheck({ firstName }: { firstName: string }) {
       video.srcObject = stream;
       await video.play();
 
-      const moves = shuffle(Object.keys(MOVES) as Move[]);
+      const moves = shuffle(Object.keys(MOVES) as Move[]).slice(0, MOVES_PER_CHECK);
+      let base: Base | null = null;
       const frames: Blob[] = [];
       const neutralFrames: Blob[] = []; // straight-on: the server matches these to the profile photo
       const matches: number[] = []; // during moves (turned, smiling): kept for the record
@@ -199,8 +208,9 @@ export default function RealnessCheck({ firstName }: { firstName: string }) {
           }
           const face = faces[0];
           if (!ready) {
-            if (neutral(face, result)) {
+            if (neutral(face, result, base)) {
               ready = true;
+              if (!base) base = { pitch: angles(face).pitch, roll: angles(face).roll };
               grab.width = video.videoWidth;
               grab.height = video.videoHeight;
               grab.getContext("2d")!.drawImage(video, 0, 0);
@@ -210,9 +220,9 @@ export default function RealnessCheck({ firstName }: { firstName: string }) {
             }
             continue;
           }
-          if (doing(move, face, result)) {
+          if (doing(move, face, result, base!)) {
             held++;
-            if (held >= HOLD_FRAMES) {
+            if (held >= HOLD[move]) {
               grab.width = video.videoWidth;
               grab.height = video.videoHeight;
               grab.getContext("2d")!.drawImage(video, 0, 0);

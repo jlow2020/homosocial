@@ -1,7 +1,7 @@
 "use server";
 
 import { getMe, getSupabaseAdmin } from "@/lib/supabase-server";
-import { passes, type RealnessResult, MOVES } from "@/lib/realness";
+import { passes, type RealnessResult, MOVES, MOVES_PER_CHECK } from "@/lib/realness";
 import { placeMember } from "@/lib/game/place";
 import { closestIdentity, identitiesIn, type Identity } from "@/lib/server/vision";
 import { hasConsent } from "@/lib/consent";
@@ -48,7 +48,7 @@ export async function completeVerification(form: FormData): Promise<VerifyOutcom
   }
   const validMoves = Object.keys(MOVES);
   const result: RealnessResult = {
-    moves: Array.isArray(raw.moves) ? raw.moves.filter((m) => validMoves.includes(m)).slice(0, 3) : [],
+    moves: Array.isArray(raw.moves) ? raw.moves.filter((m) => validMoves.includes(m)).slice(0, MOVES_PER_CHECK) : [],
     match: num(raw.match),
     moveMatch: num(raw.moveMatch),
     real: num(raw.real),

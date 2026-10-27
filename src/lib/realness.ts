@@ -1,10 +1,14 @@
 // Shared by the browser check and the server that records it.
 
 export const MOVES = {
-  turn: "Turn your head to one side",
-  smile: "Give us a big smile",
-  mouth: "Open your mouth wide",
+  smile: "Smile",
+  up: "Lift your chin",
+  blink: "Close your eyes for a second",
+  tilt: "Tilt your head",
 } as const;
+
+// Three of these, in a random order, each attempt.
+export const MOVES_PER_CHECK = 3;
 
 export type Move = keyof typeof MOVES;
 
@@ -32,7 +36,7 @@ export type RealnessResult = {
 
 export function passes(r: RealnessResult): boolean {
   return (
-    r.moves.length === 3 &&
+    r.moves.length === MOVES_PER_CHECK &&
     r.match >= THRESHOLDS.match &&
     r.real >= THRESHOLDS.real &&
     r.live >= THRESHOLDS.live &&
