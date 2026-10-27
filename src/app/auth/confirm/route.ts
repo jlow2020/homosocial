@@ -15,5 +15,5 @@ export async function GET(request: NextRequest) {
 
   const { error } = await auth.auth.verifyOtp({ token_hash: tokenHash, type });
   if (error) return NextResponse.redirect(`${origin}/join?error=link`);
-  return NextResponse.redirect(`${origin}/me`);
+  return NextResponse.redirect(type === "recovery" ? `${origin}/account?reset=1` : `${origin}/me`);
 }
