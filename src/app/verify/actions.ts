@@ -5,18 +5,15 @@ import { passes, type RealnessResult, MOVES, MOVES_PER_CHECK } from "@/lib/realn
 import { placeMember } from "@/lib/game/place";
 import { closestIdentity, identitiesIn, type Identity } from "@/lib/server/vision";
 import { hasConsent } from "@/lib/consent";
-import { enqueue } from "@/lib/moderation";
 import { BIOMETRIC_VERSION } from "@/lib/legal";
 
 export type VerifyOutcome = { passed: boolean; message: string; retry: boolean };
 
 const MAX_ATTEMPTS = 15;
 const MAX_FRAME_BYTES = 1024 * 1024;
-// Face distance to his profile photo (lower is more alike). Under SAME_FACE
-// passes. Up to CLOSE_FACE also passes but goes to the review queue: selfies vs.
-// posed profile photos land here for plenty of real guys, and the ID check after
-// this is the hard gate. Above CLOSE_FACE he tries again.
-const SAME_FACE = 0.52;
+// Face distance to his profile photo (lower is more alike). Looser than the
+// ID check's 0.52: a live selfie vs. a posed profile photo lands between the two
+// for plenty of real guys, and the ID check after this is the hard gate.
 const CLOSE_FACE = 0.62;
 
 function num(v: unknown): number {
@@ -113,7 +110,6 @@ export async function completeVerification(form: FormData): Promise<VerifyOutcom
   // rather than lock everyone out. The ID check is the hard gate.
   const checked: RealnessResult =
     serverDistance === null ? result : { ...result, match: serverDistance <= CLOSE_FACE ? 1 : 0 };
-  const close = serverDistance !== null && serverDistance > SAME_FACE && serverDistance <= CLOSE_FACE;
 
   const passed = frames.length === 3 && paths.length === 3 && passes(checked);
   const record = {
@@ -138,18 +134,6 @@ export async function completeVerification(form: FormData): Promise<VerifyOutcom
   const { error } = await db.from("profiles").update(update).eq("id", p.id);
   if (error) return { passed: false, message: "Your result didn't save. Try again.", retry: true };
 
-  if (passed && close) {
-    await enqueue(db, {
-      user_id: p.id,
-      circle_id: p.circle_id ?? null,
-      surface: "profile_photo",
-      media_bucket: "verifications",
-      media_path: neutralPaths[0] ?? paths[0] ?? null,
-      verdict: "flagged",
-      category: "identity",
-      reason: `Realness Check passed on a close face match (${serverDistance!.toFixed(2)}). Compare his check photo to his profile photo.`,
-    });
-  }
   if (passed && !p.circle_id) await placeMember(db, p.id);
 
   if (passed) return { passed: true, message: "", retry: false };
