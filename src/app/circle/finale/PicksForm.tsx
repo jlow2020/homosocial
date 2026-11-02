@@ -12,7 +12,7 @@ export default function PicksForm({
 }: {
   dating: boolean;
   guys: Guy[];
-  initial: { friend: string[]; date: string[]; setups: string[][]; stay: "stay" | "mix" | null };
+  initial: { friend: string[]; date: string[]; setups: string[][] };
 }) {
   const [friend, setFriend] = useState<string[]>(initial.friend);
   const [date, setDate] = useState<string[]>(initial.date);
@@ -21,7 +21,6 @@ export default function PicksForm({
     while (s.length < 2) s.push(["", ""]);
     return s;
   });
-  const [stay, setStay] = useState<"stay" | "mix" | null>(initial.stay);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [pending, start] = useTransition();
 
@@ -42,7 +41,6 @@ export default function PicksForm({
           if (a) f.set(`setup${i}a`, a);
           if (b) f.set(`setup${i}b`, b);
         });
-        if (stay) f.set("stay", stay);
         start(async () => {
           const r = await savePicks(f);
           setMsg(r.ok ? { ok: true, text: "Saved. You can change them until the Finale." } : { ok: false, text: r.error ?? "That didn't save." });
@@ -145,22 +143,8 @@ export default function PicksForm({
         ))}
       </section>
 
-      <section className="pick-section">
-        <h2 className="pick-h">Next Season</h2>
-        <div className="stay-opts">
-          <button type="button" className={stay === "stay" ? "stay-opt on" : "stay-opt"} onClick={() => setStay("stay")} aria-pressed={stay === "stay"}>
-            <b>Stay</b>
-            <span>Run it back with this Circle.</span>
-          </button>
-          <button type="button" className={stay === "mix" ? "stay-opt on" : "stay-opt"} onClick={() => setStay("mix")} aria-pressed={stay === "mix"}>
-            <b>Mix me in</b>
-            <span>New Circle, new guys. Your mutuals stay yours.</span>
-          </button>
-        </div>
-      </section>
-
       {msg && <p className={msg.ok ? "notice-inline" : "error"}>{msg.text}</p>}
-      <button className="btn btn-pink btn-big" disabled={pending || !stay}>
+      <button className="btn btn-pink btn-big" disabled={pending}>
         {pending ? "Saving..." : "Lock in my picks"}
       </button>
     </form>

@@ -1,7 +1,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import { getMe, getSupabaseAdmin } from "@/lib/supabase-server";
+import { loadPlayer, PAST_COOKIE } from "@/lib/game/player";
+import { placeMember } from "@/lib/game/place";
 
 const REASONS = ["fake", "harassment", "underage", "scam", "other"] as const;
 
@@ -46,4 +50,24 @@ export async function reportMember(
   );
   revalidatePath("/circle");
   return { ok: true };
+}
+
+// The Season's over: he leaves his finished Circle (it stays readable) and gets
+// a fresh one near him, new faces first.
+export async function joinNextSeason(): Promise<void> {
+  const jar = await cookies();
+  jar.delete(PAST_COOKIE);
+  const pl = await loadPlayer({ needSeat: true });
+  // Looking back at an old Circle means he's already moved on.
+  if (pl.past || pl.clock.phase !== "revealed") redirect("/circle");
+  const old = pl.circle.id;
+  await pl.db.from("profiles").update({ circle_id: null, home_circle_id: null, moved_from: null }).eq("id", pl.profile.id).eq("circle_id", old);
+  const next = await placeMember(pl.db, pl.profile.id);
+  if (!next) {
+    // Couldn't place him: put him back rather than leave him nowhere.
+    await pl.db.from("profiles").update({ circle_id: old }).eq("id", pl.profile.id).is("circle_id", null);
+  } else {
+    jar.set("hs_flash", encodeURIComponent(`Welcome to Season ${pl.seasonNo + 1}. Your old Circle is under Past Seasons whenever you want it.`), { path: "/", maxAge: 120, sameSite: "lax" });
+  }
+  redirect("/circle");
 }

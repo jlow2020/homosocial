@@ -11,7 +11,8 @@ import StaffBadge from "@/components/StaffBadge";
 import FounderBadge from "@/components/FounderBadge";
 import { getMe, getSupabaseAdmin, nextPath } from "@/lib/supabase-server";
 import { SEASON, WEEKS, ageFrom } from "@/lib/season";
-import { loadPlayer, photoUrls, type Player } from "@/lib/game/player";
+import { loadPlayer, pastCircles, photoUrls, type Player } from "@/lib/game/player";
+import NextSeason from "./NextSeason";
 import { ensureDrop, promptOf } from "@/lib/game/drops";
 import { etLabel, untilLabel } from "@/lib/game/clock";
 import { Avatar, GuyName, Shell, timeAgo, weekTitle } from "./ui";
@@ -138,6 +139,8 @@ async function Lobby({ pl }: { pl: Player }) {
         </div>
       </section>
 
+      {!greenRoom && <PastSeasons pl={pl} />}
+
       {!greenRoom && others.length > 0 && (
         <section className="members">
           <h2 className="members-title">Who&apos;s in</h2>
@@ -225,6 +228,7 @@ async function Home({ pl }: { pl: Player }) {
         </section>
       )}
       <div className="home-grid">
+        {revealed && !pl.past && <NextSeason pl={pl} />}
         <section className="drop-card">
           <p className="eyebrow">
             {revealed ? "Week 8 drop" : `This week's drop`} · {answerCount} of {pl.members.length} answered
@@ -355,7 +359,7 @@ async function Home({ pl }: { pl: Player }) {
         )}
 
         <section className="mini-card season-strip">
-          <h3>Season {circle.season_no}</h3>
+          <h3>Season {pl.seasonNo}</h3>
           <ol className="strip">
             {WEEKS.map((w) => {
               const state = w.n < week || revealed ? "past" : w.n === week ? "now" : "next";
@@ -375,7 +379,32 @@ async function Home({ pl }: { pl: Player }) {
             })}
           </ol>
         </section>
+        {!pl.past && <PastSeasons pl={pl} />}
       </div>
     </Shell>
+  );
+}
+
+// Old Circles he finished, to look back at.
+async function PastSeasons({ pl }: { pl: Player }) {
+  const past = await pastCircles(pl.db, pl.profile.id, pl.circle.id);
+  if (!past.length) return null;
+  return (
+    <section className="mini-card">
+      <h3>Past Seasons</h3>
+      <ul className="mini-list">
+        {past.map((c) => (
+          <li key={c.id}>
+            {/* A plain link: these set a cookie, so no prefetching. */}
+            {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+            <a href={`/circle/past/${c.id}`}>
+              Circle {c.number}
+              {c.label ? ` · ${c.label}` : ""}
+            </a>
+            <span className="fine"> · ended {new Date(c.finale_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }

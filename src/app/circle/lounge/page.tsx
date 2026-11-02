@@ -46,7 +46,7 @@ export default async function Lounge() {
           })}
         </ul>
         {msgs.length === 0 && <p className="fine">Quiet in here.</p>}
-        <Composer send={postLounge} placeholder="Say something to the Circle" />
+        {pl.closed ? <p className="fine">This Season is over, so the Lounge is read-only.</p> : <Composer send={postLounge} placeholder="Say something to the Circle" />}
       </div>
     </Shell>
   );

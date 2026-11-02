@@ -30,7 +30,9 @@ export async function Shell({ pl, children }: { pl: Player; children: React.Reac
     pl.waiting || c.phase === "filling"
       ? "Starting soon"
       : c.phase === "revealed"
-        ? "Finale: revealed"
+        ? pl.closed
+          ? "Season over"
+          : "Finale: revealed"
         : `Week ${c.week}: ${weekTitle(c.week)}`;
   const rawFlash = (await cookies()).get("hs_flash")?.value;
   let flashText = rawFlash ? decodeURIComponent(rawFlash).slice(0, 400) : null;
@@ -50,6 +52,11 @@ export async function Shell({ pl, children }: { pl: Player; children: React.Reac
                 Admin
               </Link>
             )}
+            {pl.waiting && (threads ?? []).length > 0 && (
+              <Link href="/circle/dms" className="topbar-link">
+                Messages{unread ? ` (${unread})` : ""}
+              </Link>
+            )}
             <Link href="/profile" className="topbar-link">
               Profile
             </Link>
@@ -61,7 +68,7 @@ export async function Shell({ pl, children }: { pl: Player; children: React.Reac
           <span className={pl.waiting ? "chy-hot" : "chy-gold"}>{tag}</span>
           <span className="chy-light">
             Circle {pl.circle.number}
-            {pl.circle.label ? ` · ${pl.circle.label}` : ""} · Season {pl.circle.season_no}
+            {pl.circle.label ? ` · ${pl.circle.label}` : ""} · Season {pl.seasonNo}
           </span>
           {c.phase === "season" && !pl.waiting && (
             <span className="chy-heat" title={`Heat ${targetHeat(pl.circle, c.week)} of 5`} aria-label={`Heat ${targetHeat(pl.circle, c.week)} of 5`}>
@@ -73,6 +80,18 @@ export async function Shell({ pl, children }: { pl: Player; children: React.Reac
       </div>
       {!pl.waiting && <NavTabs dropWeek={dropWeek} unread={unread ?? 0} />}
       <div className="wrap game-body">
+        {pl.past && (
+          <div className="past-banner">
+            <span>
+              Looking back at Season {pl.seasonNo}. It&apos;s read-only.
+            </span>
+            {/* A plain link: these set a cookie, so no prefetching. */}
+            {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+            <a href="/circle/past/exit" className="btn btn-outline btn-small">
+              Back to my Circle
+            </a>
+          </div>
+        )}
         <Flash text={flashText} />
         {pl.seated && <PushPrompt />}
         {children}

@@ -44,6 +44,9 @@ async function player(): Promise<Player> {
 }
 
 
+// A finished Circle (or one he's looking back at) is read-only.
+const READ_ONLY: Result = { ok: false, error: "This Circle's Season is over, so it's read-only now." };
+
 function currentWeek(pl: Player): number | null {
   return pl.clock.phase === "season" ? pl.clock.week : null;
 }
@@ -177,6 +180,7 @@ async function answerInMyCircle(pl: Player, answerId: string) {
 
 export async function toggleReaction(answerId: string, emoji: string): Promise<Result> {
   const pl = await player();
+  if (pl.closed) return READ_ONLY;
   if (!["fire", "lol", "crown", "heart"].includes(emoji)) return { ok: false };
   const a = await answerInMyCircle(pl, answerId);
   if (!a) return { ok: false };
@@ -197,6 +201,7 @@ export async function toggleReaction(answerId: string, emoji: string): Promise<R
 
 export async function replyToAnswer(answerId: string, body: string): Promise<Result> {
   const pl = await player();
+  if (pl.closed) return READ_ONLY;
   const text = clean(body, 500);
   if (!text) return { ok: false, error: "Say something first." };
   const a = await answerInMyCircle(pl, answerId);
@@ -221,6 +226,7 @@ export async function replyToAnswer(answerId: string, body: string): Promise<Res
 
 export async function postLounge(body: string): Promise<Result> {
   const pl = await player();
+  if (pl.closed) return READ_ONLY;
   const text = clean(body, 800);
   if (!text) return { ok: false };
   if (pl.clock.phase === "filling") return { ok: false, error: "The Lounge opens when your Circle starts." };
@@ -236,6 +242,7 @@ export async function postLounge(body: string): Promise<Result> {
 
 export async function postPlan(form: FormData): Promise<Result> {
   const pl = await player();
+  if (pl.closed) return READ_ONLY;
   const title = clean(form.get("title"), 80);
   const place = clean(form.get("place"), 120);
   const details = clean(form.get("details"), 600);
@@ -267,6 +274,7 @@ export async function postPlan(form: FormData): Promise<Result> {
 
 export async function toggleRsvp(planId: string): Promise<Result> {
   const pl = await player();
+  if (pl.closed) return READ_ONLY;
   if (!UUID.test(planId)) return { ok: false };
   const { data: plan } = await pl.db.from("plans").select("circle_id").eq("id", planId).maybeSingle();
   if (!plan || plan.circle_id !== pl.circle.id) return { ok: false };
@@ -467,8 +475,6 @@ export async function savePicks(form: FormData): Promise<Result> {
     const [a, b] = [x as string, y as string].sort();
     if (!setups.some((s) => s.a === a && s.b === b)) setups.push({ a, b });
   }
-  const stay = form.get("stay");
-  if (stay !== "stay" && stay !== "mix") return { ok: false, error: "Pick Stay or Mix me in." };
 
   const base = { circle_id: pl.circle.id, season_no: pl.circle.season_no };
   await pl.db.from("picks").delete().match({ ...base, from_id: pl.profile.id });
@@ -479,7 +485,6 @@ export async function savePicks(form: FormData): Promise<Result> {
   ];
   if (rows.length) await pl.db.from("picks").insert(rows);
   if (setups.length) await pl.db.from("setups").insert(setups.map((s) => ({ ...base, from_id: pl.profile.id, ...s })));
-  await pl.db.from("stay_choices").upsert({ ...base, user_id: pl.profile.id, choice: stay }, { onConflict: "circle_id,season_no,user_id" });
   revalidatePath("/circle/finale");
   return { ok: true };
 }
@@ -871,6 +876,7 @@ export async function saveReading(week: number, path: string): Promise<Result> {
 
 export async function fireReading(readingId: string): Promise<Result> {
   const pl = await player();
+  if (pl.closed) return READ_ONLY;
   if (!UUID.test(readingId)) return { ok: false };
   const { data: r } = await pl.db.from("chain_readings").select("id, user_id, drops(circle_id)").eq("id", readingId).maybeSingle();
   if (!r || (r.drops as unknown as { circle_id: string }).circle_id !== pl.circle.id) return { ok: false };

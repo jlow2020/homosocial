@@ -5,11 +5,11 @@ import { warmImageModels } from "@/lib/moderation/image";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { WEEKS } from "@/lib/season";
 import { claimNotice, notify, teaser } from "@/lib/notify";
-import { clockFor } from "./clock";
+import { clockFor, closesAt, finaleFor, DEFAULT_TZ } from "./clock";
 import { fillGeo, fillCircles, placeMember, rehomeLoners } from "./place";
 import { ensureDrop, promptOf } from "./drops";
 import { lockWeek, awardSeason } from "./lock";
-import { loadMembers, type Circle, type Member } from "./player";
+import { loadAlumni, loadMembers, type Circle, type Member } from "./player";
 
 // The clock's hands. Runs every few minutes (GitHub Actions hits /api/tick)
 // and whenever a test Circle changes week. Each thing happens once per Circle.
@@ -33,6 +33,11 @@ export async function tickAll(db: SupabaseClient): Promise<{ circles: number; se
   const { data } = await db.from("circles").select("*").not("kickoff_at", "is", null);
   const sent: string[] = [];
   for (const c of (data ?? []) as Circle[]) {
+    // When the Finale is, so finished Circles stop taking new guys.
+    if (!c.finale_at && c.kickoff_at) {
+      c.finale_at = finaleFor(new Date(c.kickoff_at), c.tz || DEFAULT_TZ).toISOString();
+      await db.from("circles").update({ finale_at: c.finale_at }).eq("id", c.id).is("finale_at", null);
+    }
     try {
       sent.push(...(await tickCircle(db, c)));
     } catch (e) {
@@ -45,19 +50,21 @@ export async function tickAll(db: SupabaseClient): Promise<{ circles: number; se
 export async function tickCircle(db: SupabaseClient, circle: Circle, now = new Date()): Promise<string[]> {
   const clock = clockFor(circle, now);
   if (clock.phase === "filling") return [];
+  // Long finished: nothing left to do.
+  if (clock.phase === "revealed" && now > closesAt(clock.finaleAt)) return [];
   const members = await loadMembers(db, circle.id, circle.id);
-  if (!members.length) return [];
+  if (!members.length && clock.phase !== "revealed") return [];
   const ids = members.map((m) => m.id);
   const s = circle.season_no;
   const sent: string[] = [];
 
-  const lockBefore = async (week: number) => {
+  const lockBefore = async (week: number, who: Member[] = members) => {
     for (let w = 1; w < week; w++) {
       const { data: d } = await db.from("drops").select("*").eq("circle_id", circle.id).eq("season_no", s).eq("week", w).maybeSingle();
       if (d && !d.locked_at) {
-        await lockWeek(db, circle, d as Parameters<typeof lockWeek>[2], members);
+        await lockWeek(db, circle, d as Parameters<typeof lockWeek>[2], who);
         if (await claimNotice(db, circle.id, `read:${s}:${w}`)) {
-          await notify(db, ids, readNotice(w));
+          await notify(db, who.map((m) => m.id), readNotice(w));
           sent.push(`read:${s}:${w}`);
         }
       }
@@ -65,11 +72,19 @@ export async function tickCircle(db: SupabaseClient, circle: Circle, now = new D
   };
 
   if (clock.phase === "revealed") {
-    await lockBefore(9);
+    const everyone = await loadAlumni(db, circle, circle.id);
+    const all = everyone.length ? everyone : members;
+    if (!all.length) return sent;
+    await lockBefore(9, all);
     if (await claimNotice(db, circle.id, `finale:${s}`)) {
-      await awardSeason(db, circle, members);
-      await notify(db, ids, { title: "The Finale 🌹", body: "Picks are in. Go see who picked you back.", url: "/circle/finale", tag: "finale" });
+      await awardSeason(db, circle, all);
+      await notify(db, all.map((m) => m.id), { title: "The Finale 🌹", body: "Picks are in. Go see who picked you back.", url: "/circle/finale", tag: "finale" });
       sent.push(`finale:${s}`);
+    }
+    // The next morning: anyone who hasn't joined the next Season yet gets asked.
+    if (now.getTime() >= clock.finaleAt.getTime() + 13 * HOUR && now < closesAt(clock.finaleAt) && ids.length && (await claimNotice(db, circle.id, `next:${s}`))) {
+      await notify(db, ids, { title: "Next Season is open", body: "New Circle, new guys, near you. Your mutuals come with you.", url: "/circle", tag: "next" });
+      sent.push(`next:${s}`);
     }
     return sent;
   }

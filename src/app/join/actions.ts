@@ -4,7 +4,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { getSupabaseAdmin, getSupabaseAuth, getSupabaseMailer, siteOrigin } from "@/lib/supabase-server";
 
-export type JoinState = { sent?: string; error?: string; hasAccount?: boolean };
+export type JoinState = { sent?: string; error?: string; hasAccount?: boolean; resent?: boolean };
 
 export async function joinWithEmail(_prev: JoinState, form: FormData): Promise<JoinState> {
   const email = String(form.get("email") ?? "").trim().toLowerCase();
@@ -25,12 +25,14 @@ export async function joinWithEmail(_prev: JoinState, form: FormData): Promise<J
     options: { emailRedirectTo: `${origin}/auth/finish`, shouldCreateUser: true },
   });
   if (error) {
+    // A resend that fails keeps him on the "check your email" screen.
+    const keep = form.get("again") === "1" ? { sent: email } : {};
     if (error.status === 429) {
-      return { error: "Too many sign-in emails right now. Wait a minute and try again." };
+      return { ...keep, error: "One email a minute. Wait a moment and try again." };
     }
-    return { error: "We couldn't send your sign-in link. Try again." };
+    return { ...keep, error: "We couldn't send your link. Try again." };
   }
-  return { sent: email };
+  return { sent: email, resent: form.get("again") === "1" };
 }
 
 export async function joinWithGoogle() {

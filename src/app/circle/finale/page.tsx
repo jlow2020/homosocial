@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { loadPlayer, photoUrls } from "@/lib/game/player";
 import { etLabel, untilLabel } from "@/lib/game/clock";
 import { openChat } from "../game-actions";
+import NextSeason from "../NextSeason";
 import { Avatar, GuyName, Shell } from "../ui";
 import PicksForm from "./PicksForm";
 import { chemistryFor } from "@/lib/game/chemistry";
@@ -19,14 +20,12 @@ export default async function Finale() {
   const urls = await photoUrls(db, pl.members.map((m) => m.photo_path));
   const dating = pl.profile.looking_for === "friends_dating";
 
-  const [{ data: picks }, { data: setups }, { data: stays }] = await Promise.all([
+  const [{ data: picks }, { data: setups }] = await Promise.all([
     db.from("picks").select("from_id, to_id, kind").match(base),
     db.from("setups").select("from_id, a, b").match(base),
-    db.from("stay_choices").select("user_id, choice").match(base),
   ]);
   const myPicks = (picks ?? []).filter((p) => p.from_id === me);
   const mySetups = (setups ?? []).filter((s) => s.from_id === me);
-  const myStay = (stays ?? []).find((s) => s.user_id === me)?.choice as "stay" | "mix" | undefined;
 
   if (clock.phase === "season") {
     const chem = await chemistryFor(db, circle, me, pl.members);
@@ -72,7 +71,6 @@ export default async function Finale() {
             friend: myPicks.filter((p) => p.kind === "friend").map((p) => p.to_id),
             date: myPicks.filter((p) => p.kind === "date").map((p) => p.to_id),
             setups: mySetups.map((s) => [s.a, s.b]),
-            stay: myStay ?? null,
           }}
         />
       </Shell>
@@ -96,8 +94,6 @@ export default async function Finale() {
     .map(([k, who]) => ({ other: k.split(":").find((x) => x !== me)!, count: who.size }))
     .filter((s) => byId.has(s.other));
 
-  const stayed = (stays ?? []).filter((s) => s.choice === "stay").length;
-  const total = pl.members.length;
 
   const card = (id: string, line: string, tone: string) => {
     const m = byId.get(id)!;
@@ -120,7 +116,7 @@ export default async function Finale() {
   return (
     <Shell pl={pl}>
       <div className="finale-head reveal">
-        <p className="eyebrow">The Finale · Season {circle.season_no}</p>
+        <p className="eyebrow">The Finale · Season {pl.seasonNo}</p>
         <h1 className="game-h1">The lights are up.</h1>
       </div>
 
@@ -159,13 +155,7 @@ export default async function Finale() {
         </section>
       )}
 
-      <section className="mini-card" style={{ marginTop: 28 }}>
-        <h3>What&apos;s next</h3>
-        <p>
-          {stayed} of {total} picked Stay. You picked <b>{myStay === "mix" ? "Mix me in" : myStay === "stay" ? "Stay" : "nothing, so you're staying"}</b>.
-          The next Season starts right away. Every mutual carries over.
-        </p>
-      </section>
+      {!pl.past && <NextSeason pl={pl} />}
     </Shell>
   );
 }

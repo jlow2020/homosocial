@@ -69,6 +69,17 @@ export function finaleFor(kickoff: Date, tz: string = DEFAULT_TZ): Date {
   return addDaysET(weekStarts(kickoff, tz)[7], 6, FINALE_HOUR, tz);
 }
 
+// After the Finale the Circle stays open for goodbyes, then goes read-only.
+export const OPEN_AFTER_FINALE_MS = 3 * DAY;
+
+export function closesAt(finaleAt: Date): Date {
+  return new Date(finaleAt.getTime() + OPEN_AFTER_FINALE_MS);
+}
+
+export function isClosed(clock: Clock, now = new Date()): boolean {
+  return clock.phase === "revealed" && now >= closesAt(clock.finaleAt);
+}
+
 export function clockFor(c: CircleClockInput, now = new Date()): Clock {
   if (!c.kickoff_at) return { phase: "filling" };
   const tz = c.tz || DEFAULT_TZ;

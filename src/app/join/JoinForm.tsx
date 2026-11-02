@@ -8,16 +8,35 @@ export default function JoinForm({ google }: { google: boolean }) {
   const [state, action, pending] = useActionState<JoinState, FormData>(joinWithEmail, {});
 
   if (state.sent) {
+    const outlook = /@(outlook|hotmail|live|msn)\./i.test(state.sent);
     return (
       <div className="form wrap">
         <div className="notice">
           <h2 className="notice-title">Check your email.</h2>
           <p>
-            We sent a sign-in link to <strong>{state.sent}</strong>. Open it on
-            this phone to keep going. It can take a minute, and sometimes it
-            lands in spam.
+            We sent a link to <strong>{state.sent}</strong>. Open it on this phone to keep going.
+          </p>
+          <p>
+            Not there in a minute? Check {outlook ? "Junk Email" : "Spam"}, and mark it <b>Not spam</b> so the next one
+            lands in your inbox.
           </p>
         </div>
+        <form action={action} className="stack">
+          <input type="hidden" name="email" value={state.sent} />
+          <input type="hidden" name="again" value="1" />
+          <button className="btn btn-outline btn-full" type="submit" disabled={pending}>
+            {pending ? "Sending" : "Send it again"}
+          </button>
+        </form>
+        {state.resent && !state.error && <p className="notice-inline">Sent again. Give it a minute.</p>}
+        {state.error && (
+          <p className="error" role="alert">
+            {state.error}
+          </p>
+        )}
+        <p className="fine">
+          Wrong email? <a href="/join">Start over</a>.
+        </p>
       </div>
     );
   }

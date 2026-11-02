@@ -1,10 +1,11 @@
 import "server-only";
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getMe, getSupabaseAdmin, nextPath, type Profile } from "@/lib/supabase-server";
 import { isAdmin, ROLE_TITLE, type AdminRole } from "@/lib/admin";
 import { SEASON } from "@/lib/season";
-import { clockFor, weekStarts, DEFAULT_TZ, type Clock } from "./clock";
+import { clockFor, finaleFor, isClosed, weekStarts, DEFAULT_TZ, type Clock } from "./clock";
 
 export type Circle = {
   id: string;
@@ -19,6 +20,7 @@ export type Circle = {
   label: string | null;
   rehome_until: string | null;
   ticked_at: string | null;
+  finale_at: string | null;
 };
 
 export type Member = {
@@ -45,7 +47,14 @@ export type Player = {
   waiting: boolean;
   members: Member[]; // seated, active, not blocked, includes me when seated
   titles: Map<string, string>; // admin titles by member id
+  past: boolean; // looking back at a Circle he's already moved on from
+  closed: boolean; // Season over and the goodbye window too: read-only
+  seasonNo: number; // his own Season count, for labels
 };
+
+// Set by /circle/past/[id] while he looks back at an old Circle.
+export const PAST_COOKIE = "hs_past";
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const MEMBER_COLS = "id, first_name, birthdate, interests, hot_take, photo_path, looking_for, email, founder_no";
 
@@ -61,15 +70,35 @@ export async function loadPlayer(opts: { needSeat?: boolean } = {}): Promise<Pla
   if (!p.circle_id) redirect("/circle");
 
   const db = getSupabaseAdmin()!;
+  // Looking back at an old Circle? Only one he was in, and only once its Season is over.
+  const want = (await cookies()).get(PAST_COOKIE)?.value;
+  let circleId = p.circle_id;
+  let past = false;
+  if (want && want !== p.circle_id && UUID.test(want)) {
+    const { data: was } = await db
+      .from("circle_history")
+      .select("circle_id, circles!inner(finale_at)")
+      .eq("user_id", p.id)
+      .eq("circle_id", want)
+      .maybeSingle();
+    const fin = (was?.circles as unknown as { finale_at: string | null } | null)?.finale_at;
+    if (fin && new Date(fin) <= new Date()) {
+      circleId = want;
+      past = true;
+    }
+  }
   const [{ data: circleRow }, role] = await Promise.all([
-    db.from("circles").select("*").eq("id", p.circle_id).single(),
+    db.from("circles").select("*").eq("id", circleId).single(),
     isAdmin(me.userId),
   ]);
   let circle = circleRow as Circle;
   const seated = !!p.id_verified_at;
   if (opts.needSeat && !seated) redirect("/circle");
 
-  const members = await loadMembers(db, circle.id, p.id);
+  // Once the Finale is past, guys start leaving for the next Season. The Circle
+  // still shows everyone who finished it.
+  const over = !!circle.kickoff_at && clockFor(circle).phase === "revealed";
+  const members = over ? await loadAlumni(db, circle, p.id) : await loadMembers(db, circle.id, p.id);
 
   // A Circle kicks off the moment it has two guys.
   if (!circle.kickoff_at && members.length >= SEASON.minToOpen) {
@@ -85,6 +114,11 @@ export async function loadPlayer(opts: { needSeat?: boolean } = {}): Promise<Pla
   }
 
   const clock = clockFor(circle);
+  if (circle.kickoff_at && !circle.finale_at) {
+    const fin = finaleFor(new Date(circle.kickoff_at), circle.tz || DEFAULT_TZ).toISOString();
+    await db.from("circles").update({ finale_at: fin }).eq("id", circle.id).is("finale_at", null);
+    circle = { ...circle, finale_at: fin };
+  }
 
   // The clock runs from here too, every ten minutes, so nothing waits on the scheduler.
   if (clock.phase !== "filling") {
@@ -106,8 +140,59 @@ export async function loadPlayer(opts: { needSeat?: boolean } = {}): Promise<Pla
   const { data: staff } = await db.from("admins").select("user_id, role").in("user_id", members.map((m) => m.id));
   const titles = new Map((staff ?? []).map((s) => [s.user_id as string, ROLE_TITLE[s.role as AdminRole]]));
 
-  const waiting = !seated || clock.phase === "filling" || members.length < SEASON.minToOpen;
-  return { db, me, profile: p as Player["profile"], role, circle, clock, seated, waiting, members, titles };
+  const waiting = !over && (!seated || clock.phase === "filling" || members.length < SEASON.minToOpen);
+  const seasonNo = await seasonNumber(db, p.id, circle);
+  return { db, me, profile: p as Player["profile"], role, circle, clock, seated, waiting, members, titles, past, closed: past || isClosed(clock), seasonNo };
+}
+
+// Everyone who was still in this Circle at its Finale, whether or not he's
+// moved on to the next Season since.
+export async function loadAlumni(db: SupabaseClient, circle: Pick<Circle, "id" | "finale_at" | "kickoff_at" | "tz">, meId: string): Promise<Member[]> {
+  const fin = circle.finale_at ?? (circle.kickoff_at ? finaleFor(new Date(circle.kickoff_at), circle.tz || DEFAULT_TZ).toISOString() : null);
+  let q = db.from("circle_history").select("user_id").eq("circle_id", circle.id);
+  if (fin) q = q.or(`left_at.is.null,left_at.gte.${new Date(fin).toISOString()}`);
+  const [{ data: hist }, { data: blocks }] = await Promise.all([
+    q,
+    db.from("blocks").select("blocker, blocked").or(`blocker.eq.${meId},blocked.eq.${meId}`),
+  ]);
+  const ids = (hist ?? []).map((h) => h.user_id as string);
+  if (!ids.length) return [];
+  const { data: rows } = await db
+    .from("profiles")
+    .select(MEMBER_COLS)
+    .in("id", ids)
+    .neq("status", "banned")
+    .not("id_verified_at", "is", null)
+    .order("id_verified_at", { ascending: true });
+  const hidden = new Set((blocks ?? []).map((b) => (b.blocker === meId ? b.blocked : b.blocker)));
+  return ((rows ?? []) as Member[]).filter((m) => !hidden.has(m.id));
+}
+
+// His Season count: 1 + every Circle he finished before this one.
+async function seasonNumber(db: SupabaseClient, userId: string, circle: Circle): Promise<number> {
+  const { data } = await db.from("circle_history").select("circle_id, circles!inner(finale_at)").eq("user_id", userId);
+  const mine = circle.finale_at ? new Date(circle.finale_at).getTime() : Infinity;
+  let n = 1;
+  for (const row of data ?? []) {
+    if (row.circle_id === circle.id) continue;
+    const fin = (row.circles as unknown as { finale_at: string | null } | null)?.finale_at;
+    if (fin && new Date(fin).getTime() < mine && new Date(fin) <= new Date()) n++;
+  }
+  return n;
+}
+
+// Old Circles whose Season he finished, newest first.
+export async function pastCircles(db: SupabaseClient, userId: string, exceptId?: string): Promise<{ id: string; number: number; label: string | null; finale_at: string }[]> {
+  const { data } = await db
+    .from("circle_history")
+    .select("circle_id, left_at, circles!inner(id, number, label, finale_at)")
+    .eq("user_id", userId);
+  const now = Date.now();
+  return (data ?? [])
+    .map((r) => ({ c: r.circles as unknown as { id: string; number: number; label: string | null; finale_at: string | null }, left: r.left_at as string | null }))
+    .filter(({ c, left }) => c.id !== exceptId && c.finale_at && new Date(c.finale_at).getTime() <= now && (!left || new Date(left) >= new Date(c.finale_at)))
+    .map(({ c }) => ({ id: c.id, number: c.number, label: c.label, finale_at: c.finale_at! }))
+    .sort((a, b) => b.finale_at.localeCompare(a.finale_at));
 }
 
 export async function loadMembers(db: SupabaseClient, circleId: string, meId: string): Promise<Member[]> {
