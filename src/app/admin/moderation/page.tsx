@@ -46,7 +46,7 @@ export default async function Moderation() {
   const { data: people } = ids.length ? await db.from("profiles").select("id, first_name").in("id", ids) : { data: [] };
   const name = new Map((people ?? []).map((p) => [p.id as string, p.first_name as string]));
   const urls = new Map<string, string>();
-  for (const bucket of ["photos", "clips"]) {
+  for (const bucket of ["photos", "clips", "verifications"]) {
     const paths = items.filter((i) => i.media_bucket === bucket && i.media_path).map((i) => i.media_path as string);
     if (paths.length) {
       const { data } = await db.storage.from(bucket).createSignedUrls(paths, 3600);

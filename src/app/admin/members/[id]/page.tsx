@@ -132,7 +132,7 @@ export default async function Member({ params }: { params: Promise<{ id: string 
             <dt>Face match</dt>
             <dd>
               {typeof v?.serverDistance === "number"
-                ? `server distance ${v.serverDistance.toFixed(2)} (pass under 0.52)`
+                ? `server distance ${v.serverDistance.toFixed(2)} (pass under 0.62, review over 0.52)`
                 : `server ${pct(v?.serverMatch)}`}{" "}
               · phone {pct(v?.clientMatch)}
             </dd>
