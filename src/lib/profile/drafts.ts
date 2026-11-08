@@ -53,7 +53,6 @@ export function rankPrompts(me: Me, seed: string): string[] {
     let s = r() * 1.5;
     if (fits && fits.length === 0) s += 2;
     else if (fits) s += fits.reduce((a, g) => a + Math.min(2, groups.get(g) ?? 0), 0) * 1.4;
-    if ((p.id === "die-on" || p.id === "unpopular") && me.hotTake) s += 4;
     return { id: p.id, s };
   }).sort((a, b) => b.s - a.s);
   // Don't open with two that ask the same thing.
@@ -129,10 +128,6 @@ export function templateDrafts(id: string, me: Me): string[] {
     case "two-drink":
       out.push(d.find((x) => /danc|karaoke|club/.test(x)) && `wants to go ${d.find((x) => /danc|karaoke|club/.test(x))} right now`);
       break;
-    case "die-on":
-    case "unpopular":
-      out.push(me.hotTake && me.hotTake.replace(/\s+/g, " ").trim().slice(0, 140));
-      break;
     case "red-flag":
       out.push(d[0] && `I'll turn any hang into ${d[0]}`, t0 && `I have opinions about ${lc(t0)}`);
       break;
@@ -162,7 +157,7 @@ Answer with only JSON: {"<prompt id>": ["answer", "answer", "answer"], ...}`;
 Things he's into: ${tags || "not given"}
 Things he's down to do: ${down || "not given"}
 In his words: ${me.interests.slice(0, 300) || "not given"}
-His hot take: ${me.hotTake.slice(0, 300) || "not given"}
+More about him: ${me.hotTake.slice(0, 300) || "not given"}
 Work: ${me.work || "not given"}
 >>>
 Prompts (id: text):

@@ -231,9 +231,7 @@ async function draftsFor(ids: string[], who: Me): Promise<Record<string, string[
   const out: Record<string, string[]> = {};
   for (const id of ids) {
     const mine = templateDrafts(id, who);
-    // His hot take is already his words, so it leads when it fits.
-    const lead = (id === "die-on" || id === "unpopular") && who.hotTake ? [mine[0]] : [];
-    out[id] = [...new Set([...lead, ...(ai?.[id] ?? []), ...mine])].slice(0, 4);
+    out[id] = [...new Set([...(ai?.[id] ?? []), ...mine])].slice(0, 4);
   }
   return out;
 }

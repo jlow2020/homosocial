@@ -113,7 +113,7 @@ export default async function Member({ params }: { params: Promise<{ id: string 
             <dd>{p ? (p.looking_for === "friends_dating" ? "Friends and dating" : "Friends") : "n/a"}</dd>
             <dt>Into</dt>
             <dd>{p?.interests ?? "n/a"}</dd>
-            <dt>Hot take</dt>
+            <dt>Anything else</dt>
             <dd>{p?.hot_take ?? "n/a"}</dd>
             <dt>Founder</dt>
             <dd>{p?.founder_no ? `#${p.founder_no}` : "no"}</dd>

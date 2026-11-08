@@ -145,8 +145,14 @@ export default function ProfileForm({ initial, photoUrl }: { initial: Initial; p
       </fieldset>
 
       <label className="field">
-        <span className="label">Your most controversial opinion</span>
-        <textarea className="textarea" name="hot_take" required maxLength={600} defaultValue={initial?.hot_take} />
+        <span className="label">Anything else? (optional)</span>
+        <textarea
+          className="textarea"
+          name="hot_take"
+          maxLength={600}
+          placeholder="Whatever you want the guys to know."
+          defaultValue={initial?.hot_take}
+        />
       </label>
 
       {isNew && (

@@ -134,6 +134,13 @@ export default async function Guy({ params }: { params: Promise<{ id: string }> 
           </section>
         )}
 
+        {m.hot_take?.trim() && (
+          <section className="g-card g-prompt">
+            <p className="g-prompt-q">{self ? "About you" : "About him"}</p>
+            <p className="g-quote">{m.hot_take}</p>
+          </section>
+        )}
+
         {his.answers.map((a) => (
           <section key={a.prompt_id} className="g-card g-prompt">
             <p className="g-prompt-q">{a.prompt}</p>
@@ -266,7 +273,7 @@ export default async function Guy({ params }: { params: Promise<{ id: string }> 
 
         {!self && his.interests.length === 0 && his.answers.length === 0 && !hit && (
           <section className="g-card">
-            <p className="fine">Into {m.interests}. &ldquo;{m.hot_take}&rdquo;</p>
+            <p className="fine">Into {m.interests}.</p>
           </section>
         )}
       </div>

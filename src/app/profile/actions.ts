@@ -48,7 +48,6 @@ export async function saveProfile(_prev: ProfileState, form: FormData): Promise<
   if (!interests) return { error: "Tell us three things you're into." };
   if (lookingFor !== "friends" && lookingFor !== "friends_dating")
     return { error: "Pick what you're looking for." };
-  if (!hotTake) return { error: "Give us your hot take." };
   if (!existing && form.get("agree") !== "on")
     return { error: "Agree to the house rules to join." };
   if (!existing && !hasPhoto) return { error: "Add a profile photo of your face." };

@@ -51,7 +51,7 @@ const sections: Section[] = [
           Google.
         </p>
         <p>
-          <b>Your profile.</b> First name, birthday, zip code (we use it to place you in a nearby Circle), interests, hot take,
+          <b>Your profile.</b> First name, birthday, zip code (we use it to place you in a nearby Circle), interests, anything else you add about yourself,
           whether you&apos;re open to dating, and your profile photo.
         </p>
         <p>
@@ -118,7 +118,7 @@ const sections: Section[] = [
     body: (
       <>
         <p>
-          <b>Your Circle sees</b> your first name, age (not your birthday), interests, hot take, photo, badges and Founder
+          <b>Your Circle sees</b> your first name, age (not your birthday), interests, what you wrote about yourself, photo, badges and Founder
           number, and the answers, reactions, replies, plans, Roses and messages you post to the Circle.
         </p>
         <p>
@@ -144,7 +144,7 @@ const sections: Section[] = [
           person deciding.
         </p>
         <p>
-          <b>Guys whose ID check is overdue</b> see only first names, ages and interests, not faces or hot takes, until it
+          <b>Guys whose ID check is overdue</b> see only first names, ages and interests, not faces or what they wrote about themselves, until it
           passes.
         </p>
         <p>Your photos and media are stored privately. They aren&apos;t public links and search engines can&apos;t find them.</p>

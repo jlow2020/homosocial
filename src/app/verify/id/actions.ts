@@ -11,7 +11,8 @@ import { hasConsent } from "@/lib/consent";
 import { purgeVerificationFrames } from "@/lib/retention";
 import { BIOMETRIC_VERSION } from "@/lib/legal";
 
-export type IdOutcome = { passed: boolean; message: string; retry: boolean };
+// step: which photo to retake, when it's one of them.
+export type IdOutcome = { passed: boolean; message: string; retry: boolean; step?: "front" | "back" };
 
 const MAX_ATTEMPTS = 10;
 const MAX_BYTES = 6 * 1024 * 1024;
@@ -48,14 +49,14 @@ export async function checkId(form: FormData): Promise<IdOutcome> {
 
   const front = file(form, "front");
   const back = file(form, "back");
-  if (!front) return { passed: false, message: "Add a photo of your ID.", retry: true };
+  if (!front) return { passed: false, message: "That photo didn't come through. Take it again.", retry: true, step: "front" };
 
   const attempt = (p.id_attempts ?? 0) + 1;
-  const fail = async (message: string, reason: string, retry = true): Promise<IdOutcome> => {
+  const fail = async (message: string, reason: string, retry = true, step?: "front" | "back"): Promise<IdOutcome> => {
     await db.from("profiles").update({ id_attempts: attempt, updated_at: new Date().toISOString() }).eq("id", p.id);
     console.log("id-check fail", p.id, reason);
     after(() => adminAlert(db, { title: "ID check failed", body: `${who(p)} failed try ${attempt}: ${message}`, url: memberUrl(p.id) }));
-    return { passed: false, message, retry };
+    return { passed: false, message, retry, step };
   };
 
   const frontBuf = Buffer.from(await front.arrayBuffer());
@@ -73,9 +74,11 @@ export async function checkId(form: FormData): Promise<IdOutcome> {
   if (!doc) {
     return fail(
       backBuf
-        ? "We couldn't read the barcode on the back. Lay the card flat in good light, fill the frame, and make sure there's no glare on the barcode."
+        ? "We couldn't read the barcode. Retake the back: lay the card flat in good light, get close, and keep glare off the barcode. Still stuck? Tap Upload a photo instead and use your camera app."
         : "We couldn't read the lines of <<< at the bottom of the page. Lay it flat in good light, fill the frame, and avoid glare.",
       "unreadable",
+      true,
+      backBuf ? "back" : "front",
     );
   }
 
@@ -84,12 +87,12 @@ export async function checkId(form: FormData): Promise<IdOutcome> {
   const birth = doc.birthDate.toISOString().slice(0, 10);
   const age = ageFrom(birth);
   if (doc.expires && doc.expires.getTime() < now.getTime() - 24 * 3600 * 1000) {
-    return fail("That ID is expired. Use one that's current.", "expired");
+    return fail("That ID is expired. Use one that's current.", "expired", true, "front");
   }
   if (!Number.isFinite(age) || age < SEASON.minAge) {
     return fail(`Homosocial is for guys ${SEASON.minAge} and up.`, "underage", false);
   }
-  if (age > 110) return fail("We couldn't read the birthday on that ID. Try a clearer photo.", "bad_birthdate");
+  if (age > 110) return fail("We couldn't read the birthday on that ID. Retake the back, closer and sharper.", "bad_birthdate", true, "back");
 
   // 3. Face on the ID vs. the live Realness Check and the profile photo.
   let idFaces: Identity[];
@@ -100,7 +103,7 @@ export async function checkId(form: FormData): Promise<IdOutcome> {
     return fail("Something went wrong reading your ID photo. Try again.", "face_error");
   }
   if (idFaces.length === 0) {
-    return fail("We couldn't find the photo on your ID. Retake the front in good light with no glare on the picture.", "no_id_face");
+    return fail("We couldn't find the photo on your ID. Retake the front in good light with no glare on the picture.", "no_id_face", true, "front");
   }
   const idFace = idFaces[0];
 
@@ -131,6 +134,8 @@ export async function checkId(form: FormData): Promise<IdOutcome> {
     return fail(
       "The photo on your ID doesn't match your Realness Check. Retake the front of your ID in good light, filling the frame.",
       `face_mismatch ${match.toFixed(2)}`,
+      true,
+      "front",
     );
   }
 

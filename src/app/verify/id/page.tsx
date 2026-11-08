@@ -25,18 +25,16 @@ export default async function VerifyId({ searchParams }: { searchParams: Promise
   return (
     <main>
       <PageHead
-        title="One last thing"
+        title="ID check"
         tag={
           <>
-            <span className="chy-gold">Last step</span>
-            <span className="chy-light">One-time ID check</span>
+            <span className="chy-gold">Once and done</span>
+            <span className="chy-light">Unlocks DMs, photos and video</span>
           </>
         }
         right={<Link href="/circle" className="topbar-link">Back</Link>}
       >
-        Everyone in your Circle is a real adult, checked once. We read your ID and match its photo to your
-        Realness Check. We never keep pictures of your ID or your ID number. We keep your birthday, that you passed, and
-        a scrambled fingerprint so one ID can&apos;t open two accounts.
+        Two quick photos, about a minute. We match your ID to your Realness Check, then throw the pictures away.
       </PageHead>
       {agreed ? <IdCheck /> : <BiometricConsent back="/verify/id" missing={consent === "missing"} />}
     </main>

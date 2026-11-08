@@ -59,7 +59,7 @@ export default async function CircleInside({ params }: { params: Promise<{ id: s
               </p>
               <span className={`pill ${stageTone(p.stage)}`}>{p.stage}</span>
               <p className="member-into">Into {p.profile!.interests}</p>
-              <p className="member-take">&ldquo;{p.profile!.hot_take}&rdquo;</p>
+              {p.profile!.hot_take && <p className="member-take">{p.profile!.hot_take}</p>}
             </div>
           </li>
         ))}
