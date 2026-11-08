@@ -79,23 +79,28 @@ export async function readBarcode(image: Buffer): Promise<LicenseData | null> {
 export async function readMrz(image: Buffer): Promise<MrzData | null> {
   const sharp = req("sharp");
   const worker = await ocr();
-  const meta = await sharp(image).rotate().metadata();
-  const bases: Buffer[] = [];
-  // The <<< lines are in the bottom part of the page or card. Try that first.
-  const full = await sharp(image).rotate().toBuffer();
-  const h = meta.height ?? 0;
-  const w = meta.width ?? 0;
-  if (h && w) {
-    const top = Math.round(h * 0.55);
-    bases.push(await sharp(full).extract({ left: 0, top, width: w, height: h - top }).toBuffer());
-  }
-  bases.push(full);
-  for (const base of bases) {
-    for (const v of await variants(base, [1800, 1200])) {
+  const upright = await sharp(image).rotate().toBuffer();
+  const started = Date.now();
+  // Phone photos are rarely straight, and OCR on the <<< lines falls apart at a
+  // few degrees of tilt. Straighten a few ways, bottom of the page first.
+  for (const angle of [0, 3, -3, 6, -6, 1.5, -1.5]) {
+    const turned = angle ? await sharp(upright).rotate(angle, { background: "#000" }).toBuffer() : upright;
+    const meta = await sharp(turned).metadata();
+    const w = meta.width ?? 0;
+    const h = meta.height ?? 0;
+    const crops: Buffer[] = [];
+    if (w && h) {
+      const top = Math.round(h * 0.5);
+      crops.push(await sharp(turned).extract({ left: 0, top, width: w, height: h - top }).toBuffer());
+    }
+    if (angle === 0) crops.push(turned);
+    for (const crop of crops) {
+      const v = await sharp(crop).resize({ width: 1800, withoutEnlargement: false }).grayscale().normalize().sharpen().png().toBuffer();
       const { data } = await worker.recognize(v);
       const parsed = parseMrz(String(data.text ?? "").split("\n"));
       if (parsed) return parsed;
     }
+    if (Date.now() - started > 25000) break;
   }
   return null;
 }

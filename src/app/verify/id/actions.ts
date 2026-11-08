@@ -29,6 +29,10 @@ function file(form: FormData, key: string): File | null {
 // The ID number itself is never stored.
 function fingerprint(kind: string, issuer: string, docNumber: string): string {
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "homosocial";
+  // Passport numbers are read off the photo, where L and 1 or O and 0 look alike
+  // and the check digit can't always tell. Fold them together so a misread
+  // can't sneak the same passport onto a second account.
+  if (kind === "mrz") docNumber = docNumber.toUpperCase().replace(/[IL]/g, "1").replace(/O/g, "0").replace(/S/g, "5").replace(/B/g, "8").replace(/Z/g, "2");
   return createHmac("sha256", key).update(`${kind}:${issuer}:${docNumber}`.toUpperCase()).digest("hex");
 }
 
@@ -75,7 +79,7 @@ export async function checkId(form: FormData): Promise<IdOutcome> {
     return fail(
       backBuf
         ? "We couldn't read the barcode. Retake the back: lay the card flat in good light, get close, and keep glare off the barcode. Still stuck? Tap Upload a photo instead and use your camera app."
-        : "We couldn't read the lines of <<< at the bottom of the page. Lay it flat in good light, fill the frame, and avoid glare.",
+        : "We couldn't read the <<< lines at the bottom of your passport page. Lay it open and flat in good light, get close, and keep glare off the bottom. Still stuck? Tap Upload a photo instead and use your camera app.",
       "unreadable",
       true,
       backBuf ? "back" : "front",

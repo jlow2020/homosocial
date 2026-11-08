@@ -21,7 +21,7 @@ const COPY: Record<Kind, Record<Side, { title: string; tip: string }>> = {
     back: { title: "Back of your ID", tip: "The side with the barcode. Get close so the barcode is sharp." },
   },
   passport: {
-    front: { title: "Your passport photo page", tip: "Fit the whole page, including the <<< lines at the bottom." },
+    front: { title: "Your passport photo page", tip: "Open it flat to the page with your picture. Get the <<< lines at the bottom fully in the frame, sharp and with no glare." },
     back: { title: "", tip: "" },
   },
 };
@@ -98,7 +98,7 @@ export default function IdCheck() {
   const upload = useRef<HTMLInputElement>(null);
   const failCamera = useRef(() => setNoCamera(true)).current;
 
-  const top = useRef<HTMLParagraphElement>(null);
+  const top = useRef<HTMLDivElement>(null);
   // Keep the step he's on at the top of the screen, camera and shutter in view.
   useEffect(() => {
     const t = setTimeout(() => top.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 400);
@@ -201,8 +201,18 @@ export default function IdCheck() {
 
   const ready = shots.front && (kind === "passport" || shots.back);
   return (
-    <div className="form wrap idc">
-      <p className="idc-step" ref={top}>
+    <div className="form wrap idc idc-top" ref={top}>
+      {!review && !shots.front && (
+        <div className="idc-kinds" role="radiogroup" aria-label="Which ID">
+          <button type="button" role="radio" aria-checked={kind === "card"} className={kind === "card" ? "on" : ""} onClick={() => kind !== "card" && switchKind("card")}>
+            🪪 License / ID
+          </button>
+          <button type="button" role="radio" aria-checked={kind === "passport"} className={kind === "passport" ? "on" : ""} onClick={() => kind !== "passport" && switchKind("passport")}>
+            🛂 Passport
+          </button>
+        </div>
+      )}
+      <p className="idc-step">
         {steps > 1 ? `Step ${side === "front" ? 1 : 2} of 2` : "One photo"}
       </p>
       <p className="idc-title">{copy.title}</p>
@@ -211,7 +221,7 @@ export default function IdCheck() {
         <>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={review.url} alt={copy.title} className="idc-review" />
-          <p className="fine">Is it sharp, with no glare on the picture or the barcode?</p>
+          <p className="fine">{kind === "passport" ? "Can you read the <<< lines at the bottom, with no glare on your picture?" : "Is it sharp, with no glare on the picture or the barcode?"}</p>
           <div className="idc-actions">
             <button type="button" className="btn btn-pink btn-full" onClick={useIt}>
               {kind === "card" && side === "front" && !shots.back ? "Looks good, next" : "Looks good, check my ID"}
@@ -256,15 +266,7 @@ export default function IdCheck() {
       )}
 
       <div className="idc-foot">
-        {kind === "card" ? (
-          <button type="button" className="link-button quiet" onClick={() => switchKind("passport")}>
-            Using a passport book instead?
-          </button>
-        ) : (
-          <button type="button" className="link-button quiet" onClick={() => switchKind("card")}>
-            Use a driver&apos;s license or ID card instead
-          </button>
-        )}
+        <p className="fine">Any country&apos;s passport works. So do US passport cards and green cards: pick License or ID card.</p>
         <p className="fine">Military IDs can&apos;t be photographed by law, so use your license or passport.</p>
       </div>
     </div>

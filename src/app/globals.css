@@ -6590,3 +6590,31 @@ input[type="date"].input::-webkit-date-and-time-value {
   justify-content: center;
   margin-top: 8px;
 }
+
+.idc-kinds {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  padding: 4px;
+  border-radius: 14px;
+  background: var(--studio);
+  border: 1px solid var(--line);
+}
+.idc-kinds button {
+  font: inherit;
+  font-weight: 700;
+  font-size: 15px;
+  padding: 10px 8px;
+  border: 0;
+  border-radius: 10px;
+  background: none;
+  color: var(--soft);
+  cursor: pointer;
+}
+.idc-kinds button.on {
+  background: var(--hot);
+  color: var(--prime);
+}
+.idc-top {
+  scroll-margin-top: 12px;
+}
