@@ -1,3 +1,4 @@
+import { ID_GRACE_DAYS } from "@/lib/season";
 import type { Profile } from "@/lib/supabase-server";
 
 export type Stage =
@@ -28,6 +29,8 @@ export function stageOf(profile: Profile | null, hasUsername: boolean): Stage {
   if (profile.status === "paused") return "Paused";
   if (profile.status === "waitlist") return "Waitlist";
   if (profile.id_verified_at) return "Seated";
+  // Playing on his Realness Check for a few days; ID check still due.
+  if (profile.verified_at && Date.now() - new Date(profile.verified_at).getTime() < ID_GRACE_DAYS * 864e5) return "Seated";
   if (profile.verified_at) return "Lobby";
   return "Realness pending";
 }

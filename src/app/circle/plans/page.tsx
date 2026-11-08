@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { loadPlayer, photoUrls } from "@/lib/game/player";
 import { etLabel } from "@/lib/game/clock";
-import { Avatar, GuyName, Shell } from "../ui";
+import { Avatar, GuyName, IdGate, Shell } from "../ui";
 import PlanForm from "./PlanForm";
 import RsvpButton from "./RsvpButton";
 
@@ -72,7 +72,7 @@ export default async function Plans() {
           <p className="fine">Meet in public the first time.</p>
         </div>
       </div>
-      {!pl.closed && <PlanForm />}
+      {!pl.closed && (pl.idPending ? <IdGate what="Plans" /> : <PlanForm />)}
       <ul className="plan-list">{upcoming.map((p) => card(p))}</ul>
       {upcoming.length === 0 && <p className="fine">Nothing coming up.</p>}
       {past.length > 0 && (

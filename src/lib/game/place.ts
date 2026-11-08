@@ -1,5 +1,6 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { isSeated, SEATED_OR } from "./player";
 import { SEASON, MIN_SEAT_MILES } from "@/lib/season";
 import { notify } from "@/lib/notify";
 import { placeForZip } from "@/lib/geo";
@@ -61,8 +62,8 @@ export async function fillCircles(db: SupabaseClient): Promise<void> {
 // A seated guy alone in his Circle joins the nearest Circle that has guys and room,
 // instead of waiting. Returns true if he moved.
 export async function rehomeIfAlone(db: SupabaseClient, userId: string): Promise<boolean> {
-  const { data: me } = await db.from("profiles").select("circle_id, id_verified_at, status").eq("id", userId).maybeSingle();
-  if (!me?.circle_id || !me.id_verified_at || me.status !== "active") return false;
+  const { data: me } = await db.from("profiles").select("circle_id, verified_at, id_verified_at, status").eq("id", userId).maybeSingle();
+  if (!me?.circle_id || !isSeated(me) || me.status !== "active") return false;
   // An admin running his Circle on his own stays put.
   const { data: admin } = await db.from("admins").select("user_id").eq("user_id", userId).maybeSingle();
   if (admin) return false;
@@ -94,7 +95,7 @@ export async function rehomeIfAlone(db: SupabaseClient, userId: string): Promise
 export async function rehomeLoners(db: SupabaseClient): Promise<void> {
   const { data: lonely } = await db.from("circle_centers").select("id").eq("members", 1).limit(100);
   for (const c of lonely ?? []) {
-    const { data: guy } = await db.from("profiles").select("id").eq("circle_id", c.id).eq("status", "active").not("id_verified_at", "is", null).maybeSingle();
+    const { data: guy } = await db.from("profiles").select("id").eq("circle_id", c.id).eq("status", "active").or(SEATED_OR()).maybeSingle();
     if (guy) await rehomeIfAlone(db, guy.id as string);
   }
 }

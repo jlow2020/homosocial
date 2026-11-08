@@ -22,6 +22,11 @@ export const WEEKS = [
   { n: 8, title: "The Finale", blurb: "Sunday, 8pm. Private picks. Only mutuals revealed." },
 ];
 
+// After the Realness Check he plays right away. The ID check is due within this
+// many days, and unlocks DMs, photos and video, and Plans. Past it, he's paused
+// in the waiting room until he does it.
+export const ID_GRACE_DAYS = 3;
+
 // Anyone with a US zip can play. Where he lives decides his Circle (see place_member_geo).
 export const MIN_SEAT_MILES = 150; // "close to home" when grouping guys
 

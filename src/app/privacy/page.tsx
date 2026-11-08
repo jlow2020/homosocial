@@ -144,8 +144,8 @@ const sections: Section[] = [
           person deciding.
         </p>
         <p>
-          <b>Guys in the lobby</b> who haven&apos;t done their ID check yet see only first names, ages and interests, not faces
-          or hot takes.
+          <b>Guys whose ID check is overdue</b> see only first names, ages and interests, not faces or hot takes, until it
+          passes.
         </p>
         <p>Your photos and media are stored privately. They aren&apos;t public links and search engines can&apos;t find them.</p>
       </>
@@ -258,7 +258,7 @@ const sections: Section[] = [
     title: "Adults only",
     body: (
       <p>
-        Homosocial is only for people 18 and older, and every member&apos;s age is checked against a government ID. We don&apos;t
+        Homosocial is only for people 18 and older, and every member&apos;s age is checked at his Realness Check and again against a government ID within 3 days of joining. We don&apos;t
         knowingly collect information from anyone under 18. If we learn we have, we delete it and close the account. If you
         think a minor is on Homosocial, report him in the app or email <Mail to={LEGAL.support} />.
       </p>

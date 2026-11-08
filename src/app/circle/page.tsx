@@ -10,7 +10,7 @@ import MemberActions from "./MemberActions";
 import StaffBadge from "@/components/StaffBadge";
 import FounderBadge from "@/components/FounderBadge";
 import { getMe, getSupabaseAdmin, nextPath } from "@/lib/supabase-server";
-import { SEASON, WEEKS, ageFrom } from "@/lib/season";
+import { ID_GRACE_DAYS, SEASON, WEEKS, ageFrom } from "@/lib/season";
 import { loadPlayer, pastCircles, photoUrls, type Player } from "@/lib/game/player";
 import NextSeason from "./NextSeason";
 import { startMyCircle } from "./actions";
@@ -93,13 +93,13 @@ async function Lobby({ pl }: { pl: Player }) {
   const capacity = pl.circle.capacity ?? SEASON.spots;
   const [photo, extras] = await Promise.all([photoUrls(db, [p.photo_path, ...others.map((m) => m.photo_path)]), loadExtras(db, p.id)]);
   const thin = extras.answers.length < 3 || extras.photos.length === 0 || extras.interests.length === 0;
-  // Guys already placed here who are still finishing sign-up (ID check).
+  // Guys already placed here who are still finishing sign-up (Realness Check).
   const { count: arriving } = await db
     .from("profiles")
     .select("id", { count: "exact", head: true })
     .eq("circle_id", pl.circle.id)
     .eq("status", "active")
-    .is("id_verified_at", null)
+    .is("verified_at", null)
     .neq("id", p.id);
 
   return (
@@ -111,9 +111,11 @@ async function Lobby({ pl }: { pl: Player }) {
             <>
               <h1 className="game-h1">One last step.</h1>
               <p className="game-lede">
-                {others.length > 0
-                  ? `${others.length} ${others.length === 1 ? "guy is" : "guys are"} already in your Circle. Do your ID check to start playing.`
-                  : "Do your ID check to start playing."}
+                {p.verified_at && Date.now() - new Date(p.verified_at).getTime() > ID_GRACE_DAYS * 864e5
+                  ? `Your ${ID_GRACE_DAYS} days are up. Do your ID check to get back in. It takes about a minute.`
+                  : others.length > 0
+                    ? `${others.length} ${others.length === 1 ? "guy is" : "guys are"} already in your Circle. Do your ID check to start playing.`
+                    : "Do your ID check to start playing."}
               </p>
               <div className="waiting-actions">
                 <Link href="/verify/id" className="btn btn-gold">

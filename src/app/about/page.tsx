@@ -43,8 +43,8 @@ const sections: Section[] = [
     title: "Real guys only",
     body: (
       <p>
-        Every member passes a Realness Check and a one-time ID check, so everyone in your Circle is a real adult who looks like
-        his photo. We never keep pictures of your ID, and we never sell your data. See our{" "}
+        Every member passes a Realness Check, then a one-time ID check within 3 days, so everyone in your Circle is a real adult
+        who looks like his photo. We never keep pictures of your ID, and we never sell your data. See our{" "}
         <Link href="/privacy">Privacy Policy</Link> and <Link href="/biometrics">Biometric and ID Notice</Link>.
       </p>
     ),

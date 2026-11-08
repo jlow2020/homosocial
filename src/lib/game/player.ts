@@ -4,7 +4,7 @@ import { cookies } from "next/headers";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getMe, getSupabaseAdmin, nextPath, type Profile } from "@/lib/supabase-server";
 import { isAdmin, ROLE_TITLE, type AdminRole } from "@/lib/admin";
-import { SEASON } from "@/lib/season";
+import { SEASON, ID_GRACE_DAYS } from "@/lib/season";
 import { clockFor, finaleFor, isClosed, weekStarts, DEFAULT_TZ, type Clock } from "./clock";
 
 export type Circle = {
@@ -49,9 +49,25 @@ export type Player = {
   titles: Map<string, string>; // admin titles by member id
   past: boolean; // looking back at a Circle he's already moved on from (or an admin looking in)
   visiting: boolean; // an admin looking inside someone else's Circle
+  idPending: boolean; // playing on his Realness Check; ID check still due
+  idDue: Date | null; // when it's due
   closed: boolean; // Season over and the goodbye window too: read-only
   seasonNo: number; // his own Season count, for labels
 };
+
+// Seated: passed the ID check, or passed the Realness Check within the last
+// ID_GRACE_DAYS (he plays while his ID check is due).
+const GRACE_MS = ID_GRACE_DAYS * 24 * 3600 * 1000;
+export function graceStart(now = Date.now()): string {
+  return new Date(now - GRACE_MS).toISOString();
+}
+export const SEATED_OR = () => `id_verified_at.not.is.null,verified_at.gt.${graceStart()}`;
+export function isSeated(p: { verified_at: string | null; id_verified_at: string | null }, now = Date.now()): boolean {
+  return !!p.id_verified_at || (!!p.verified_at && new Date(p.verified_at).getTime() > now - GRACE_MS);
+}
+export function idDueAt(p: { verified_at: string | null }): Date | null {
+  return p.verified_at ? new Date(new Date(p.verified_at).getTime() + GRACE_MS) : null;
+}
 
 // Set by /circle/past/[id] while he looks back at an old Circle.
 export const PAST_COOKIE = "hs_past";
@@ -100,7 +116,8 @@ export async function loadPlayer(opts: { needSeat?: boolean } = {}): Promise<Pla
   }
   const { data: circleRow } = await db.from("circles").select("*").eq("id", circleId).single();
   let circle = circleRow as Circle;
-  const seated = !!p.id_verified_at;
+  const seated = isSeated(p);
+  const idPending = seated && !p.id_verified_at;
   if (opts.needSeat && !seated) redirect("/circle");
 
   // Once the Finale is past, guys start leaving for the next Season. The Circle
@@ -152,7 +169,7 @@ export async function loadPlayer(opts: { needSeat?: boolean } = {}): Promise<Pla
   const filling = clock.phase === "filling";
   const waiting = !over && (visiting ? filling : !seated || filling || (members.length < SEASON.minToOpen && !role));
   const seasonNo = await seasonNumber(db, p.id, circle);
-  return { db, me, profile: p as Player["profile"], role, circle, clock, seated, waiting, members, titles, past, visiting, closed: past || isClosed(clock), seasonNo };
+  return { db, me, profile: p as Player["profile"], role, circle, clock, seated, waiting, members, titles, past, visiting, idPending, idDue: idPending ? idDueAt(p) : null, closed: past || isClosed(clock), seasonNo };
 }
 
 // Everyone who was still in this Circle at its Finale, whether or not he's
@@ -172,8 +189,8 @@ export async function loadAlumni(db: SupabaseClient, circle: Pick<Circle, "id" |
     .select(MEMBER_COLS)
     .in("id", ids)
     .neq("status", "banned")
-    .not("id_verified_at", "is", null)
-    .order("id_verified_at", { ascending: true });
+    .not("verified_at", "is", null)
+    .order("verified_at", { ascending: true });
   const hidden = new Set((blocks ?? []).map((b) => (b.blocker === meId ? b.blocked : b.blocker)));
   return ((rows ?? []) as Member[]).filter((m) => !hidden.has(m.id));
 }
@@ -213,8 +230,8 @@ export async function loadMembers(db: SupabaseClient, circleId: string, meId: st
       .eq("circle_id", circleId)
       .eq("status", "active")
       .not("verified_at", "is", null)
-      .not("id_verified_at", "is", null)
-      .order("id_verified_at", { ascending: true }),
+      .or(SEATED_OR())
+      .order("verified_at", { ascending: true }),
     db.from("blocks").select("blocker, blocked").or(`blocker.eq.${meId},blocked.eq.${meId}`),
   ]);
   const hidden = new Set((blocks ?? []).map((b) => (b.blocker === meId ? b.blocked : b.blocker)));

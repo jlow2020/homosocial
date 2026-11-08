@@ -13,7 +13,8 @@ const sections: Section[] = [
     title: "What our checks do, and don't do",
     body: (
       <p>
-        Every member passed a Realness Check and an ID check, so you know he&apos;s a real adult who looks like his photos. That
+        Every member passed a Realness Check, and nobody can DM you or post photos until his ID check passes too, so you know
+        he&apos;s a real adult who looks like his photos. That
         tells you nothing about how he&apos;ll act. We don&apos;t run criminal background checks. Trust your gut over any badge.
       </p>
     ),

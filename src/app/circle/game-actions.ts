@@ -45,6 +45,9 @@ async function player(): Promise<Player> {
 }
 
 
+// Playing on his Realness Check: DMs, photos and video, and Plans wait for his ID check.
+const NEED_ID: Result = { ok: false, error: "That unlocks after your ID check. It takes about a minute: tap the gold banner up top." };
+
 // A finished Circle (or one he's looking back at) is read-only.
 const READ_ONLY: Result = { ok: false, error: "This Circle's Season is over, so it's read-only now." };
 
@@ -110,6 +113,7 @@ export async function answerDrop(form: FormData): Promise<Result> {
     return { ok: false, error: "Write something first." };
   }
 
+  if (pl.idPending && !pass && (hasPhoto || videoPath)) return { ok: false, error: "Photos and videos unlock after your ID check. Tap the gold banner up top, it takes about a minute." };
   let photo_path: string | null = null;
   let img: Awaited<ReturnType<typeof moderateImage>> | null = null;
   if (hasPhoto && !pass) {
@@ -243,6 +247,7 @@ export async function postLounge(body: string): Promise<Result> {
 
 export async function postPlan(form: FormData): Promise<Result> {
   const pl = await player();
+  if (pl.idPending) return NEED_ID;
   if (pl.closed) return READ_ONLY;
   const title = clean(form.get("title"), 80);
   const place = clean(form.get("place"), 120);
@@ -275,6 +280,7 @@ export async function postPlan(form: FormData): Promise<Result> {
 
 export async function toggleRsvp(planId: string): Promise<Result> {
   const pl = await player();
+  if (pl.idPending) return NEED_ID;
   if (pl.closed) return READ_ONLY;
   if (!UUID.test(planId)) return { ok: false };
   const { data: plan } = await pl.db.from("plans").select("circle_id").eq("id", planId).maybeSingle();
@@ -303,6 +309,7 @@ async function threadWith(pl: Player, otherId: string, accept: boolean) {
 
 export async function startDm(otherId: string): Promise<void> {
   const pl = await player();
+  if (pl.idPending) redirect("/verify/id");
   if (!UUID.test(otherId) || otherId === pl.profile.id || !isMember(pl, otherId)) redirect("/circle/dms");
   const t = await threadWith(pl, otherId, false);
   if (!t.accepted_at && t.requested_by === pl.profile.id) {
@@ -314,6 +321,7 @@ export async function startDm(otherId: string): Promise<void> {
 export async function openChat(otherId: string): Promise<void> {
   // A Finale mutual opens a chat, already accepted.
   const pl = await player();
+  if (pl.idPending) redirect("/verify/id");
   if (!UUID.test(otherId) || otherId === pl.profile.id) redirect("/circle/dms");
   const t = await threadWith(pl, otherId, true);
   if (!t.accepted_at) await pl.db.from("dm_threads").update({ accepted_at: new Date().toISOString() }).eq("id", t.id);
@@ -352,6 +360,7 @@ export async function setDmPhotos(threadId: string, on: boolean): Promise<Result
 
 export async function sendDmPhoto(form: FormData): Promise<Result> {
   const pl = await player();
+  if (pl.idPending) return NEED_ID;
   const t = await myThread(pl, String(form.get("thread") ?? ""));
   if (!t?.accepted_at) return { ok: false, error: "That chat is gone." };
   if (!t.photos_a || !t.photos_b) return { ok: false, error: "You both have to turn photos on first." };
@@ -380,6 +389,7 @@ export async function sendDmPhoto(form: FormData): Promise<Result> {
 
 export async function acceptDm(threadId: string): Promise<Result> {
   const pl = await player();
+  if (pl.idPending) return NEED_ID;
   const t = await myThread(pl, threadId);
   if (!t || t.requested_by === pl.profile.id) return { ok: false };
   await pl.db.from("dm_threads").update({ accepted_at: new Date().toISOString() }).eq("id", t.id);
@@ -397,6 +407,7 @@ export async function declineDm(threadId: string): Promise<void> {
 
 export async function sendDm(threadId: string, body: string): Promise<Result> {
   const pl = await player();
+  if (pl.idPending) return NEED_ID;
   const text = clean(body, 2000);
   if (!text) return { ok: false };
   const t = await myThread(pl, threadId);
@@ -527,6 +538,7 @@ export async function clipTicket(
   size: number
 ): Promise<{ ok: boolean; error?: string; signedUrl?: string; path?: string; apikey?: string }> {
   const pl = await player();
+  if (pl.idPending) return { ok: false, error: NEED_ID.error };
   const t = await myThread(pl, threadId);
   if (!t?.accepted_at) return { ok: false, error: "That chat is gone." };
   if (!t.photos_a || !t.photos_b) return { ok: false, error: "You both have to turn photos and videos on first." };
@@ -541,6 +553,7 @@ export async function clipTicket(
 
 export async function sendDmClip(threadId: string, path: string): Promise<Result> {
   const pl = await player();
+  if (pl.idPending) return NEED_ID;
   const t = await myThread(pl, threadId);
   if (!t?.accepted_at || !t.photos_a || !t.photos_b) return { ok: false, error: "That chat is gone." };
   const prefix = `dms/${t.id}/${pl.profile.id}-`;
@@ -642,6 +655,7 @@ export async function answerClipTicket(
   size: number
 ): Promise<{ ok: boolean; error?: string; signedUrl?: string; path?: string; apikey?: string }> {
   const pl = await player();
+  if (pl.idPending) return { ok: false, error: NEED_ID.error };
   const now = currentWeek(pl);
   if (!now || !Number.isInteger(week) || week < 1 || week > now) return { ok: false, error: "That drop isn't open." };
   const drop = await ensureDrop(pl.db, pl.circle, week);
@@ -696,6 +710,7 @@ export async function takeHotSeat(week: number): Promise<Result> {
 // Blind Date: tap in, get paired with the next guy who taps in.
 export async function blindDateIn(week: number): Promise<Result> {
   const pl = await player();
+  if (pl.idPending) return NEED_ID;
   if (currentWeek(pl) !== week || pl.clock.phase !== "season") return { ok: false, error: "That drop isn't open." };
   const drop = await ensureDrop(pl.db, pl.circle, week);
   if (drop.spec?.kind !== "blinddate") return { ok: false };
@@ -848,6 +863,7 @@ export async function readingTicket(
   size: number
 ): Promise<{ ok: boolean; error?: string; signedUrl?: string; path?: string; apikey?: string }> {
   const pl = await player();
+  if (pl.idPending) return { ok: false, error: NEED_ID.error };
   const drop = await finishedChain(pl, week);
   if (!drop) return { ok: false, error: "The story isn't finished yet." };
   if (!AUDIO_TYPES.has(contentType)) return { ok: false, error: "That file type won't play." };

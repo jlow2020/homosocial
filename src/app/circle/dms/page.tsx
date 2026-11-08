@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { loadPlayer, photoUrls } from "@/lib/game/player";
-import { Avatar, Shell, timeAgo } from "../ui";
+import { Avatar, IdGate, Shell, timeAgo } from "../ui";
 
 export const dynamic = "force-dynamic";
 
@@ -21,6 +21,13 @@ type Thread = {
 
 export default async function Dms() {
   const pl = await loadPlayer({ needSeat: true });
+  if (pl.idPending)
+    return (
+      <Shell pl={pl}>
+        <h1 className="game-h1">DMs</h1>
+        <IdGate what="DMs" />
+      </Shell>
+    );
   const me = pl.profile.id;
   const { data } = await pl.db
     .from("dm_threads")

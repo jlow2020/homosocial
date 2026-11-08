@@ -124,8 +124,8 @@ const sections: Section[] = [
       <>
         <p>
           Before your first Realness Check, we ask you to agree to this notice in writing (by checking a box), and we record when
-          you agreed. The checks are required to get a seat in a Circle. If you don&apos;t want to do them, you can&apos;t join a
-          Circle.
+          you agreed. The Realness Check gets you a seat in a Circle, and the ID check is due within 3 days to keep it. If you
+          don&apos;t want to do them, you can&apos;t join a Circle.
         </p>
         <p>
           You can withdraw your consent at any time by deleting your account, which deletes everything above (except a banned

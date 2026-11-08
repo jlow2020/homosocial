@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { loadPlayer, photoUrls } from "@/lib/game/player";
 import { UUID } from "@/lib/admin";
 import { acceptDm, declineDm } from "../../game-actions";
-import { Avatar, GuyName, Shell } from "../../ui";
+import { Avatar, GuyName, IdGate, Shell } from "../../ui";
 import Live from "../../Live";
 import AcceptButton from "./AcceptButton";
 import { PhotoSwitch } from "./DmPhotos";
@@ -31,6 +31,13 @@ export default async function Thread({ params }: { params: Promise<{ id: string 
   const { id } = await params;
   if (!UUID.test(id)) notFound();
   const pl = await loadPlayer({ needSeat: true });
+  if (pl.idPending)
+    return (
+      <Shell pl={pl}>
+        <h1 className="game-h1">DMs</h1>
+        <IdGate what="DMs" />
+      </Shell>
+    );
   const me = pl.profile.id;
   const { data: t } = await pl.db.from("dm_threads").select("*").eq("id", id).maybeSingle();
   if (!t || (t.a !== me && t.b !== me)) notFound();

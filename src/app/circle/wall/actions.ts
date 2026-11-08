@@ -50,6 +50,7 @@ export async function wallClipTicket(contentType: string, size: number): Promise
   const pl = await player();
   const no = canPost(pl);
   if (no) return { ok: false, error: no.error };
+  if (pl.idPending) return { ok: false, error: "Videos unlock after your ID check. Tap the gold banner up top." };
   if (!CLIP_TYPES.has(contentType)) return { ok: false, error: "That video type won't play. Try an .mp4 or .mov." };
   if (!(size > 0 && size <= MAX_CLIP)) return { ok: false, error: "That clip is too big. Keep it under 30 seconds." };
   const ext = contentType === "video/quicktime" ? "mov" : contentType === "video/webm" ? "webm" : "mp4";
@@ -63,6 +64,7 @@ export async function wallClipTicket(contentType: string, size: number): Promise
 async function readMedia(pl: Player, form: FormData) {
   const file = form.get("photo");
   const videoPath = String(form.get("video_path") ?? "");
+  if (pl.idPending && ((file instanceof File && file.size > 0) || videoPath)) return { error: "Photos and videos unlock after your ID check. Tap the gold banner up top." };
   if (file instanceof File && file.size > 0) {
     if (file.type !== "image/jpeg" || file.size > MAX_PHOTO) return { error: "That photo didn't work. Try a different one." };
     const buf = Buffer.from(await file.arrayBuffer());

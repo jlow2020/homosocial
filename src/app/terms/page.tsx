@@ -65,8 +65,9 @@ const sections: Section[] = [
     body: (
       <>
         <p>
-          Every member does a Realness Check (a short selfie video matched to his profile photo) and a one-time ID check (a
-          government ID matched to his Realness Check) before he gets a seat. How this works, and what we keep, is in the{" "}
+          Every member does a Realness Check (a short selfie video matched to his profile photo) before he gets a seat, and a
+          one-time ID check (a government ID matched to his Realness Check) within 3 days of that. Until his ID check passes, he
+          can&apos;t DM, post photos or videos, or make Plans, and if it isn&apos;t done in 3 days he loses his seat until it is. How this works, and what we keep, is in the{" "}
           <Link href="/biometrics">Biometric and ID Notice</Link>. You agree to give us true, current information and real
           photos of yourself, and to use only your own ID.
         </p>

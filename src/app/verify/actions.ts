@@ -3,6 +3,8 @@
 import { after } from "next/server";
 import { getMe, getSupabaseAdmin } from "@/lib/supabase-server";
 import { adminAlert, memberUrl, who } from "@/lib/alerts";
+import { cookies } from "next/headers";
+import { ID_GRACE_DAYS } from "@/lib/season";
 import { passes, type RealnessResult, MOVES, MOVES_PER_CHECK } from "@/lib/realness";
 import { placeMember } from "@/lib/game/place";
 import { closestIdentity, identitiesIn, type Identity } from "@/lib/server/vision";
@@ -152,7 +154,10 @@ export async function completeVerification(form: FormData): Promise<VerifyOutcom
     );
   }
 
-  if (passed) return { passed: true, message: "", retry: false };
+  if (passed) {
+    (await cookies()).set("hs_flash", encodeURIComponent(`You're in. Do your ID check within ${ID_GRACE_DAYS} days to unlock DMs, photos and video.`), { path: "/", maxAge: 120, sameSite: "lax" });
+    return { passed: true, message: "", retry: false };
+  }
 
   // Don't explain which check failed. It only helps people game it.
   const lowMatch = checked.match < 0.5;

@@ -24,7 +24,7 @@ const faq = [
   { q: "What does it cost?", a: "Nothing." },
   { q: "Is it a dating app?", a: "It's for making friends. If you want more, flip one private switch and the Finale asks a second question. Nobody else ever sees it." },
   { q: "What happens after 8 weeks?", a: "Join the next Season and you get a fresh Circle near you, with new guys. Your mutuals and chats come with you." },
-  { q: "Is everyone real?", a: "Yes. Every guy passes a live photo check and a one-time ID check before he can talk to anyone. ID photos are deleted right after." },
+  { q: "Is everyone real?", a: "Yes. Every guy passes a live photo check and a one-time ID check before he can DM anyone or post photos. ID photos are deleted right after." },
 ];
 
 async function foundersLeft(): Promise<number | null> {

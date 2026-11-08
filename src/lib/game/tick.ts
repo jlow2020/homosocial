@@ -3,7 +3,7 @@ import { purgeStaleVerifications } from "@/lib/retention";
 import { alertAdmins } from "@/lib/moderation";
 import { warmImageModels } from "@/lib/moderation/image";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { WEEKS } from "@/lib/season";
+import { ID_GRACE_DAYS, WEEKS } from "@/lib/season";
 import { claimNotice, notify, teaser } from "@/lib/notify";
 import { adminAlert, dailyDigest } from "@/lib/alerts";
 import { clockFor, closesAt, finaleFor, DEFAULT_TZ } from "./clock";
@@ -56,11 +56,43 @@ export async function tickAll(db: SupabaseClient): Promise<{ circles: number; se
     }
   }
   try {
+    sent.push(...(await idReminders(db)));
+  } catch (e) {
+    console.error("id reminders failed", e);
+  }
+  try {
     if (await dailyDigest(db)) sent.push("admin:digest");
   } catch (e) {
     console.error("digest failed", e);
   }
   return { circles: (data ?? []).length, sent };
+}
+
+// A day before his ID check is due, one reminder.
+async function idReminders(db: SupabaseClient, now = new Date()): Promise<string[]> {
+  const day = 24 * HOUR;
+  const from = new Date(now.getTime() - ID_GRACE_DAYS * day).toISOString();
+  const to = new Date(now.getTime() - (ID_GRACE_DAYS - 1) * day).toISOString();
+  const { data } = await db
+    .from("profiles")
+    .select("id, circle_id")
+    .is("id_verified_at", null)
+    .eq("status", "active")
+    .not("circle_id", "is", null)
+    .gt("verified_at", from)
+    .lte("verified_at", to);
+  const sent: string[] = [];
+  for (const p of data ?? []) {
+    if (!(await claimNotice(db, p.circle_id as string, `iddue:${p.id}`))) continue;
+    await notify(db, [p.id as string], {
+      title: "Your ID check is due tomorrow",
+      body: "It takes about a minute, and it keeps you in your Circle.",
+      url: "/verify/id",
+      tag: "iddue",
+    });
+    sent.push(`iddue:${p.id}`);
+  }
+  return sent;
 }
 
 export async function tickCircle(db: SupabaseClient, circle: Circle, now = new Date()): Promise<string[]> {

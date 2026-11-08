@@ -8,6 +8,7 @@ import NavTabs from "./NavTabs";
 import PushPrompt from "@/components/PushPrompt";
 import Flash from "@/components/Flash";
 import { cookies } from "next/headers";
+import { etLabel } from "@/lib/game/clock";
 
 export function weekTitle(week: number): string {
   return WEEKS.find((w) => w.n === week)?.title ?? "";
@@ -85,11 +86,31 @@ export async function Shell({ pl, children }: { pl: Player; children: React.Reac
             </a>
           </div>
         )}
+        {pl.idPending && !pl.past && pl.idDue && (
+          <div className="past-banner">
+            <span>Do your ID check by {etLabel(pl.idDue, pl.circle.tz ?? undefined)} to keep playing. It unlocks DMs, photos and video, and Plans.</span>
+            <Link href="/verify/id" className="btn btn-gold btn-small">
+              Do it now
+            </Link>
+          </div>
+        )}
         <Flash text={flashText} />
         {pl.seated && <PushPrompt />}
         {children}
       </div>
     </main>
+  );
+}
+
+// What a guy still on his Realness Check sees where DMs or Plans would be.
+export function IdGate({ what }: { what: string }) {
+  return (
+    <section className="mini-card" style={{ marginTop: 20, marginBottom: 20, alignItems: "center", textAlign: "center", borderRadius: 14 }}>
+      <p className="game-lede">{what} unlock after your ID check. It takes about a minute.</p>
+      <Link href="/verify/id" className="btn btn-gold">
+        Do my ID check
+      </Link>
+    </section>
   );
 }
 

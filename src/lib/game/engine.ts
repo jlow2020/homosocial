@@ -1,6 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { PROMPTS, modeOf, type Mode } from "./prompts";
+import { SEATED_OR } from "./player";
 import { FORMATS } from "./templates";
 import { PLAYS, PLAY_BY_ID, RANK_NIGHTS, type PlaySpec } from "./plays";
 
@@ -260,7 +261,7 @@ function fromRepeat(circle: CircleLike, week: number): Chosen {
 export async function chooseDrop(db: SupabaseClient, circle: CircleLike, week: number): Promise<Chosen> {
   const heat = targetHeat(circle, week);
   const { seen, last } = await seenKeys(db, circle.id);
-  const { data: seated } = await db.from("profiles").select("id").eq("circle_id", circle.id).eq("status", "active").not("id_verified_at", "is", null);
+  const { data: seated } = await db.from("profiles").select("id").eq("circle_id", circle.id).eq("status", "active").or(SEATED_OR());
   const members = (seated ?? []).map((m) => m.id as string).sort();
   // Media and text take turns: a play after a text week, text after a play week.
   const lastWasPlay = !!last?.startsWith("play:");
