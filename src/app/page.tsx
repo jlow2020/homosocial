@@ -15,7 +15,7 @@ export async function generateMetadata({ searchParams }: { searchParams: Promise
 
 const steps = [
   { title: "Join", body: "Make a profile and pass a quick photo check. You're put in a Circle with guys near you." },
-  { title: "Play", body: "A new game drops every Monday. Answer it, see everyone else's, talk in the group chat and DMs." },
+  { title: "Play", body: "Your first game starts the moment your Circle does, then a new one every week. Answer, see everyone else's, talk." },
   { title: "Pick", body: "Week 8 is the Finale. Pick who you want to keep as friends, or more. Only mutual picks are revealed." },
 ];
 
@@ -76,7 +76,7 @@ export default async function Home() {
           <h1>
             <span>Meet {SEASON.spots} guys.</span> <span>Play for 8 weeks.</span>
           </h1>
-          <p className="home-lede">A social game for gay, bi, trans and queer men. Same group, a new game every Monday.</p>
+          <p className="home-lede">A social game for gay, bi, trans and queer men. Same group, a new game every week.</p>
           <div className="home-cta">
             <Link href="/join" className="btn btn-pink btn-big">
               Join a Circle

@@ -13,7 +13,7 @@ const NAMES = Object.keys(CARDS) as CardName[];
 
 const TITLE = "Homosocial";
 const DESCRIPTION =
-  "A social game for gay, bi, trans and queer men. Meet 30 guys, play a new game every Monday for 8 weeks. Make friends, maybe find a boyfriend.";
+  "A social game for gay, bi, trans and queer men. Meet 30 guys, play a new game every week for 8 weeks. Make friends, maybe find a boyfriend.";
 
 export function pickCard(choice?: string | string[]): CardName {
   const c = Array.isArray(choice) ? choice[0] : choice;

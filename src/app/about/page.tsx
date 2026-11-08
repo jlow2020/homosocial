@@ -19,8 +19,8 @@ const sections: Section[] = [
           Homosocial is an online social game for gay, bi, trans and queer men.
         </p>
         <p>
-          You join a Circle of up to {SEASON.spots} real, verified guys near you. For eight weeks there&apos;s a new drop every
-          Monday: a question, a game, a dare, a survey, a photo. You answer to see everyone else&apos;s. There&apos;s a group chat,
+          You join a Circle of up to {SEASON.spots} real, verified guys near you. It starts as soon as your Circle has two guys. For eight weeks there&apos;s a new drop
+          every week: a question, a game, a dare, a survey, a photo. You answer to see everyone else&apos;s. There&apos;s a group chat,
           plans to actually go do things, DMs, and Roses in Week 7. It ends with the Finale, where everyone makes private picks
           and only the ones that go both ways get revealed.
         </p>
