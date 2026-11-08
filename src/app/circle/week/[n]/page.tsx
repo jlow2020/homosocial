@@ -48,7 +48,10 @@ export default async function WeekPage({ params }: { params: Promise<{ n: string
   const { db, clock, circle } = pl;
   const current = clock.phase === "season" ? clock.week : clock.phase === "revealed" ? 8 : 0;
   const week = Number(n);
-  if (!Number.isInteger(week) || week < 1 || week > current) redirect("/circle");
+  // Admins can look ahead at any week once the Circle has started.
+  const reach = pl.role && clock.phase !== "filling" ? 8 : current;
+  const preview = week > current;
+  if (!Number.isInteger(week) || week < 1 || week > reach) redirect("/circle");
 
   const drop = await ensureDrop(db, circle, week);
   const prompt = promptOf(drop);
@@ -216,8 +219,9 @@ export default async function WeekPage({ params }: { params: Promise<{ n: string
       {converting && <Live every={6000} />}
       <div className="week-nav">
         {week > 1 ? <Link href={`/circle/week/${week - 1}`}>← Week {week - 1}</Link> : <span />}
-        {week < current ? <Link href={`/circle/week/${week + 1}`}>Week {week + 1} →</Link> : <span />}
+        {week < reach ? <Link href={`/circle/week/${week + 1}`}>Week {week + 1} →</Link> : <span />}
       </div>
+      {preview && <p className="notice-inline">Admin preview. This week isn&apos;t open yet, so answers won&apos;t save.</p>}
       <section className="drop-card">
         <p className="eyebrow">
           Week {week}: {weekTitle(week)} · {rows.length} of {pl.members.length} answered

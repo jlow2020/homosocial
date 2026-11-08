@@ -47,7 +47,8 @@ export type Player = {
   waiting: boolean;
   members: Member[]; // seated, active, not blocked, includes me when seated
   titles: Map<string, string>; // admin titles by member id
-  past: boolean; // looking back at a Circle he's already moved on from
+  past: boolean; // looking back at a Circle he's already moved on from (or an admin looking in)
+  visiting: boolean; // an admin looking inside someone else's Circle
   closed: boolean; // Season over and the goodbye window too: read-only
   seasonNo: number; // his own Season count, for labels
 };
@@ -70,10 +71,13 @@ export async function loadPlayer(opts: { needSeat?: boolean } = {}): Promise<Pla
   if (!p.circle_id) redirect("/circle");
 
   const db = getSupabaseAdmin()!;
-  // Looking back at an old Circle? Only one he was in, and only once its Season is over.
+  const role = await isAdmin(me.userId);
+  // Looking back at an old Circle? Only one he was in, and only once its Season
+  // is over. Admins can look inside any Circle (read-only).
   const want = (await cookies()).get(PAST_COOKIE)?.value;
   let circleId = p.circle_id;
   let past = false;
+  let visiting = false;
   if (want && want !== p.circle_id && UUID.test(want)) {
     const { data: was } = await db
       .from("circle_history")
@@ -85,12 +89,16 @@ export async function loadPlayer(opts: { needSeat?: boolean } = {}): Promise<Pla
     if (fin && new Date(fin) <= new Date()) {
       circleId = want;
       past = true;
+    } else if (role) {
+      const { data: exists } = await db.from("circles").select("id").eq("id", want).maybeSingle();
+      if (exists) {
+        circleId = want;
+        past = true;
+        visiting = true;
+      }
     }
   }
-  const [{ data: circleRow }, role] = await Promise.all([
-    db.from("circles").select("*").eq("id", circleId).single(),
-    isAdmin(me.userId),
-  ]);
+  const { data: circleRow } = await db.from("circles").select("*").eq("id", circleId).single();
   let circle = circleRow as Circle;
   const seated = !!p.id_verified_at;
   if (opts.needSeat && !seated) redirect("/circle");
@@ -140,9 +148,11 @@ export async function loadPlayer(opts: { needSeat?: boolean } = {}): Promise<Pla
   const { data: staff } = await db.from("admins").select("user_id, role").in("user_id", members.map((m) => m.id));
   const titles = new Map((staff ?? []).map((s) => [s.user_id as string, ROLE_TITLE[s.role as AdminRole]]));
 
-  const waiting = !over && (!seated || clock.phase === "filling" || members.length < SEASON.minToOpen);
+  // An admin can run his Circle on his own to look around; everyone else waits for a second guy.
+  const filling = clock.phase === "filling";
+  const waiting = !over && (visiting ? filling : !seated || filling || (members.length < SEASON.minToOpen && !role));
   const seasonNo = await seasonNumber(db, p.id, circle);
-  return { db, me, profile: p as Player["profile"], role, circle, clock, seated, waiting, members, titles, past, closed: past || isClosed(clock), seasonNo };
+  return { db, me, profile: p as Player["profile"], role, circle, clock, seated, waiting, members, titles, past, visiting, closed: past || isClosed(clock), seasonNo };
 }
 
 // Everyone who was still in this Circle at its Finale, whether or not he's

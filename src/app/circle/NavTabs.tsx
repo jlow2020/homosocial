@@ -8,6 +8,7 @@ export default function NavTabs({ dropWeek, unread }: { dropWeek: number | null;
   const tabs = [
     { href: "/circle", label: "Home", on: path === "/circle" },
     ...(dropWeek ? [{ href: `/circle/week/${dropWeek}`, label: "Drop", on: path.startsWith("/circle/week") }] : []),
+    { href: "/circle/wall", label: "Wall", on: path.startsWith("/circle/wall") },
     { href: "/circle/lounge", label: "Lounge", on: path.startsWith("/circle/lounge") },
     { href: "/circle/plans", label: "Plans", on: path.startsWith("/circle/plans") },
     { href: "/circle/dms", label: "DMs", on: path.startsWith("/circle/dms"), badge: unread },

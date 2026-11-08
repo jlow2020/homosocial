@@ -63,6 +63,9 @@ export async function fillCircles(db: SupabaseClient): Promise<void> {
 export async function rehomeIfAlone(db: SupabaseClient, userId: string): Promise<boolean> {
   const { data: me } = await db.from("profiles").select("circle_id, id_verified_at, status").eq("id", userId).maybeSingle();
   if (!me?.circle_id || !me.id_verified_at || me.status !== "active") return false;
+  // An admin running his Circle on his own stays put.
+  const { data: admin } = await db.from("admins").select("user_id").eq("user_id", userId).maybeSingle();
+  if (admin) return false;
   // A Circle whose Season is over isn't a waiting room. He moves on when he chooses.
   const { data: home } = await db.from("circles").select("finale_at").eq("id", me.circle_id).maybeSingle();
   if (home?.finale_at && new Date(home.finale_at as string) <= new Date()) return false;

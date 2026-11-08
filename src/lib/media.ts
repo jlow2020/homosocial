@@ -22,7 +22,7 @@ async function ffmpegPath(): Promise<string> {
   return p;
 }
 
-export type ClipRef = { table: "answers" | "dm_messages" | "chain_readings" | "profiles" | "profile_photos"; id: string; path: string; kind: "video" | "audio" };
+export type ClipRef = { table: "answers" | "dm_messages" | "chain_readings" | "profiles" | "profile_photos" | "wall_posts" | "wall_comments"; id: string; path: string; kind: "video" | "audio" };
 
 export async function convertClip(db: SupabaseClient, ref: ClipRef): Promise<void> {
   const dir = await mkdtemp(path.join(tmpdir(), "clip-"));
@@ -36,14 +36,14 @@ export async function convertClip(db: SupabaseClient, ref: ClipRef): Promise<voi
     const ffmpeg = await ffmpegPath();
     const args =
       ref.kind === "video"
-        ? ["-y", "-i", inFile, "-map_metadata", "-1", "-vf", "scale='min(720,iw)':-2", "-c:v", "libx264", "-preset", "veryfast", "-crf", "26", "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "96k", "-movflags", "+faststart", "-t", ref.table === "profile_photos" ? "31" : "95", outFile]
+        ? ["-y", "-i", inFile, "-map_metadata", "-1", "-vf", "scale='min(720,iw)':-2", "-c:v", "libx264", "-preset", "veryfast", "-crf", "26", "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "96k", "-movflags", "+faststart", "-t", ["profile_photos", "wall_posts", "wall_comments"].includes(ref.table) ? "31" : "95", outFile]
         : ["-y", "-i", inFile, "-map_metadata", "-1", "-vn", "-c:a", "aac", "-b:a", "80k", "-movflags", "+faststart", "-t", "125", outFile];
     const { stderr } = await run(ffmpeg, args, { timeout: 4 * 60 * 1000, maxBuffer: 16 * 1024 * 1024 });
     const out = await readFile(outFile);
     // Videos posted to the Circle get the same nudity check as photos, on a
     // few frames spread across the clip.
     let check: { action: "allow" | "veil" | "hold"; reason?: string; detail?: unknown } = { action: "allow" };
-    if (ref.kind === "video" && (ref.table === "answers" || ref.table === "profile_photos")) check = await checkFrames(ffmpeg, outFile, dir, String(stderr));
+    if (ref.kind === "video" && ["answers", "profile_photos", "wall_posts", "wall_comments"].includes(ref.table)) check = await checkFrames(ffmpeg, outFile, dir, String(stderr));
     const newPath = ref.path.replace(/\.[a-z0-9]+$/i, "") + `-c.${outExt}`;
     const up = await db.storage.from("clips").upload(newPath, out, { contentType: ref.kind === "video" ? "video/mp4" : "audio/mp4", upsert: true });
     if (up.error) throw up.error;
@@ -66,6 +66,25 @@ export async function convertClip(db: SupabaseClient, ref: ClipRef): Promise<voi
         });
         if (check.action === "hold") {
           await notify(db, [row.user_id as string], { title: "Your video is waiting on a quick look", body: HELD_NOTICE, url: "/profile", tag: "held", email: false });
+        }
+      }
+    } else if (check.action !== "allow" && (ref.table === "wall_posts" || ref.table === "wall_comments")) {
+      // Wall videos: same check, same queue.
+      const wallRow =
+        ref.table === "wall_posts"
+          ? (await db.from("wall_posts").select("user_id, circle_id").eq("id", ref.id).maybeSingle()).data
+          : await (async () => {
+              const { data: c } = await db.from("wall_comments").select("user_id, wall_posts(circle_id)").eq("id", ref.id).maybeSingle();
+              return c ? { user_id: c.user_id, circle_id: (c.wall_posts as unknown as { circle_id: string } | null)?.circle_id ?? null } : null;
+            })();
+      if (wallRow) {
+        await enqueue(db, {
+          user_id: wallRow.user_id as string, circle_id: (wallRow.circle_id as string) ?? null,
+          surface: "video", ref_table: ref.table, ref_id: ref.id, media_bucket: "clips", media_path: newPath,
+          verdict: check.action === "hold" ? "held" : "veiled", category: "nudity", reason: check.reason ?? null, detail: { frames: check.detail },
+        });
+        if (check.action === "hold") {
+          await notify(db, [wallRow.user_id as string], { title: "Your video is waiting on a quick look", body: HELD_NOTICE, url: "/circle/wall", tag: "held", email: false });
         }
       }
     } else if (check.action !== "allow") {

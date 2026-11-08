@@ -6,7 +6,7 @@ import { notify } from "@/lib/notify";
 
 type Result = { ok: boolean; message: string };
 const STRIKE_WINDOW_DAYS = 90;
-const TABLES = new Set(["answers", "replies", "lounge_messages", "plans", "roses", "dm_messages"]);
+const TABLES = new Set(["answers", "replies", "lounge_messages", "plans", "roses", "dm_messages", "wall_posts", "wall_comments"]);
 
 export async function decide(id: string, decision: "approve" | "dismiss" | "remove" | "strike"): Promise<Result> {
   const a = await getAdmin();
@@ -18,7 +18,7 @@ export async function decide(id: string, decision: "approve" | "dismiss" | "remo
 
   if (decision === "approve" || decision === "dismiss") {
     if (ref) {
-      await a.db.from(ref.table).update(ref.table === "answers" ? { held: false, veiled: false } : { held: false }).eq("id", ref.id);
+      await a.db.from(ref.table).update(["answers", "wall_posts", "wall_comments"].includes(ref.table) ? { held: false, veiled: false } : { held: false }).eq("id", ref.id);
       if (ref.table === "dm_messages") {
         const { data: m } = await a.db.from("dm_messages").select("thread_id").eq("id", ref.id).maybeSingle();
         if (m) await a.db.from("dm_threads").update({ last_at: new Date().toISOString() }).eq("id", m.thread_id);

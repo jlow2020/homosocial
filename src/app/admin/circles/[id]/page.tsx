@@ -35,6 +35,13 @@ export default async function CircleInside({ params }: { params: Promise<{ id: s
         {seated} of {circle.capacity} seats taken ·{" "}
         {seated >= SEASON.minToOpen ? "started" : `${SEASON.minToOpen - seated} more to start`}
       </p>
+      <p>
+        {/* A plain link: it sets a cookie, so no prefetching. */}
+        {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+        <a href={`/circle/past/${circle.id}`} className="btn btn-outline btn-small">
+          Look inside (read-only)
+        </a>
+      </p>
       <ul className="member-list">
         {inside.map((p) => (
           <li key={p.id} className="member">

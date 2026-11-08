@@ -83,7 +83,9 @@ export async function Shell({ pl, children }: { pl: Player; children: React.Reac
         {pl.past && (
           <div className="past-banner">
             <span>
-              Looking back at Season {pl.seasonNo}. It&apos;s read-only.
+              {pl.visiting
+                ? `Admin view: Circle ${pl.circle.number}${pl.circle.label ? ` · ${pl.circle.label}` : ""}. Read-only.`
+                : `Looking back at Season ${pl.seasonNo}. It's read-only.`}
             </span>
             {/* A plain link: these set a cookie, so no prefetching. */}
             {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}

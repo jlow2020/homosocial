@@ -71,3 +71,14 @@ export async function joinNextSeason(): Promise<void> {
   }
   redirect("/circle");
 }
+
+// Admins: start your own Circle now, even alone, to look around. The 8 weeks
+// start for real; anyone who joins later plays along from there.
+export async function startMyCircle(): Promise<void> {
+  const pl = await loadPlayer({ needSeat: true });
+  if (!pl.role || pl.visiting || pl.past || pl.circle.kickoff_at) redirect("/circle");
+  await pl.db.from("circles").update({ kickoff_at: new Date().toISOString() }).eq("id", pl.circle.id).is("kickoff_at", null);
+  const { logAdmin } = await import("@/lib/admin");
+  await logAdmin(pl.profile.id, "start circle solo", null, { circle: pl.circle.id });
+  redirect("/circle");
+}

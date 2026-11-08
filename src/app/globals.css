@@ -5909,3 +5909,165 @@ input[type="date"].input::-webkit-date-and-time-value {
   font-variant-numeric: tabular-nums;
   color: var(--muted);
 }
+
+/* The Circle Wall */
+.wall {
+  max-width: 640px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.wall-post {
+  background: var(--studio);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.wall-new {
+  border-color: var(--hot);
+}
+.wall-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.wall-head > div {
+  flex: 1;
+  min-width: 0;
+}
+.wall-when {
+  margin: 2px 0 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+.wall-when a {
+  color: inherit;
+}
+.wall-text {
+  margin: 0;
+  font-size: 17px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.wall-media,
+.wall-attach {
+  display: block;
+  width: 100%;
+  max-height: 560px;
+  object-fit: contain;
+  border-radius: 12px;
+  background: #000;
+}
+.wall-attach {
+  max-height: 260px;
+}
+.wall-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+.wall-like {
+  font: inherit;
+  font-weight: 700;
+  font-size: 15px;
+  background: none;
+  border: 0;
+  color: var(--soft);
+  cursor: pointer;
+  padding: 4px 0;
+}
+.wall-like.on {
+  color: var(--hot);
+}
+.wall-count {
+  color: var(--soft);
+  font-weight: 700;
+  text-decoration: none;
+}
+.wall-more {
+  font-size: 14px;
+  color: var(--muted);
+}
+.wall-comments {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.wall-comment {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+.wall-comment-body {
+  flex: 1;
+  min-width: 0;
+}
+.wall-bubble {
+  background: rgba(251, 244, 255, 0.06);
+  border-radius: 14px;
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.wall-bubble p {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.wall-bubble .wall-media {
+  max-height: 320px;
+}
+.wall-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 2px 0 0 8px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.wall-meta .wall-like {
+  font-size: 13px;
+}
+.wall-del {
+  margin-left: auto;
+  font-size: 13px;
+}
+.wall-compose {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.wall-compose textarea {
+  resize: vertical;
+}
+.wall-compose-comment textarea {
+  min-height: 42px;
+}
+.wall-compose-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.wall-tools {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  font-size: 14px;
+}
+.wall-empty {
+  text-align: center;
+  padding: 24px 0;
+}

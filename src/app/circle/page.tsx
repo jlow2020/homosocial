@@ -13,6 +13,7 @@ import { getMe, getSupabaseAdmin, nextPath } from "@/lib/supabase-server";
 import { SEASON, WEEKS, ageFrom } from "@/lib/season";
 import { loadPlayer, pastCircles, photoUrls, type Player } from "@/lib/game/player";
 import NextSeason from "./NextSeason";
+import { startMyCircle } from "./actions";
 import MiniCard from "./MiniCard";
 import { miniState } from "@/lib/game/mini-engine";
 import { ensureDrop, promptOf } from "@/lib/game/drops";
@@ -77,7 +78,7 @@ export default async function CirclePage() {
 
   let pl = await loadPlayer();
   // Alone in his Circle while another one has room: he joins that one instead of waiting.
-  if (pl.seated && pl.members.length < 2 && (await rehomeIfAlone(pl.db, pl.profile.id))) pl = await loadPlayer();
+  if (pl.seated && pl.members.length < 2 && !pl.role && !pl.past && (await rehomeIfAlone(pl.db, pl.profile.id))) pl = await loadPlayer();
   if (pl.waiting) return <Lobby pl={pl} />;
   return <Home pl={pl} />;
 }
@@ -130,6 +131,11 @@ async function Lobby({ pl }: { pl: Player }) {
               </p>
               <div className="waiting-actions">
                 <InviteButton />
+                {pl.role && !pl.visiting && pl.clock.phase === "filling" && (
+                  <form action={startMyCircle}>
+                    <button className="btn btn-gold">Admin: start my Circle now</button>
+                  </form>
+                )}
                 {thin && (
                   <Link href="/profile" className="btn btn-outline">
                     Finish your profile
