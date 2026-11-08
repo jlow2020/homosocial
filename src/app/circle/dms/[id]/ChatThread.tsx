@@ -6,6 +6,8 @@ import { useEffect, useMemo, useOptimistic, useRef, useState, useTransition } fr
 import { clipTicket, reactDm, sendDm, sendDmClip, sendDmPhoto } from "../../game-actions";
 import { shrinkImage } from "@/lib/image";
 import { reportMember } from "../../actions";
+import { EMOJI_GROUPS } from "@/lib/emoji";
+import EmojiSheet from "./EmojiSheet";
 
 export type ChatMessage = {
   id: string;
@@ -19,11 +21,7 @@ export type ChatMessage = {
 };
 
 const TAPBACKS = ["❤️", "😂", "🔥", "😮", "😢", "👑"];
-const EMOJI = [
-  "😂", "🤣", "😍", "🥰", "😘", "😏", "😈", "🥵", "🫦", "👀", "🔥", "💦", "🍑", "🍆", "👅", "💋",
-  "❤️", "🩷", "💜", "🖤", "🏳️‍🌈", "🌈", "👑", "💅", "🙌", "👏", "🙏", "💀", "😭", "😮", "🤭", "🫣",
-  "🥂", "🍸", "🏖️", "🌴", "🎉", "✨", "💯", "🤝", "☕", "🎶", "🐻", "🦦", "🌹", "🙈", "😴", "🤤",
-];
+const EMOJI = EMOJI_GROUPS.flatMap((g) => g.list);
 const MAX_CLIP_SECONDS = 30;
 
 const dayFmt = new Intl.DateTimeFormat("en-US", { weekday: "short", month: "short", day: "numeric" });
@@ -162,12 +160,15 @@ function Bubble({
     return mine?.emoji === emoji ? rest : [...rest, { emoji, mine: true }];
   });
   const lastTap = useRef(0);
-  const choose = (emoji: string) =>
+  const [picker, setPicker] = useState(false);
+  const choose = (emoji: string) => {
+    setPicker(false);
+    setOpen(false);
     start(async () => {
       react(emoji);
-      setOpen(false);
       await reactDm(m.id, emoji);
     });
+  };
 
   const onTap = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -212,8 +213,12 @@ function Bubble({
                 {t}
               </button>
             ))}
+            <button className="tapback tapback-more" onClick={() => setPicker(true)} aria-label="More emoji">
+              ＋
+            </button>
           </div>
         )}
+        {picker && <EmojiSheet onPick={choose} onClose={() => setPicker(false)} />}
         {m.media && <Media media={m.media} mine={m.mine} name={otherName} otherId={otherId} messageId={m.id} onTap={onTap} />}
         {m.game ? (
           <SpeedGame game={m.game} otherName={otherName} />
@@ -344,7 +349,7 @@ function DmComposer({
     setError("");
     onPending({ id, body });
     start(async () => {
-      const r = await sendDm(threadId, body);
+      const r = await sendDm(threadId, body).catch(() => ({ ok: false, error: "That didn't send. Check your connection." }));
       if (!r.ok) {
         onFailed(id);
         setText(body);
@@ -360,7 +365,12 @@ function DmComposer({
       onPending({ id, body: null, label: "📷 Sending photo..." });
       setBusy("Sending photo...");
       try {
-        const small = await shrinkImage(f, 1600, 0.85);
+        const small = await shrinkImage(f, 1600, 0.85).catch(() => (f.type === "image/jpeg" && f.size < 7e6 ? f : null));
+        if (!small) {
+          onFailed(id);
+          setError("That photo didn't open. Try a different one, or take a screenshot of it and send that.");
+          return;
+        }
         const form = new FormData();
         form.set("thread", threadId);
         form.set("photo", small);
@@ -369,6 +379,9 @@ function DmComposer({
           onFailed(id);
           setError(r.error ?? "That didn't send.");
         }
+      } catch {
+        onFailed(id);
+        setError("That photo didn't send. Check your connection and try again.");
       } finally {
         setBusy("");
       }
@@ -406,6 +419,9 @@ function DmComposer({
           onFailed(id);
           setError(r.error ?? "That didn't send.");
         }
+      } catch {
+        onFailed(id);
+        setError("That video didn't send. Check your connection and try again.");
       } finally {
         setBusy("");
       }
@@ -446,7 +462,7 @@ function DmComposer({
           className="dm-icon"
           disabled={!media || !!busy}
           onClick={() => file.current?.click()}
-          title={media ? "Photo or video" : `Turn on photos above. ${otherName} has to too.`}
+          title={media ? "Photo or video" : "Photos and videos open up once you're both talking"}
           aria-label="Send a photo or video"
         >
           ＋

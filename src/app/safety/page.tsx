@@ -38,7 +38,7 @@ const sections: Section[] = [
     title: "Online",
     body: (
       <ul>
-        <li>Turn DM photos on only when you want to. You can turn them off again any time.</li>
+        <li>Photos and videos in DMs arrive blurred. Only tap if you want to see them, and hit Report on anything you didn&apos;t ask for.</li>
         <li>Think before you send a face and an explicit photo together.</li>
         <li>Keep chats on Homosocial until you trust someone. Reports and blocks only work here.</li>
         <li>Someone threatening to share your photos? Don&apos;t pay. Report him, save the evidence, and call the line below.</li>

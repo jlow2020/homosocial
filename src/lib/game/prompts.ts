@@ -3,7 +3,7 @@
 //
 // House style: juicy, a little filthy, never explicit. Everyone here is a
 // verified adult, so we flirt like adults. Public photos: underwear yes,
-// explicit no. Explicit photos only in DMs, once both guys turn photos on.
+// explicit no. Explicit photos only in accepted DMs.
 // anon: answers show without names or faces. Use it for the confessions
 // nobody would sign with their real face.
 

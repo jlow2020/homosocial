@@ -30,7 +30,7 @@ const sections: Section[] = [
           underwear, thirst traps and a bare butt are all fine. Genitals, an anus, and sex acts are not.
         </li>
         <li>
-          <b>In DMs</b>, explicit photos and videos are fine only after you both turn photos on, and only of yourself.
+          <b>In DMs</b>, explicit photos and videos are fine once he&apos;s accepted your DM, and only of yourself. Photos and videos from him arrive blurred until you tap, and one tap reports and blocks him.
         </li>
         <li>Nobody owes you a photo. Asking once is flirting. Asking again after a no is harassment.</li>
       </ul>

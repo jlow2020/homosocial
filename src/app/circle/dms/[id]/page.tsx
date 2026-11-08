@@ -4,9 +4,8 @@ import { loadPlayer, photoUrls } from "@/lib/game/player";
 import { UUID } from "@/lib/admin";
 import { acceptDm, declineDm } from "../../game-actions";
 import { Avatar, GuyName, IdGate, Shell } from "../../ui";
-import Live from "../../Live";
+import Pulse from "./Pulse";
 import AcceptButton from "./AcceptButton";
-import { PhotoSwitch } from "./DmPhotos";
 import ChatThread, { type ChatMessage } from "./ChatThread";
 import BlindReveal from "./BlindReveal";
 import { Challenge } from "./SpeedGame";
@@ -44,10 +43,9 @@ export default async function Thread({ params }: { params: Promise<{ id: string 
   const amA = t.a === me;
   const otherId = amA ? t.b : t.a;
 
-  // Opening the chat marks it read.
-  await pl.db.from("dm_threads").update({ [amA ? "read_a" : "read_b"]: new Date().toISOString() }).eq("id", id);
-
-  const [{ data: rows }, { data: otherRow }] = await Promise.all([
+  // Opening the chat marks it read. Everything here runs at once.
+  const [, { data: rows }, { data: otherRow }] = await Promise.all([
+    pl.db.from("dm_threads").update({ [amA ? "read_a" : "read_b"]: new Date().toISOString() }).eq("id", id),
     pl.db
       .from("dm_messages")
       .select("id, user_id, body, photo_path, media_type, ready, held, game_id, created_at, dm_reactions(user_id, emoji)")
@@ -65,15 +63,14 @@ export default async function Thread({ params }: { params: Promise<{ id: string 
 
   const photoPaths = msgs.filter((m) => m.photo_path && m.media_type !== "video").map((m) => m.photo_path);
   const clipPaths = msgs.filter((m) => m.photo_path && m.media_type === "video").map((m) => m.photo_path as string);
-  const [urls, clips] = await Promise.all([
-    photoUrls(pl.db, [other.photo_path, ...photoPaths]),
+  const gameIds = msgs.map((m) => m.game_id).filter(Boolean) as string[];
+  const [urls, clips, { data: gameRows }] = await Promise.all([
+    photoUrls(pl.db, [other.photo_path, pl.profile.photo_path, ...photoPaths]),
     clipPaths.length
       ? pl.db.storage.from("clips").createSignedUrls(clipPaths, 3600).then((r) => new Map((r.data ?? []).map((x) => [x.path as string, x.signedUrl as string])))
       : Promise.resolve(new Map<string, string>()),
+    gameIds.length ? pl.db.from("dm_games").select("id, questions, seconds, answers").in("id", gameIds) : Promise.resolve({ data: [] as { id: string; questions: unknown; seconds: unknown; answers: unknown }[] }),
   ]);
-
-  const gameIds = msgs.map((m) => m.game_id).filter(Boolean) as string[];
-  const { data: gameRows } = gameIds.length ? await pl.db.from("dm_games").select("id, questions, seconds, answers").in("id", gameIds) : { data: [] };
   const games = new Map(
     (gameRows ?? []).map((g) => {
       const ans = (g.answers ?? {}) as Record<string, string[]>;
@@ -99,16 +96,14 @@ export default async function Thread({ params }: { params: Promise<{ id: string 
   const revealPending = !!t.blind_until && !blind && !(t.keep_a && t.keep_b);
   const iKept = amA ? !!t.keep_a : !!t.keep_b;
   const heKept = amA ? !!t.keep_b : !!t.keep_a;
-  const mineOn = !blind && (amA ? t.photos_a : t.photos_b);
-  const theirsOn = !blind && (amA ? t.photos_b : t.photos_a);
-  const myUrl = (await photoUrls(pl.db, [pl.profile.photo_path])).get(pl.profile.photo_path) ?? null;
+  const myUrl = urls.get(pl.profile.photo_path) ?? null;
   const seenAt = (amA ? t.read_b : t.read_a) as string | null;
   const incoming = !t.accepted_at && t.requested_by !== me;
   const waiting = !t.accepted_at && t.requested_by === me;
 
   return (
     <Shell pl={pl}>
-      <Live every={3000} />
+      <Pulse threadId={id} />
       <div className="dm">
         <div className="dm-top">
           <Link href="/circle/dms" className="dm-back" aria-label="All DMs">
@@ -117,7 +112,7 @@ export default async function Thread({ params }: { params: Promise<{ id: string 
           {blind ? <span className="avatar anon-mask" style={{ width: 44, height: 44 }}>💘</span> : <Avatar src={urls.get(other.photo_path)} name={other.first_name} size={44} />}
           <div className="dm-top-name">
             {blind ? <span className="guy-name">Your blind date</span> : <GuyName pl={pl} m={other} age />}
-            <span className="fine">{blind ? `Names and faces come out ${new Date(t.blind_until).toLocaleDateString("en-US", { weekday: "long" })}` : t.accepted_at ? (mineOn && theirsOn ? "Photos and videos on" : "In your Circle") : "Message request"}</span>
+            <span className="fine">{blind ? `Names and faces come out ${new Date(t.blind_until).toLocaleDateString("en-US", { weekday: "long" })}` : t.accepted_at ? "In your Circle" : "Message request"}</span>
           </div>
           {t.accepted_at && !blind && !revealPending && !incoming && <Challenge threadId={id} />}
         </div>
@@ -129,7 +124,7 @@ export default async function Thread({ params }: { params: Promise<{ id: string 
           otherName={blind ? "your date" : other.first_name}
           otherPhoto={blind ? null : (urls.get(other.photo_path) ?? null)}
           seenAt={seenAt}
-          media={!!t.accepted_at && !blind && mineOn && theirsOn}
+          media={!!t.accepted_at && !blind}
           canSend={!incoming && !revealPending && !(waiting && messages.length > 0)}
           waiting={waiting}
           footer={
@@ -155,8 +150,6 @@ export default async function Thread({ params }: { params: Promise<{ id: string 
                 iKept={iKept}
                 heKept={heKept}
               />
-            ) : t.accepted_at ? (
-              <PhotoSwitch threadId={id} mine={mineOn} theirs={theirsOn} name={other.first_name} />
             ) : null
           }
         />

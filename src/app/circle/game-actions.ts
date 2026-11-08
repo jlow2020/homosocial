@@ -10,6 +10,8 @@ import { ensureDrop } from "@/lib/game/drops";
 import { miniState } from "@/lib/game/mini-engine";
 import { checkPlayAnswer } from "@/lib/game/playcheck";
 import { UUID } from "@/lib/admin";
+import { getMe, getSupabaseAdmin } from "@/lib/supabase-server";
+import { isOneEmoji } from "@/lib/emoji";
 import { notify, teaser } from "@/lib/notify";
 import { chainEndingAt } from "@/lib/game/chain";
 import { pickQuestions, REMATCH_SECONDS } from "@/lib/game/rematch";
@@ -346,24 +348,12 @@ async function myThread(pl: Player, threadId: string) {
   };
 }
 
-// Each guy turns photos on for a chat. Photos unlock only when both have.
-export async function setDmPhotos(threadId: string, on: boolean): Promise<Result> {
-  const pl = await player();
-  const t = await myThread(pl, threadId);
-  if (!t) return { ok: false };
-  if (!t.accepted_at) return { ok: false, error: "Accept the chat first." };
-  const mine = t.a === pl.profile.id ? "photos_a" : "photos_b";
-  await pl.db.from("dm_threads").update({ [mine]: on }).eq("id", t.id);
-  revalidatePath(`/circle/dms/${t.id}`);
-  return { ok: true };
-}
-
 export async function sendDmPhoto(form: FormData): Promise<Result> {
   const pl = await player();
   if (pl.idPending) return NEED_ID;
   const t = await myThread(pl, String(form.get("thread") ?? ""));
   if (!t?.accepted_at) return { ok: false, error: "That chat is gone." };
-  if (!t.photos_a || !t.photos_b) return { ok: false, error: "You both have to turn photos on first." };
+  if (t.blind_until && new Date(t.blind_until) > new Date()) return { ok: false, error: "Photos and videos open up after the reveal." };
   const file = form.get("photo");
   if (!(file instanceof File) || file.type !== "image/jpeg" || file.size === 0 || file.size > MAX_PHOTO) {
     return { ok: false, error: "That photo didn't work. Try a different one." };
@@ -382,7 +372,9 @@ export async function sendDmPhoto(form: FormData): Promise<Result> {
   }
   await pl.db.from("dm_threads").update({ last_at: new Date().toISOString() }).eq("id", t.id);
   const otherId = t.a === pl.profile.id ? t.b : t.a;
-  await notify(pl.db, [otherId], { title: pl.profile.first_name, body: "📷 Sent you a photo", url: `/circle/dms/${t.id}`, tag: `dm:${t.id}`, email: false });
+  const db = pl.db;
+  const from = pl.profile.first_name;
+  after(() => notify(db, [otherId], { title: from, body: "📷 Sent you a photo", url: `/circle/dms/${t.id}`, tag: `dm:${t.id}`, email: false }));
   revalidatePath(`/circle/dms/${t.id}`);
   return { ok: true };
 }
@@ -428,7 +420,9 @@ export async function sendDm(threadId: string, body: string): Promise<Result> {
   await pl.db.from("dm_threads").update({ last_at: new Date().toISOString() }).eq("id", t.id);
 
   const otherId = t.a === pl.profile.id ? t.b : t.a;
-  await notify(pl.db, [otherId], { title: t.blind_until && new Date(t.blind_until) > new Date() ? "💘 Your blind date" : pl.profile.first_name, body: teaser(text, 120), url: `/circle/dms/${t.id}`, tag: `dm:${t.id}`, email: false });
+  const db = pl.db;
+  const title = t.blind_until && new Date(t.blind_until) > new Date() ? "💘 Your blind date" : pl.profile.first_name;
+  after(() => notify(db, [otherId], { title, body: teaser(text, 120), url: `/circle/dms/${t.id}`, tag: `dm:${t.id}`, email: false }));
   revalidatePath(`/circle/dms/${t.id}`);
   return { ok: true, notice: await noticeFor(d, false) };
 }
@@ -503,7 +497,6 @@ export async function savePicks(form: FormData): Promise<Result> {
 
 // DMs, Messenger style -------------------------------------------------------------
 
-const DM_REACTIONS = new Set(["❤️", "😂", "🔥", "😮", "😢", "👑"]);
 
 async function myMessage(pl: Player, messageId: string) {
   if (!UUID.test(messageId)) return null;
@@ -516,7 +509,7 @@ async function myMessage(pl: Player, messageId: string) {
 // One reaction per guy per message. Same emoji again takes it off.
 export async function reactDm(messageId: string, emoji: string): Promise<Result> {
   const pl = await player();
-  if (!DM_REACTIONS.has(emoji)) return { ok: false };
+  if (!isOneEmoji(emoji)) return { ok: false };
   const t = await myMessage(pl, messageId);
   if (!t) return { ok: false };
   const key = { message_id: messageId, user_id: pl.profile.id };
@@ -541,7 +534,7 @@ export async function clipTicket(
   if (pl.idPending) return { ok: false, error: NEED_ID.error };
   const t = await myThread(pl, threadId);
   if (!t?.accepted_at) return { ok: false, error: "That chat is gone." };
-  if (!t.photos_a || !t.photos_b) return { ok: false, error: "You both have to turn photos and videos on first." };
+  if (t.blind_until && new Date(t.blind_until) > new Date()) return { ok: false, error: "Photos and videos open up after the reveal." };
   if (!CLIP_TYPES.has(contentType)) return { ok: false, error: "That video type won't play. Try an .mp4 or .mov." };
   if (!(size > 0 && size <= MAX_CLIP)) return { ok: false, error: "That clip is too big. Keep it under 30 seconds." };
   const ext = contentType === "video/quicktime" ? "mov" : contentType === "video/webm" ? "webm" : "mp4";
@@ -555,7 +548,8 @@ export async function sendDmClip(threadId: string, path: string): Promise<Result
   const pl = await player();
   if (pl.idPending) return NEED_ID;
   const t = await myThread(pl, threadId);
-  if (!t?.accepted_at || !t.photos_a || !t.photos_b) return { ok: false, error: "That chat is gone." };
+  if (!t?.accepted_at) return { ok: false, error: "That chat is gone." };
+  if (t.blind_until && new Date(t.blind_until) > new Date()) return { ok: false, error: "Photos and videos open up after the reveal." };
   const prefix = `dms/${t.id}/${pl.profile.id}-`;
   if (!path.startsWith(prefix) || path.includes("..")) return { ok: false, error: "That didn't work." };
   const name = path.slice(`dms/${t.id}/`.length);
@@ -568,7 +562,8 @@ export async function sendDmClip(threadId: string, path: string): Promise<Result
     after(() => convertClip(db, { table: "dm_messages", id: msg.id, path, kind: "video" }));
   }
   const otherId = t.a === pl.profile.id ? t.b : t.a;
-  await notify(pl.db, [otherId], { title: pl.profile.first_name, body: "🎥 Sent you a clip", url: `/circle/dms/${t.id}`, tag: `dm:${t.id}`, email: false });
+  const from = pl.profile.first_name;
+  after(() => notify(pl.db, [otherId], { title: from, body: "🎥 Sent you a clip", url: `/circle/dms/${t.id}`, tag: `dm:${t.id}`, email: false }));
   revalidatePath(`/circle/dms/${t.id}`);
   return { ok: true };
 }
@@ -953,4 +948,21 @@ export async function answerMini(week: number, slot: number, choice: number | nu
   if (error && error.code !== "23505") return { ok: false, error: "That didn't save. Try again." };
   revalidatePath("/circle");
   return { ok: true };
+}
+
+// A cheap check the open chat runs every second or so. It only reloads the
+// whole chat when something actually changed: a new message, a reaction, a
+// clip finished converting, or he read it.
+export async function dmPulse(threadId: string): Promise<string> {
+  const me = await getMe();
+  const db = getSupabaseAdmin();
+  if (!me?.profile || !db || !UUID.test(threadId)) return "";
+  const [{ data: t }, { data: rows }] = await Promise.all([
+    db.from("dm_threads").select("a, b, accepted_at, read_a, read_b, keep_a, keep_b, blind_until").eq("id", threadId).maybeSingle(),
+    db.from("dm_messages").select("id, ready, held, dm_reactions(user_id, emoji)").eq("thread_id", threadId).order("created_at", { ascending: false }).limit(60),
+  ]);
+  if (!t || (t.a !== me.profile.id && t.b !== me.profile.id)) return "";
+  const other = t.a === me.profile.id ? t.read_b : t.read_a;
+  const msgs = (rows ?? []).map((m) => `${m.id}${m.ready ? "" : "~"}${m.held ? "!" : ""}${(m.dm_reactions as { user_id: string; emoji: string }[]).map((x) => x.user_id.slice(0, 4) + x.emoji).sort().join("")}`);
+  return [t.accepted_at, other, t.keep_a, t.keep_b, t.blind_until, ...msgs].join("|");
 }
