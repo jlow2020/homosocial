@@ -2,6 +2,8 @@
 
 import { randomUUID } from "crypto";
 import { redirect } from "next/navigation";
+import { after } from "next/server";
+import { adminAlert, memberUrl, who } from "@/lib/alerts";
 import { revalidatePath } from "next/cache";
 import { getMe, getSupabaseAdmin } from "@/lib/supabase-server";
 import { SEASON, ageFrom } from "@/lib/season";
@@ -130,7 +132,12 @@ export async function saveProfile(_prev: ProfileState, form: FormData): Promise<
   }
 
   // New guys go straight into the rest of the profile; it all can be skipped.
-  if (!existing) redirect("/profile/more");
+  if (!existing) {
+    const id = me.userId;
+    const name = who({ id, first_name: firstName, city: place.city, state: place.state });
+    after(() => adminAlert(db, { title: "New signup", body: `${name} just made a profile.`, url: memberUrl(id) }));
+    redirect("/profile/more");
+  }
   // A new face that isn't him on file means a new Realness Check.
   if (hasPhoto && !keepsCheck) redirect("/verify");
   // Still signing up: carry on with the rest of the profile.

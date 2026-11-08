@@ -1,6 +1,8 @@
 "use server";
 
+import { after } from "next/server";
 import { getMe, getSupabaseAdmin } from "@/lib/supabase-server";
+import { adminAlert, memberUrl, who } from "@/lib/alerts";
 import { passes, type RealnessResult, MOVES, MOVES_PER_CHECK } from "@/lib/realness";
 import { placeMember } from "@/lib/game/place";
 import { closestIdentity, identitiesIn, type Identity } from "@/lib/server/vision";
@@ -135,6 +137,20 @@ export async function completeVerification(form: FormData): Promise<VerifyOutcom
   if (error) return { passed: false, message: "Your result didn't save. Try again.", retry: true };
 
   if (passed && !p.circle_id) await placeMember(db, p.id);
+
+  // Tell the admins: every pass, and failures on the 1st try, the 3rd, and the last.
+  if (passed || attempt === 1 || attempt === 3 || attempt >= MAX_ATTEMPTS) {
+    const name = who(p);
+    after(() =>
+      adminAlert(db, {
+        title: passed ? "Realness Check passed" : "Realness Check failed",
+        body: passed
+          ? `${name} passed on try ${attempt}. Next: his ID check.`
+          : `${name} failed try ${attempt}${attempt >= MAX_ATTEMPTS ? " (out of tries for today)" : ""}. ${checked.match < 0.5 ? "His face didn't match his profile photo." : "The moves or the light didn't check out."}`,
+        url: memberUrl(p.id),
+      }),
+    );
+  }
 
   if (passed) return { passed: true, message: "", retry: false };
 

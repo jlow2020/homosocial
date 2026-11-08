@@ -7,6 +7,7 @@ export default async function Log() {
   const { data: log } = await db
     .from("admin_log")
     .select("id, at, action, target, admin_id")
+    .not("action", "like", "digest:%")
     .order("at", { ascending: false })
     .limit(300);
   const ids = [...new Set((log ?? []).flatMap((l) => [l.target, l.admin_id]).filter(Boolean) as string[])];

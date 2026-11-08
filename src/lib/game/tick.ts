@@ -5,6 +5,7 @@ import { warmImageModels } from "@/lib/moderation/image";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { WEEKS } from "@/lib/season";
 import { claimNotice, notify, teaser } from "@/lib/notify";
+import { adminAlert, dailyDigest } from "@/lib/alerts";
 import { clockFor, closesAt, finaleFor, DEFAULT_TZ } from "./clock";
 import { fillGeo, fillCircles, placeMember, rehomeLoners } from "./place";
 import { ensureDrop, promptOf } from "./drops";
@@ -38,11 +39,25 @@ export async function tickAll(db: SupabaseClient): Promise<{ circles: number; se
       c.finale_at = finaleFor(new Date(c.kickoff_at), c.tz || DEFAULT_TZ).toISOString();
       await db.from("circles").update({ finale_at: c.finale_at }).eq("id", c.id).is("finale_at", null);
     }
+    // Tell the admins when a Circle starts.
+    if (!(c as Circle & { is_test?: boolean }).is_test && (await claimNotice(db, c.id, "admin:kickoff"))) {
+      const { count } = await db.from("profiles").select("id", { count: "exact", head: true }).eq("circle_id", c.id);
+      await adminAlert(db, {
+        title: "A Circle just started",
+        body: `Circle ${c.number}${c.label ? ` (${c.label})` : ""} is live with ${count ?? 0} guys.`,
+        url: "/admin/circles",
+      });
+    }
     try {
       sent.push(...(await tickCircle(db, c)));
     } catch (e) {
       console.error("tick failed for circle", c.id, e);
     }
+  }
+  try {
+    if (await dailyDigest(db)) sent.push("admin:digest");
+  } catch (e) {
+    console.error("digest failed", e);
   }
   return { circles: (data ?? []).length, sent };
 }

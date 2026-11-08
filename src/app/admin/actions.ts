@@ -171,3 +171,11 @@ export async function deleteMember(id: string, confirm: string, blockId: boolean
   revalidatePath("/admin", "layout");
   redirect("/admin/members?deleted=1");
 }
+
+// Fires a sample alert so you can see where they land.
+export async function sendTestAlert(): Promise<void> {
+  const a = await getAdmin();
+  if (!a) return;
+  const { adminAlert } = await import("@/lib/alerts");
+  await adminAlert(a.db, { title: "Test alert", body: "If you can read this, alerts work.", url: "/admin" });
+}

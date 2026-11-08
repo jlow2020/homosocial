@@ -1,7 +1,9 @@
 "use server";
 
 import { createHmac } from "node:crypto";
+import { after } from "next/server";
 import { getMe, getSupabaseAdmin } from "@/lib/supabase-server";
+import { adminAlert, memberUrl, who } from "@/lib/alerts";
 import { readDocument } from "@/lib/server/idread";
 import { closestIdentity, identitiesIn, type Identity } from "@/lib/server/vision";
 import { ageFrom, SEASON, FOUNDER_CAP } from "@/lib/season";
@@ -52,6 +54,7 @@ export async function checkId(form: FormData): Promise<IdOutcome> {
   const fail = async (message: string, reason: string, retry = true): Promise<IdOutcome> => {
     await db.from("profiles").update({ id_attempts: attempt, updated_at: new Date().toISOString() }).eq("id", p.id);
     console.log("id-check fail", p.id, reason);
+    after(() => adminAlert(db, { title: "ID check failed", body: `${who(p)} failed try ${attempt}: ${message}`, url: memberUrl(p.id) }));
     return { passed: false, message, retry };
   };
 
@@ -165,5 +168,6 @@ export async function checkId(form: FormData): Promise<IdOutcome> {
   await purgeVerificationFrames(db, p.id);
   // One of the first in? He's a Founder now.
   await db.rpc("claim_founder", { p_user: p.id, p_cap: FOUNDER_CAP });
+  after(() => adminAlert(db, { title: "New verified player", body: `${who(p)} passed his ID check. He's in.`, url: memberUrl(p.id) }));
   return { passed: true, message: "", retry: false };
 }
