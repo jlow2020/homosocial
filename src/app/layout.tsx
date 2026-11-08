@@ -5,6 +5,7 @@ import "./globals.css";
 import HashSignIn from "@/components/HashSignIn";
 import SiteFooter from "@/components/SiteFooter";
 import AppBar from "@/components/AppBar";
+import CrashWatch from "@/components/CrashWatch";
 import { shareMetadata } from "@/lib/og";
 
 export const metadata: Metadata = {
@@ -32,6 +33,7 @@ export default function RootLayout({
     <html lang="en">
       <body>
         <HashSignIn />
+        <CrashWatch />
         {children}
         <SiteFooter />
         <AppBar />

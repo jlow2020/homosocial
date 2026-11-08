@@ -12,7 +12,7 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
     loadPeople(db),
     loadCircles(db),
     db.from("reports").select("id, created_at, reason, reported").order("created_at", { ascending: false }).limit(5),
-    db.from("admin_log").select("at, action, target, detail").not("action", "like", "digest:%").not("action", "like", "push:%").order("at", { ascending: false }).limit(8),
+    db.from("admin_log").select("at, action, target, detail").not("action", "like", "digest:%").not("action", "like", "push:%").not("action", "like", "client:%").order("at", { ascending: false }).limit(8),
   ]);
 
   const count = new Map(STAGES.map((s) => [s, 0]));

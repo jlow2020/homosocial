@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { dmPulse } from "../../game-actions";
+import { looksStale, reloadOnce } from "@/lib/crash";
 
 // Checks the chat about once a second with a tiny query, and only reloads it
 // when something changed. Faster than reloading the whole page on a timer.
@@ -20,8 +21,9 @@ export default function Pulse({ threadId, every = 1200 }: { threadId: string; ev
         const sig = await dmPulse(threadId);
         if (sig && last.current !== null && sig !== last.current) router.refresh();
         if (sig) last.current = sig;
-      } catch {
-        // offline for a second; try again next tick
+      } catch (e) {
+        // A new version went live: reload onto it. Otherwise just offline for a second.
+        if (looksStale(e)) reloadOnce();
       } finally {
         busy.current = false;
       }

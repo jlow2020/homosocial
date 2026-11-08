@@ -6552,3 +6552,41 @@ input[type="date"].input::-webkit-date-and-time-value {
   color: var(--soft);
   font-weight: 400;
 }
+
+/* Crash screen */
+.crash {
+  min-height: 70vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 32px 16px;
+  text-align: center;
+  background: var(--prime);
+  color: var(--spot);
+}
+.crash-mark {
+  margin: 0;
+  font-size: 40px;
+  color: var(--hot);
+}
+.crash-title {
+  margin: 0;
+  font-family: var(--display);
+  font-weight: 900;
+  font-size: 40px;
+  text-transform: uppercase;
+  line-height: 1;
+}
+.crash-text {
+  margin: 0;
+  color: var(--soft);
+}
+.crash-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 8px;
+}
