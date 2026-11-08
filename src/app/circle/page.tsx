@@ -410,7 +410,6 @@ async function PastSeasons({ pl }: { pl: Player }) {
             {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
             <a href={`/circle/past/${c.id}`}>
               Circle {c.number}
-              {c.label ? ` · ${c.label}` : ""}
             </a>
             <span className="fine"> · ended {new Date(c.finale_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>
           </li>

@@ -8,7 +8,6 @@ import NavTabs from "./NavTabs";
 import PushPrompt from "@/components/PushPrompt";
 import Flash from "@/components/Flash";
 import { cookies } from "next/headers";
-import { targetHeat } from "@/lib/game/engine";
 
 export function weekTitle(week: number): string {
   return WEEKS.find((w) => w.n === week)?.title ?? "";
@@ -66,15 +65,7 @@ export async function Shell({ pl, children }: { pl: Player; children: React.Reac
       <div className="wrap game-head">
         <div className="chyron">
           <span className={pl.waiting ? "chy-hot" : "chy-gold"}>{tag}</span>
-          <span className="chy-light">
-            Circle {pl.circle.number}
-            {pl.circle.label ? ` · ${pl.circle.label}` : ""} · Season {pl.seasonNo}
-          </span>
-          {c.phase === "season" && !pl.waiting && (
-            <span className="chy-heat" title={`Heat ${targetHeat(pl.circle, c.week)} of 5`} aria-label={`Heat ${targetHeat(pl.circle, c.week)} of 5`}>
-              {"🔥".repeat(targetHeat(pl.circle, c.week))}
-            </span>
-          )}
+          {pl.seasonNo > 1 && <span className="chy-light">Season {pl.seasonNo}</span>}
           {pl.profile.founder_no && <span className="chy-hot">Founder #{pl.profile.founder_no}</span>}
         </div>
       </div>
@@ -84,7 +75,7 @@ export async function Shell({ pl, children }: { pl: Player; children: React.Reac
           <div className="past-banner">
             <span>
               {pl.visiting
-                ? `Admin view: Circle ${pl.circle.number}${pl.circle.label ? ` · ${pl.circle.label}` : ""}. Read-only.`
+                ? `Admin view: Circle ${pl.circle.number}. Read-only.`
                 : `Looking back at Season ${pl.seasonNo}. It's read-only.`}
             </span>
             {/* A plain link: these set a cookie, so no prefetching. */}

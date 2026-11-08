@@ -247,7 +247,7 @@ export default async function Guy({ params }: { params: Promise<{ id: string }> 
               {book.map((p) => (
                 <li key={`${p.circle}:${p.season}`}>
                   <p className="yb-head">
-                    Season {p.season} <span className="fine">· Circle {p.circle}{p.region ? `, ${p.region}` : ""}</span>
+                    Season {p.season} <span className="fine">· Circle {p.circle}</span>
                   </p>
                   {p.best && (
                     <p className="g-quote small">
