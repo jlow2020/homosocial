@@ -13,6 +13,7 @@ import LieVote from "./LieVote";
 import StoryVote from "./StoryVote";
 import ReportAnswer from "./ReportAnswer";
 import OwnerDeck from "./OwnerDeck";
+import ToTMatches from "./ToTMatches";
 import Veil from "./Veil";
 import { FireReading, RecordReading } from "./ReadAloud";
 import Waveform from "@/components/Waveform";
@@ -131,22 +132,6 @@ export default async function WeekPage({ params }: { params: Promise<{ n: string
     }
   }
   const anonSurvey = spec?.kind === "survey" && !!spec.anon;
-  const splits =
-    mine && spec?.kind === "thisorthat" && answeredPlays.length >= 3
-      ? spec.pairs.map(([a, b], i) => {
-          const left = answeredPlays.filter((x) => (x.data!.picks as number[])[i] === 0).length;
-          return { a, b, left: Math.round((100 * left) / answeredPlays.length) };
-        })
-      : null;
-  const agree =
-    mine?.data && spec?.kind === "thisorthat"
-      ? answeredPlays
-          .filter((a) => a.user_id !== pl.profile.id)
-          .map((a) => ({ name: byId.get(a.user_id)?.first_name ?? "?", n: spec.pairs.filter((_, i) => (a.data!.picks as number[])[i] === (mine.data!.picks as number[])[i]).length }))
-          .sort((x, y) => y.n - x.n)
-          .slice(0, 3)
-      : [];
-
   const chain = spec?.kind === "chain";
   const chainLines = chain ? rows.filter((a) => !a.passed).length : 0;
   const chainEnd = chainEndingAt(pl.members.length);
@@ -387,30 +372,17 @@ export default async function WeekPage({ params }: { params: Promise<{ n: string
               {anonSurvey && mine.data && <p className="fine">Your card: {compile(spec!, mine.data).score}. Only you see it.</p>}
             </div>
           )}
-          {splits && (
-            <div className="census">
-              <p className="eyebrow">How the Circle split · {answeredPlays.length} answered</p>
-              <ul className="splits">
-                {splits.map((s) => (
-                  <li key={s.a}>
-                    <span className={s.left >= 50 ? "win" : ""}>
-                      {s.a} {s.left}%
-                    </span>
-                    <span className="split-bar">
-                      <span style={{ width: `${s.left}%` }} />
-                    </span>
-                    <span className={s.left < 50 ? "win" : ""}>
-                      {100 - s.left}% {s.b}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-              {agree.length > 0 && (
-                <p className="fine">
-                  Most like you: {agree.map((g) => `${g.name} (${g.n} of ${spec!.kind === "thisorthat" ? spec!.pairs.length : 0})`).join(", ")}.
-                </p>
-              )}
-            </div>
+          {mine?.data && spec?.kind === "thisorthat" && (
+            <ToTMatches
+              pairs={spec.pairs}
+              mine={mine.data.picks as number[]}
+              guys={answeredPlays
+                .filter((a) => a.user_id !== pl.profile.id && byId.has(a.user_id))
+                .map((a) => {
+                  const m = byId.get(a.user_id)!;
+                  return { id: m.id, name: m.first_name, photo: urls.get(m.photo_path), picks: a.data!.picks as number[] };
+                })}
+            />
           )}
           {ownerDeck && (
             <OwnerDeck
@@ -421,7 +393,7 @@ export default async function WeekPage({ params }: { params: Promise<{ n: string
             />
           )}
           <ul className={samePose ? "answer-list answer-grid" : "answer-list"}>
-            {(spec?.kind === "blinddate" || spec?.kind === "ranknight" || anonSurvey || ownerDeck ? [] : [...rows.filter((a) => a.user_id === pl.profile.id && !a.passed), ...others]).map((a) => {
+            {(spec?.kind === "blinddate" || spec?.kind === "ranknight" || spec?.kind === "thisorthat" || anonSurvey || ownerDeck ? [] : [...rows.filter((a) => a.user_id === pl.profile.id && !a.passed), ...others]).map((a) => {
               const m = byId.get(a.user_id);
               const isMine = a.user_id === pl.profile.id;
               const hideName = anon && !revealed && !lieRevealed;
