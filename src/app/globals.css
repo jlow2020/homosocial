@@ -6366,7 +6366,7 @@ input[type="date"].input::-webkit-date-and-time-value {
   gap: 6px;
 }
 .tot-shared::before {
-  content: "You both picked";
+  content: attr(data-label);
   width: 100%;
   font-size: 12px;
   color: var(--muted);
@@ -6431,4 +6431,124 @@ input[type="date"].input::-webkit-date-and-time-value {
 }
 .tot-card details[open] + .tot-shared {
   display: none;
+}
+
+/* Results boards: question by question, with faces */
+.board {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.board-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.board-row {
+  position: relative;
+  overflow: hidden;
+  border-radius: 14px;
+  background: var(--studio);
+  border: 1px solid var(--line);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.board-row > * {
+  position: relative;
+}
+.board-row > .census-bar {
+  position: absolute;
+}
+.board-mine {
+  border-color: var(--hot);
+}
+.board-top {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+.board-q {
+  flex: 1;
+  margin: 0;
+  font-weight: 700;
+  color: var(--spot);
+}
+.board-pct {
+  font-family: var(--display);
+  font-weight: 900;
+  font-size: 22px;
+  color: var(--mint);
+  white-space: nowrap;
+}
+.board-who {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+.board-you {
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--hot);
+  color: var(--prime);
+  font-size: 13px;
+  font-weight: 800;
+}
+.board-face {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 10px 2px 2px;
+  border-radius: 999px;
+  background: var(--prime);
+  color: var(--spot);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+}
+.board-note {
+  margin: 0;
+  font-size: 13px;
+  color: var(--gold);
+  font-weight: 600;
+}
+.board-twin {
+  margin: 0;
+  font-size: 14px;
+  color: var(--hot);
+  font-weight: 700;
+}
+.speed-answers {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.speed-answers li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+}
+.speed-answers li b {
+  font-size: 13px;
+  color: var(--muted);
+  min-width: 56px;
+}
+.speed-answers li.mine b {
+  color: var(--hot);
+}
+.speed-answers li span {
+  color: var(--spot);
+}
+.tot-q {
+  color: var(--soft);
+  font-weight: 400;
 }

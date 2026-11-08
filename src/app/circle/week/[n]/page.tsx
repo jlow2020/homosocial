@@ -13,7 +13,8 @@ import LieVote from "./LieVote";
 import StoryVote from "./StoryVote";
 import ReportAnswer from "./ReportAnswer";
 import OwnerDeck from "./OwnerDeck";
-import ToTMatches from "./ToTMatches";
+import Matches from "./Matches";
+import { SpeedBoard, SurveyBoard } from "./Boards";
 import Veil from "./Veil";
 import { FireReading, RecordReading } from "./ReadAloud";
 import Waveform from "@/components/Waveform";
@@ -179,6 +180,13 @@ export default async function WeekPage({ params }: { params: Promise<{ n: string
     ? await photoUrls(db, [...pl.members.map((m) => m.photo_path), ...rows.filter((a) => a.media_type === "photo" || (!a.media_type && a.photo_path)).map((a) => a.photo_path)])
     : await photoUrls(db, [pl.profile.photo_path]);
   const guyList = pl.members.map((m) => ({ id: m.id, name: m.first_name, photo: urls.get(m.photo_path) ?? null }));
+  // For the results boards: a guy's face and name, and everyone else's picks.
+  const who = (id: string) => {
+    const m = byId.get(id)!;
+    return { id, name: m.first_name, photo: urls.get(m.photo_path) };
+  };
+  const peers = (pick: (d: Record<string, unknown>) => number[]) =>
+    answeredPlays.filter((a) => a.user_id !== pl.profile.id && byId.has(a.user_id)).map((a) => ({ ...who(a.user_id), picks: pick(a.data!) }));
   const ownerDeck = prompt.mode === "owner" && mine && !revealed;
 
   const Media = ({ a }: { a: AnswerRow }) => (
@@ -351,7 +359,7 @@ export default async function WeekPage({ params }: { params: Promise<{ n: string
         </section>
       ) : (
         <section className="answers">
-          {census && (
+          {census && anonSurvey && (
             <div className="census">
               <p className="eyebrow">
                 Circle Census · {answeredPlays.length} answered{anonSurvey && " · anonymous"}
@@ -373,16 +381,27 @@ export default async function WeekPage({ params }: { params: Promise<{ n: string
             </div>
           )}
           {mine?.data && spec?.kind === "thisorthat" && (
-            <ToTMatches
-              pairs={spec.pairs}
-              mine={mine.data.picks as number[]}
-              guys={answeredPlays
-                .filter((a) => a.user_id !== pl.profile.id && byId.has(a.user_id))
-                .map((a) => {
-                  const m = byId.get(a.user_id)!;
-                  return { id: m.id, name: m.first_name, photo: urls.get(m.photo_path), picks: a.data!.picks as number[] };
-                })}
-            />
+            <Matches items={spec.pairs.map(([a, b]) => ({ options: [a, b], chip: [a, b] }))} mine={mine.data.picks as number[]} guys={peers((d) => d.picks as number[])} split />
+          )}
+          {mine?.data && spec?.kind === "survey" && !anonSurvey && (
+            <>
+              <Matches
+                items={spec.questions.map((q) => ({ q, options: ["Yes", "No"], chip: [q, null] }))}
+                mine={(mine.data.answers as boolean[]).map((x) => (x ? 0 : 1))}
+                guys={peers((d) => (d.answers as boolean[]).map((x) => (x ? 0 : 1)))}
+                sharedLabel="You've both"
+              />
+              <SurveyBoard
+                questions={spec.questions}
+                yes={spec.questions.map((_, i) => answeredPlays.filter((a) => (a.data!.answers as boolean[])[i] && byId.has(a.user_id)).map((a) => who(a.user_id)))}
+                answered={answeredPlays.length}
+                everyone={florida}
+                meId={pl.profile.id}
+              />
+            </>
+          )}
+          {mine?.data && spec?.kind === "speed" && (
+            <SpeedBoard questions={spec.questions} answers={answeredPlays.filter((a) => byId.has(a.user_id)).map((a) => ({ ...who(a.user_id), list: a.data!.answers as string[] }))} meId={pl.profile.id} />
           )}
           {ownerDeck && (
             <OwnerDeck
@@ -393,7 +412,7 @@ export default async function WeekPage({ params }: { params: Promise<{ n: string
             />
           )}
           <ul className={samePose ? "answer-list answer-grid" : "answer-list"}>
-            {(spec?.kind === "blinddate" || spec?.kind === "ranknight" || spec?.kind === "thisorthat" || anonSurvey || ownerDeck ? [] : [...rows.filter((a) => a.user_id === pl.profile.id && !a.passed), ...others]).map((a) => {
+            {(spec?.kind === "blinddate" || spec?.kind === "ranknight" || spec?.kind === "thisorthat" || spec?.kind === "survey" || spec?.kind === "speed" || spec?.kind === "rank" || ownerDeck ? [] : [...rows.filter((a) => a.user_id === pl.profile.id && !a.passed), ...others]).map((a) => {
               const m = byId.get(a.user_id);
               const isMine = a.user_id === pl.profile.id;
               const hideName = anon && !revealed && !lieRevealed;
