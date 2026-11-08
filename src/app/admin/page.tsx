@@ -5,13 +5,14 @@ import { loadCircles, loadPeople } from "./data";
 import { STAGES, when } from "./util";
 import { sendTestAlert } from "./actions";
 
-export default async function AdminHome() {
+export default async function AdminHome({ searchParams }: { searchParams: Promise<{ push?: string }> }) {
   const { db } = await requireAdmin();
+  const { push } = await searchParams;
   const [people, circles, { data: reports }, { data: log }] = await Promise.all([
     loadPeople(db),
     loadCircles(db),
     db.from("reports").select("id, created_at, reason, reported").order("created_at", { ascending: false }).limit(5),
-    db.from("admin_log").select("at, action, target, detail").not("action", "like", "digest:%").order("at", { ascending: false }).limit(8),
+    db.from("admin_log").select("at, action, target, detail").not("action", "like", "digest:%").not("action", "like", "push:%").order("at", { ascending: false }).limit(8),
   ]);
 
   const count = new Map(STAGES.map((s) => [s, 0]));
@@ -119,15 +120,16 @@ export default async function AdminHome() {
         </section>
       </div>
 
-      <section>
+      <section id="alerts">
         <h2 className="admin-h2">Alerts</h2>
         <p className="admin-sub">
           Signups, checks passed or failed, Circles starting, and a 9am list of who&apos;s stuck. Push to your phone
           {process.env.RESEND_API_KEY ? ` and email to ${process.env.ALERT_EMAIL || "jonathan@homosocial.net"}` : ". Email is off until RESEND_API_KEY is set in Railway"}.
         </p>
         <form action={sendTestAlert}>
-          <button className="btn btn-outline btn-small">Send a test alert</button>
+          <button className="btn btn-outline btn-small">Send a test push to my devices</button>
         </form>
+        {push && <p className="admin-sub" role="status">{push.slice(0, 400)}</p>}
       </section>
     </div>
   );

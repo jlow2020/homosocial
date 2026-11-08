@@ -173,9 +173,15 @@ export async function deleteMember(id: string, confirm: string, blockId: boolean
 }
 
 // Fires a sample alert so you can see where they land.
+// A test push to this admin's own phones and computers, with what happened to each.
 export async function sendTestAlert(): Promise<void> {
   const a = await getAdmin();
   if (!a) return;
-  const { adminAlert } = await import("@/lib/alerts");
-  await adminAlert(a.db, { title: "Test alert", body: "If you can read this, alerts work.", url: "/admin" });
+  const { notify } = await import("@/lib/notify");
+  const res = await notify(a.db, [a.me.userId], { title: "Test push", body: "If this popped up, notifications work.", url: "/admin", email: false });
+  const line = res.length
+    ? res.map((r) => `${r.service.includes("apple") ? "iPhone" : r.service.includes("google") ? "Chrome/Android" : r.service.includes("mozilla") ? "Firefox" : r.service}: ${r.ok ? "sent" : `failed ${r.status ?? ""} ${r.why ?? ""}`.trim()}`).join(" · ")
+    : "No devices have notifications turned on for your account.";
+  const { redirect } = await import("next/navigation");
+  redirect(`/admin?push=${encodeURIComponent(line)}#alerts`);
 }

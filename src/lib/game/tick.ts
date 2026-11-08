@@ -4,7 +4,7 @@ import { alertAdmins } from "@/lib/moderation";
 import { warmImageModels } from "@/lib/moderation/image";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { ID_GRACE_DAYS, WEEKS } from "@/lib/season";
-import { claimNotice, notify, teaser } from "@/lib/notify";
+import { claimNotice, notify, sendEmail, teaser } from "@/lib/notify";
 import { adminAlert, dailyDigest } from "@/lib/alerts";
 import { clockFor, closesAt, finaleFor, DEFAULT_TZ } from "./clock";
 import { fillGeo, fillCircles, placeMember, rehomeLoners } from "./place";
@@ -56,6 +56,11 @@ export async function tickAll(db: SupabaseClient): Promise<{ circles: number; se
     }
   }
   try {
+    sent.push(...(await dmEmails(db)));
+  } catch (e) {
+    console.error("dm emails failed", e);
+  }
+  try {
     sent.push(...(await idReminders(db)));
   } catch (e) {
     console.error("id reminders failed", e);
@@ -66,6 +71,45 @@ export async function tickAll(db: SupabaseClient): Promise<{ circles: number; se
     console.error("digest failed", e);
   }
   return { circles: (data ?? []).length, sent };
+}
+
+// The backup for a DM he hasn't seen: if a message has sat unread for 15
+// minutes, one email (no message text, just who). At most one per chat every 6 hours.
+async function dmEmails(db: SupabaseClient, now = new Date()): Promise<string[]> {
+  const MIN = 60 * 1000;
+  const { data: msgs } = await db
+    .from("dm_messages")
+    .select("thread_id, user_id, created_at")
+    .eq("held", false)
+    .gt("created_at", new Date(now.getTime() - 3 * HOUR).toISOString())
+    .lte("created_at", new Date(now.getTime() - 15 * MIN).toISOString())
+    .order("created_at", { ascending: false });
+  if (!msgs?.length) return [];
+  const latest = new Map<string, { user_id: string; created_at: string }>();
+  for (const m of msgs) if (!latest.has(m.thread_id as string)) latest.set(m.thread_id as string, { user_id: m.user_id as string, created_at: m.created_at as string });
+  const { data: threads } = await db.from("dm_threads").select("id, a, b, read_a, read_b, blind_until").in("id", [...latest.keys()]);
+  const due: { thread: string; to: string; from: string; blind: boolean }[] = [];
+  for (const t of threads ?? []) {
+    const m = latest.get(t.id as string)!;
+    const toA = m.user_id !== t.a;
+    const read = (toA ? t.read_a : t.read_b) as string | null;
+    if (read && new Date(read) >= new Date(m.created_at)) continue;
+    due.push({ thread: t.id as string, to: (toA ? t.a : t.b) as string, from: m.user_id, blind: !!t.blind_until && new Date(t.blind_until as string) > now });
+  }
+  if (!due.length) return [];
+  const { data: people } = await db.from("profiles").select("id, first_name, email, notify_email, status, is_demo, circle_id").in("id", [...new Set(due.flatMap((d) => [d.to, d.from]))]);
+  const byId = new Map((people ?? []).map((p) => [p.id as string, p]));
+  const sent: string[] = [];
+  const slot = Math.floor(now.getTime() / (6 * HOUR));
+  for (const d of due) {
+    const to = byId.get(d.to);
+    if (!to || to.is_demo || to.status !== "active" || !to.notify_email || !to.email || !to.circle_id) continue;
+    if (!(await claimNotice(db, to.circle_id as string, `dmmail:${d.thread}:${d.to}:${slot}`))) continue;
+    const name = d.blind ? "Your blind date" : (byId.get(d.from)?.first_name as string) || "Someone";
+    await sendEmail(to.email as string, { title: `${name} sent you a message`, body: "It's waiting for you on Homosocial.", url: `/circle/dms/${d.thread}` }, "You get these when a DM sits unread. Turn them off from your profile.", "Read it");
+    sent.push(`dmmail:${d.thread}`);
+  }
+  return sent;
 }
 
 // A day before his ID check is due, one reminder.

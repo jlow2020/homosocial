@@ -19,20 +19,27 @@ function vapidReady(): boolean {
   const pub = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
   const priv = process.env.VAPID_PRIVATE_KEY;
   if (!pub || !priv) return false;
-  webpush.setVapidDetails(process.env.VAPID_SUBJECT || "mailto:jonathan@homosocial.net", pub, priv);
+  // Apple rejects the whole push unless the subject is a mailto: or https: address.
+  let subject = (process.env.VAPID_SUBJECT || "mailto:jonathan@homosocial.net").trim();
+  if (!/^(mailto:|https:)/.test(subject)) subject = subject.includes("@") ? `mailto:${subject}` : "mailto:jonathan@homosocial.net";
+  webpush.setVapidDetails(subject, pub.trim(), priv.trim());
   return true;
 }
 
 type Sub = { endpoint: string; user_id: string; p256dh: string; auth: string };
 
-// Tell these guys something. Fake guys are skipped. Never throws.
-export async function notify(db: SupabaseClient, userIds: string[], n: Notice): Promise<void> {
+export type PushResult = { user_id: string; service: string; ok: boolean; status?: number; why?: string };
+
+// Tell these guys something. Fake guys are skipped. Never throws. Returns what
+// happened to each phone, and logs failures so they can be chased down.
+export async function notify(db: SupabaseClient, userIds: string[], n: Notice): Promise<PushResult[]> {
   const ids = [...new Set(userIds)];
-  if (!ids.length) return;
+  const results: PushResult[] = [];
+  if (!ids.length) return results;
   try {
     const { data: people } = await db.from("profiles").select("id, email, is_demo, notify_email, status").in("id", ids);
     const real = (people ?? []).filter((p) => !p.is_demo && p.status === "active");
-    if (!real.length) return;
+    if (!real.length) return results;
     const realIds = real.map((p) => p.id as string);
 
     const pushed = new Set<string>();
@@ -41,13 +48,19 @@ export async function notify(db: SupabaseClient, userIds: string[], n: Notice): 
       const payload = JSON.stringify({ title: n.title, body: n.body, url: SITE + n.url, tag: n.tag });
       await Promise.all(
         ((subs ?? []) as Sub[]).map(async (s) => {
+          const service = new URL(s.endpoint).host;
           try {
-            await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, payload, { TTL: 60 * 60 * 24, urgency: "normal" });
+            await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, payload, { TTL: 60 * 60 * 24, urgency: "high" });
             pushed.add(s.user_id);
+            results.push({ user_id: s.user_id, service, ok: true });
           } catch (e) {
-            const code = (e as { statusCode?: number }).statusCode;
+            const err = e as { statusCode?: number; body?: string; message?: string };
+            const why = String(err.body || err.message || "").slice(0, 200);
+            results.push({ user_id: s.user_id, service, ok: false, status: err.statusCode, why });
+            console.error("push failed", service, err.statusCode, why);
             // Gone: the browser dropped the subscription.
-            if (code === 404 || code === 410) await db.from("push_subs").delete().eq("endpoint", s.endpoint);
+            if (err.statusCode === 404 || err.statusCode === 410) await db.from("push_subs").delete().eq("endpoint", s.endpoint);
+            else await db.from("admin_log").insert({ action: "push:fail", target: s.user_id, detail: { service, status: err.statusCode ?? null, why, title: n.title } });
           }
         })
       );
@@ -60,6 +73,7 @@ export async function notify(db: SupabaseClient, userIds: string[], n: Notice): 
   } catch (e) {
     console.error("notify failed", e);
   }
+  return results;
 }
 
 // Email backup through Resend. Off until RESEND_API_KEY is set.

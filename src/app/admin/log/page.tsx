@@ -8,6 +8,7 @@ export default async function Log() {
     .from("admin_log")
     .select("id, at, action, target, admin_id")
     .not("action", "like", "digest:%")
+    .not("action", "like", "push:%")
     .order("at", { ascending: false })
     .limit(300);
   const ids = [...new Set((log ?? []).flatMap((l) => [l.target, l.admin_id]).filter(Boolean) as string[])];
