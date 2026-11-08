@@ -4,10 +4,20 @@ import { useEffect, useRef, useState } from "react";
 
 // Record a short clip with the camera, right in the page. Front camera first,
 // flip to the back one on phones. Hands the finished clip back to the caller.
-export default function VideoRecorder({ seconds, onDone, onCancel }: { seconds: number; onDone: (clip: Blob) => void; onCancel: () => void }) {
+export default function VideoRecorder({
+  seconds,
+  onDone,
+  onCancel,
+  startFacing = "user",
+}: {
+  seconds: number;
+  onDone: (clip: Blob) => void;
+  onCancel: () => void;
+  startFacing?: "user" | "environment";
+}) {
   const live = useRef<HTMLVideoElement>(null);
   const [stream, setStream] = useState<MediaStream | null>(null);
-  const [facing, setFacing] = useState<"user" | "environment">("user");
+  const [facing, setFacing] = useState<"user" | "environment">(startFacing);
   const [rec, setRec] = useState<MediaRecorder | null>(null);
   const [left, setLeft] = useState(seconds);
   const [clip, setClip] = useState<{ blob: Blob; url: string } | null>(null);

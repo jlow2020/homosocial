@@ -10,7 +10,7 @@ export type ThisOrThatSpec = { kind: "thisorthat"; pairs: [string, string][]; re
 export type MadLibsSpec = { kind: "madlibs"; slots: string[]; template: string }; // template uses {0} {1} ...
 export type SpeedSpec = { kind: "speed"; questions: string[]; seconds: number };
 export type TwoTruthsSpec = { kind: "twotruths" };
-export type VideoSpec = { kind: "video"; seconds: number };
+export type VideoSpec = { kind: "video"; seconds: number; camera?: "front" | "back" };
 // Rank the Circle: five guys picked when the drop is made; you order the ones that aren't you. Winners only.
 export type RankSpec = { kind: "rank"; category: string; guys: string[] };
 // Guess the Owner and Whose Text: anonymous photo, the Circle guesses whose it is.
@@ -190,7 +190,7 @@ export const PLAYS: Play[] = [
         ["Beach", "Pool"],
         ["Drag brunch", "Drag show"],
         ["Twink", "Daddy"],
-        ["Sarasota", "St. Pete"],
+        ["Lake house", "Beach house"],
         ["Beach town", "Big city"],
         ["Grindr", "Hinge"],
         ["Gym at 6am", "Gym at 9pm"],
@@ -335,9 +335,9 @@ export const PLAYS: Play[] = [
     weeks: [3],
     heat: 3,
     mode: "video",
-    body: "Ten Second Tour. One room, one take. Rules: no cleaning first.",
+    body: "Room tour. Film one room of your place in a single 15-second take. No cleaning first.",
     hint: "The bedroom counts double.",
-    spec: { kind: "video", seconds: 15 },
+    spec: { kind: "video", seconds: 15, camera: "back" },
   },
   {
     id: "video-teach",
@@ -376,7 +376,7 @@ export const PLAYS: Play[] = [
   // The Chain: a group story, one line each.
   { id: "chain-villa", weeks: [1, 2], heat: 3, mode: "chain", body: "The Chain. One line each, in order. By Sunday it's a story.", hint: "Read what's there. Add one line. Don't end it.", spec: { kind: "chain", maxLen: 160, opener: "The villa doors opened and the first thing anyone noticed was" } },
   { id: "chain-morning", weeks: [3, 4, 6], heat: 4, mode: "chain", body: "The Chain, morning-after edition. One line each. Keep it going.", hint: "Read what's there. Add one line.", spec: { kind: "chain", maxLen: 160, opener: "I woke up in a bed that wasn't mine, in a town I didn't recognize, and the man making coffee was" } },
-  { id: "chain-wedding", weeks: [5, 6], heat: 3, mode: "chain", body: "The Chain: the wedding. One line each. Make it messy.", spec: { kind: "chain", maxLen: 160, opener: "The officiant asked if anyone objected, and from the back of the room, holding a Pub Sub," } },
+  { id: "chain-wedding", weeks: [5, 6], heat: 3, mode: "chain", body: "The Chain: the wedding. One line each. Make it messy.", spec: { kind: "chain", maxLen: 160, opener: "The officiant asked if anyone objected, and from the back of the room, holding a gas station hot dog," } },
 
   // Hot Seat: one guy, everyone's questions.
   { id: "hotseat-1", weeks: [2, 4, 5], heat: 4, mode: "hotseat", body: "Hot Seat. First guy to tap takes it. Everyone else asks him one question. He picks what to answer.", hint: "Nothing is off limits. He's allowed to dodge.", spec: { kind: "hotseat", seat: null, seatName: null } },

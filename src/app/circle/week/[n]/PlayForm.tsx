@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { answerClipTicket, answerDrop, blindDateIn, takeHotSeat } from "../../game-actions";
 import Link from "next/link";
 import type { PlaySpec } from "@/lib/game/plays";
+import VideoRecorder from "@/components/VideoRecorder";
 
 type Props = { week: number; spec: PlaySpec; guys?: { id: string; name: string; photo: string | null }[]; meId?: string; myRow?: Record<string, unknown> | null; ending?: boolean };
 
@@ -63,7 +64,7 @@ export default function PlayForm({ week, spec, guys = [], meId = "", myRow = nul
     case "twotruths":
       return <TwoTruths week={week} />;
     case "video":
-      return <Video week={week} seconds={spec.seconds} />;
+      return <Video week={week} seconds={spec.seconds} camera={spec.camera ?? "front"} />;
   }
 }
 
@@ -267,16 +268,19 @@ function TwoTruths({ week }: { week: number }) {
   );
 }
 
-function Video({ week, seconds }: { week: number; seconds: number }) {
+function Video({ week, seconds, camera }: { week: number; seconds: number; camera: "front" | "back" }) {
+  const [recording, setRecording] = useState(false);
   const [busy, setBusy] = useState("");
   const [preview, setPreview] = useState<string | null>(null);
   const [path, setPath] = useState("");
   const { pending, error, submit } = useSubmit(week);
   const [localError, setLocalError] = useState("");
 
-  const pick = async (f: File) => {
+  // Clips from the recorder are already the right length (and some browsers
+  // can't read a fresh recording's length), so only picked clips get measured.
+  const pick = async (f: File, recorded = false) => {
     setLocalError("");
-    const len = await videoLength(f);
+    const len = recorded ? 0 : await videoLength(f);
     if (len > seconds + 1) {
       setLocalError(`Clips can be up to ${seconds} seconds. That one's ${Math.round(len)}. Trim it in Photos first.`);
       return;
@@ -305,22 +309,38 @@ function Video({ week, seconds }: { week: number; seconds: number }) {
     <div className="play">
       {preview ? (
         <video src={preview} controls playsInline className="answer-photo" />
+      ) : recording ? (
+        <VideoRecorder
+          seconds={seconds}
+          startFacing={camera === "back" ? "environment" : "user"}
+          onCancel={() => setRecording(false)}
+          onDone={(clip) => {
+            setRecording(false);
+            const type = clip.type || "video/webm";
+            void pick(new File([clip], type.includes("mp4") ? "clip.mp4" : "clip.webm", { type }), true);
+          }}
+        />
+      ) : busy ? (
+        <p className="fine">{busy}</p>
       ) : (
-        <label className="photo-pick">
-          <span>{busy || `Tap to record or pick a clip, up to ${seconds} seconds`}</span>
-          <input
-            type="file"
-            accept="video/*"
-            capture="user"
-            className="visually-hidden"
-            disabled={!!busy}
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              e.target.value = "";
-              if (f) void pick(f);
-            }}
-          />
-        </label>
+        <div className="row">
+          <button type="button" className="btn btn-pink" onClick={() => setRecording(true)}>
+            Record {seconds} seconds
+          </button>
+          <label className="btn btn-outline">
+            Pick a clip
+            <input
+              type="file"
+              accept="video/*"
+              className="visually-hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                e.target.value = "";
+                if (f) void pick(f);
+              }}
+            />
+          </label>
+        </div>
       )}
       {(localError || error) && <p className="error">{localError || error}</p>}
       {path && (

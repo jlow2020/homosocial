@@ -51,6 +51,11 @@ function addDaysET(base: Date, days: number, hour: number, tz: string): Date {
   return etInstant(noon.getUTCFullYear(), noon.getUTCMonth() + 1, noon.getUTCDate(), hour, tz);
 }
 
+// Nobody gets pinged overnight: a time between midnight and 9am local moves to 9am.
+export function wakingHours(d: Date, tz: string = DEFAULT_TZ): Date {
+  return etParts(d, tz).h < 9 ? addDaysET(d, 0, 9, tz) : d;
+}
+
 // When each week starts for a Circle that kicked off at `kickoff`.
 export function weekStarts(kickoff: Date, tz: string = DEFAULT_TZ): Date[] {
   const p = etParts(kickoff, tz);

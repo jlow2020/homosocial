@@ -10,6 +10,7 @@ import { clockFor, closesAt, finaleFor, DEFAULT_TZ } from "./clock";
 import { fillGeo, fillCircles, placeMember, rehomeLoners } from "./place";
 import { ensureDrop, promptOf } from "./drops";
 import { lockWeek, awardSeason } from "./lock";
+import { pingMinis } from "./mini-engine";
 import { loadAlumni, loadMembers, type Circle, type Member } from "./player";
 
 // The clock's hands. Runs every few minutes (GitHub Actions hits /api/tick)
@@ -127,7 +128,7 @@ export async function tickCircle(db: SupabaseClient, circle: Circle, now = new D
     if (answered.size > 0 && quiet.length) {
       await notify(db, quiet, {
         title: `${answered.size} of ${members.length} guys answered`,
-        body: `You haven't. ${teaser(promptOf(drop).body, 70)}`,
+        body: `You haven't. Play to unlock this week's minis. ${teaser(promptOf(drop).body, 50)}`,
         url: `/circle/week/${w}`,
         tag: "nudge",
         email: false,
@@ -135,6 +136,10 @@ export async function tickCircle(db: SupabaseClient, circle: Circle, now = new D
       sent.push(`nudge:${s}:${w}`);
     }
   }
+
+  // Minis unlock per guy after he plays the drop. Push each one as it opens.
+  const minis = await pingMinis(db, circle, clock, ids, now);
+  if (minis) sent.push(`minis:${s}:${w}:${minis}`);
 
   // Sunday 8pm: the week locks and the Read comes out. Week 8's Read is the Finale.
   if (clock.nextDrop && now.getTime() >= clock.nextDrop.getTime() - READ_BEFORE_DROP) {

@@ -13,6 +13,8 @@ import { getMe, getSupabaseAdmin, nextPath } from "@/lib/supabase-server";
 import { SEASON, WEEKS, ageFrom } from "@/lib/season";
 import { loadPlayer, pastCircles, photoUrls, type Player } from "@/lib/game/player";
 import NextSeason from "./NextSeason";
+import MiniCard from "./MiniCard";
+import { miniState } from "@/lib/game/mini-engine";
 import { ensureDrop, promptOf } from "@/lib/game/drops";
 import { etLabel, untilLabel } from "@/lib/game/clock";
 import { Avatar, GuyName, Shell, timeAgo, weekTitle } from "./ui";
@@ -207,6 +209,7 @@ async function Home({ pl }: { pl: Player }) {
   const answerCount = (answers ?? []).length;
   const loungePhotos = await photoUrls(db, (lounge ?? []).map((l) => byId.get(l.user_id)?.photo_path));
   const recap = week >= 2 ? await myRecap(db, circle, pl.profile.id, pl.members, revealed ? 9 : week) : [];
+  const minis = pl.past ? null : await miniState(db, circle, clock, drop.id, pl.profile.id, pl.members);
 
   return (
     <Shell pl={pl}>
@@ -251,6 +254,8 @@ async function Home({ pl }: { pl: Player }) {
             <p className="fine">The Finale is {`${etLabel(clock.finaleAt, circle.tz ?? undefined)} (${untilLabel(clock.finaleAt)})`}.</p>
           )}
         </section>
+
+        {minis && <MiniCard state={minis} me={pl.profile.id} tz={circle.tz} guys={pl.members.map((m) => ({ id: m.id, name: m.first_name || "Someone" }))} />}
 
         {(week === 7 || week === 8) && !revealed && (
           <section className="event-card event-rose">

@@ -5829,3 +5829,83 @@ input[type="date"].input::-webkit-date-and-time-value {
 .act-danger {
   border-color: var(--deep);
 }
+
+/* Minis: one-tap questions under the weekly drop */
+.mini-live {
+  border: 1px solid var(--hot);
+  background: linear-gradient(160deg, rgba(255, 61, 139, 0.1), rgba(124, 240, 208, 0.05));
+}
+.mini-locked {
+  border: 1px dashed var(--line);
+  opacity: 0.85;
+}
+.mini-card.mini-locked h3 {
+  font-size: 18px;
+}
+.mini-item + .mini-item {
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+}
+.mini-card .mini-q {
+  margin: 4px 0 12px;
+  font-size: 22px;
+  line-height: 1.15;
+}
+.mini-next {
+  margin: 4px 0 0;
+  color: var(--muted);
+}
+.mini-opts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.mini-guys {
+  display: flex;
+  flex-wrap: wrap;
+}
+.mini-guys .tot-btn {
+  flex: 0 1 auto;
+}
+.mini-opts .tot-btn:disabled {
+  opacity: 0.7;
+}
+.mini-results ul {
+  list-style: none;
+  margin: 0 0 8px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.mini-results li {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) 28px;
+  gap: 10px;
+  align-items: center;
+  font-size: 14px;
+}
+.mini-results li.mine .mini-label {
+  color: var(--mint);
+  font-weight: 700;
+}
+.mini-bar {
+  height: 8px;
+  border-radius: 4px;
+  background: rgba(251, 244, 255, 0.08);
+  overflow: hidden;
+}
+.mini-bar span {
+  display: block;
+  height: 100%;
+  background: var(--hot);
+}
+.mini-results li.mine .mini-bar span {
+  background: var(--mint);
+}
+.mini-n {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+}

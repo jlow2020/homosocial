@@ -7,6 +7,7 @@ import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { loadPlayer, isMember, type Player } from "@/lib/game/player";
 import { ensureDrop } from "@/lib/game/drops";
+import { miniState } from "@/lib/game/mini-engine";
 import { checkPlayAnswer } from "@/lib/game/playcheck";
 import { UUID } from "@/lib/admin";
 import { notify, teaser } from "@/lib/notify";
@@ -906,4 +907,34 @@ async function pingDownFor(pl: Player, words: string, title: string) {
   const { data } = await pl.db.from("user_tags").select("user_id").eq("kind", "down").in("slug", slugs).in("user_id", others);
   const who = [...new Set((data ?? []).map((r) => r.user_id as string))];
   if (who.length) await notify(pl.db, who, { title: `${pl.profile.first_name} posted a plan you're down for`, body: teaser(title), url: "/circle/plans", tag: "plan", email: false });
+}
+
+// A mini: one tap. Only once it's unlocked for him, and only once.
+export async function answerMini(week: number, slot: number, choice: number | null, pickUser: string | null): Promise<Result> {
+  const pl = await player();
+  if (pl.closed) return READ_ONLY;
+  if (pl.clock.phase !== "season" || pl.clock.week !== week) return { ok: false, error: "That mini has closed." };
+  const drop = await ensureDrop(pl.db, pl.circle, week);
+  const state = await miniState(pl.db, pl.circle, pl.clock, drop.id, pl.profile.id, pl.members);
+  const item = state?.items.find((i) => i.slot === slot);
+  if (!item || !item.open) return { ok: false, error: "That mini isn't open." };
+  if (item.mine) return { ok: true };
+  if (item.mini.kind === "who") {
+    if (!pickUser || !isMember(pl, pickUser) || pickUser === pl.profile.id) return { ok: false, error: "Pick a guy." };
+  } else if (choice === null || choice < 0 || choice >= (item.mini.options?.length ?? 0)) {
+    return { ok: false, error: "Pick one." };
+  }
+  const { error } = await pl.db.from("mini_answers").insert({
+    circle_id: pl.circle.id,
+    season_no: pl.circle.season_no,
+    week,
+    slot,
+    user_id: pl.profile.id,
+    mini_id: item.mini.id,
+    choice: item.mini.kind === "who" ? null : choice,
+    pick_user: item.mini.kind === "who" ? pickUser : null,
+  });
+  if (error && error.code !== "23505") return { ok: false, error: "That didn't save. Try again." };
+  revalidatePath("/circle");
+  return { ok: true };
 }

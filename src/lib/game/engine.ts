@@ -51,6 +51,12 @@ function pickFrom<T>(list: T[], seed: string): T {
   return list[hash(seed) % list.length];
 }
 
+// Under this many guys, anonymity and guessing games don't work: with two or
+// three of you, everyone knows who wrote what. Those drops wait for a bigger room.
+const SMALL = 5;
+const NEEDS_ROOM: Mode[] = ["anon", "guesswho", "owner", "hotseat"];
+const roomFor = (mode: Mode, members: number) => members >= SMALL || !NEEDS_ROOM.includes(mode);
+
 function onHeat<T extends { heat: number }>(list: T[], target: number): T[] {
   // Exactly the target first, then one notch either way, then anything.
   const exact = list.filter((x) => x.heat === target);
@@ -142,11 +148,12 @@ async function fromFollowup(db: SupabaseClient, circle: CircleLike, week: number
 }
 
 // Layer 3: formats with a slot.
-function fromTemplate(circle: CircleLike, week: number, heat: number, seen: Set<string>, last: string | null): Chosen | null {
+function fromTemplate(circle: CircleLike, week: number, heat: number, seen: Set<string>, last: string | null, size: number): Chosen | null {
   const lastFormat = last?.startsWith("tpl:") ? last.split(":")[1] : null;
   const combos: { key: string; fmt: (typeof FORMATS)[number]; plug: (typeof FORMATS)[number]["plugs"][number]; heat: number }[] = [];
   for (const fmt of FORMATS) {
     if (!fmt.weeks.includes(week) || fmt.id === lastFormat) continue;
+    if (!roomFor(fmt.mode, size) || (fmt.id === "circlepick" && size < SMALL)) continue;
     for (const plug of fmt.plugs) {
       const key = `tpl:${fmt.id}:${plug.id}`;
       // A plug that also exists as a confession is the same question: treat as seen.
@@ -194,6 +201,8 @@ function fromPlay(circle: CircleLike, week: number, heat: number, seen: Set<stri
       p.weeks.includes(week) &&
       !seen.has(`play:${p.id}`) &&
       p.mode !== lastMode &&
+      roomFor(p.mode as Mode, members.length) &&
+      !(members.length < SMALL && "anon" in p.spec && p.spec.anon) &&
       // Rank and Blind Date need a room.
       !((p.mode === "rank" && members.length < 6) || (p.mode === "blinddate" && members.length < 6))
   );
@@ -217,16 +226,16 @@ function fromRankNight(circle: CircleLike, week: number, seen: Set<string>, memb
 }
 
 // Layer 4: the house bank.
-function fromHouse(circle: CircleLike, week: number, heat: number, seen: Set<string>): Chosen | null {
-  const pool = PROMPTS.filter((p) => p.week === week && !seen.has(p.id)).map((p) => ({ ...p, heat: p.heat ?? 2 }));
+function fromHouse(circle: CircleLike, week: number, heat: number, seen: Set<string>, size: number): Chosen | null {
+  const pool = PROMPTS.filter((p) => p.week === week && !seen.has(p.id) && roomFor(modeOf(p), size)).map((p) => ({ ...p, heat: p.heat ?? 2 }));
   if (!pool.length) return null;
   const p = pickFrom(onHeat(pool, heat), `${circle.id}:${circle.season_no}:${week}:house`);
   return { key: p.id, body: p.body, hint: p.hint ?? null, mode: modeOf(p), heat: p.heat, source: "house", credit: null };
 }
 
 // Layer 5: a confession they've answered before, now as Guess Who.
-function fromReskin(circle: CircleLike, week: number, seen: Set<string>): Chosen | null {
-  if (week < 3) return null;
+function fromReskin(circle: CircleLike, week: number, seen: Set<string>, size: number): Chosen | null {
+  if (week < 3 || size < SMALL) return null;
   const pool = PROMPTS.filter((p) => p.anon && seen.has(p.id) && !seen.has(`mode:guesswho:${p.id}`));
   if (!pool.length) return null;
   const p = pickFrom(pool, `${circle.id}:${circle.season_no}:${week}:reskin`);
@@ -257,16 +266,16 @@ export async function chooseDrop(db: SupabaseClient, circle: CircleLike, week: n
   const lastWasPlay = !!last?.startsWith("play:");
   const mediaFirst = last ? !lastWasPlay : (week + circle.season_no) % 2 === 0;
   const third = mediaFirst
-    ? (fromPlay(circle, week, heat, seen, last, members) ?? fromTemplate(circle, week, heat, seen, last))
-    : (fromTemplate(circle, week, heat, seen, last) ?? fromPlay(circle, week, heat, seen, last, members));
+    ? (fromPlay(circle, week, heat, seen, last, members) ?? fromTemplate(circle, week, heat, seen, last, members.length))
+    : (fromTemplate(circle, week, heat, seen, last, members.length) ?? fromPlay(circle, week, heat, seen, last, members));
   return (
     fromRankNight(circle, week, seen, members) ??
     (await fromBank(db, circle, week, heat, seen)) ??
     (await fromFollowup(db, circle, week, heat, seen)) ??
     (mediaFirst ? await fromCaption(db, circle, week, seen) : null) ??
     third ??
-    fromHouse(circle, week, heat, seen) ??
-    fromReskin(circle, week, seen) ??
+    fromHouse(circle, week, heat, seen, members.length) ??
+    fromReskin(circle, week, seen, members.length) ??
     fromRepeat(circle, week)
   );
 }

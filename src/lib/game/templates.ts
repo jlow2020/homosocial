@@ -49,7 +49,7 @@ export const FORMATS: Format[] = [
     render: (x) => `Rank them. Brave answers only: ${x}`,
     plugs: [
       p("tribes", "bears, otters, twinks, jocks, daddies.", 3),
-      p("eats", "Pub Sub, a gas station Cuban, airport Chili's, Waffle House at 3am.", 1),
+      p("eats", "a gas station hot dog, airport Chili's, Waffle House at 3am, a drunk slice of pizza.", 1),
       p("spots", "shower, kitchen counter, car, beach, his roommate's couch.", 4),
       p("kisses", "forehead kiss, neck kiss, the kiss that means he's staying, the kiss that means he's leaving.", 3),
       p("compliments", "\"you're cute,\" \"you're hot,\" \"you're trouble,\" \"you're mine.\"", 3),
