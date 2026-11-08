@@ -4,7 +4,7 @@ import { useActionState, useState } from "react";
 import Link from "next/link";
 import { sendReset, signInWithUsername, type SignInState } from "./actions";
 
-export default function SignInForm() {
+export default function SignInForm({ next }: { next?: string | null }) {
   const [mode, setMode] = useState<"signin" | "reset">("signin");
   const [state, signIn, signingIn] = useActionState<SignInState, FormData>(signInWithUsername, {});
   const [resetState, reset, resetting] = useActionState<SignInState, FormData>(sendReset, {});
@@ -45,6 +45,7 @@ export default function SignInForm() {
   return (
     <div className="form wrap">
       <form action={signIn} className="stack">
+        {next && <input type="hidden" name="next" value={next} />}
         <label className="field">
           <span className="label">Username</span>
           <input

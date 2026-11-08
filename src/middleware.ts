@@ -3,7 +3,10 @@ import { createServerClient } from "@supabase/ssr";
 
 // Keeps the login session fresh on every page load.
 export async function middleware(request: NextRequest) {
-  let response = NextResponse.next({ request });
+  // Pages can read where they are (sign-in sends you back there).
+  const reqHeaders = new Headers(request.headers);
+  reqHeaders.set("x-path", request.nextUrl.pathname + request.nextUrl.search);
+  let response = NextResponse.next({ request: { headers: reqHeaders } });
   const url = process.env.SUPABASE_URL;
   const key = process.env.SUPABASE_PUBLISHABLE_KEY;
   if (!url || !key) return response;
@@ -13,7 +16,8 @@ export async function middleware(request: NextRequest) {
       getAll: () => request.cookies.getAll(),
       setAll: (list) => {
         list.forEach(({ name, value }) => request.cookies.set(name, value));
-        response = NextResponse.next({ request });
+        reqHeaders.set("cookie", request.headers.get("cookie") ?? "");
+        response = NextResponse.next({ request: { headers: reqHeaders } });
         list.forEach(({ name, value, options }) => response.cookies.set(name, value, options));
       },
     },

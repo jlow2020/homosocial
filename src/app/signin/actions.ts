@@ -2,7 +2,7 @@
 
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { getSupabaseAdmin, getSupabaseAuth, getSupabaseMailer, siteOrigin } from "@/lib/supabase-server";
+import { getSupabaseAdmin, getSupabaseAuth, getSupabaseMailer, safeNext, siteOrigin } from "@/lib/supabase-server";
 import { normalizeUsername } from "@/lib/username";
 
 export type SignInState = { error?: string; resetSent?: string };
@@ -34,7 +34,7 @@ export async function signInWithUsername(_prev: SignInState, form: FormData): Pr
     if (error.status === 429) return { error: "Too many tries. Wait a few minutes and try again." };
     return { error: WRONG };
   }
-  redirect("/me");
+  redirect(safeNext(form.get("next")) ?? "/me");
 }
 
 export async function sendReset(_prev: SignInState, form: FormData): Promise<SignInState> {

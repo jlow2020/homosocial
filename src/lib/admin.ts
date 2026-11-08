@@ -1,5 +1,6 @@
 import "server-only";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { getMe, getSupabaseAdmin } from "./supabase-server";
 
 export type AdminRole = "god" | "mod";
@@ -27,8 +28,13 @@ export async function getAdmin() {
 // Admin pages answer "not found" to everyone else, so they don't exist.
 export async function requireAdmin() {
   const a = await getAdmin();
-  if (!a) notFound();
-  return a;
+  if (a) return a;
+  // Signed out (say, from an alert email opened in a new browser): sign in, then come back.
+  if (!(await getMe())) {
+    const path = (await headers()).get("x-path") || "/admin";
+    redirect(`/signin?next=${encodeURIComponent(path)}`);
+  }
+  notFound();
 }
 
 export async function logAdmin(

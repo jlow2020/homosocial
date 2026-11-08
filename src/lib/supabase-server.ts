@@ -107,6 +107,11 @@ export async function getMe(): Promise<{
 }
 
 // Where a signed-in member belongs right now.
+// A path on this site to send someone back to after sign-in, or null.
+export function safeNext(n: unknown): string | null {
+  return typeof n === "string" && n.startsWith("/") && !n.startsWith("//") && !n.includes("\\") ? n : null;
+}
+
 export function nextPath(profile: Profile | null, username: string | null, terms: string | null): string {
   if (!username) return "/account";
   if (terms !== TERMS_VERSION) return "/agree";
