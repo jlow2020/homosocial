@@ -137,7 +137,7 @@ export default async function Member({ params }: { params: Promise<{ id: string 
               · phone {pct(v?.clientMatch)}
             </dd>
             <dt>ID check</dt>
-            <dd>{p?.id_verified_at ? `Passed ${when(p.id_verified_at)}` : "Not passed"}</dd>
+            <dd>{p?.id_verified_at ? `${idCheck ? "Passed" : "Vouched by admin, no ID on file"} ${when(p.id_verified_at)}` : "Not passed"}</dd>
             <dt>ID tries</dt>
             <dd>{p?.id_attempts ?? 0}</dd>
             <dt>ID used</dt>
@@ -174,6 +174,7 @@ export default async function Member({ params }: { params: Promise<{ id: string 
           circles={circles.map((c) => ({ id: c.id, label: circleLabel(c) }))}
           notes={p?.notes ?? ""}
           viewerIsGod={a.role === "god"}
+          idPassed={!!p?.id_verified_at}
           targetRole={targetRole}
           confirmName={username ?? user?.email ?? null}
         />

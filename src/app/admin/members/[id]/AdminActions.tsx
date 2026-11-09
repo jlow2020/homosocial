@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { deleteMember, moveToCircle, redoCheck, resetAttempts, saveNotes, setAdminRole, setStatus } from "../../actions";
+import { deleteMember, moveToCircle, redoCheck, resetAttempts, saveNotes, setAdminRole, setStatus, vouchId } from "../../actions";
 
 type Props = {
   id: string;
@@ -12,6 +12,7 @@ type Props = {
   circles: { id: string; label: string }[];
   notes: string;
   viewerIsGod: boolean;
+  idPassed: boolean;
   targetRole: "god" | "mod" | null;
   confirmName: string | null;
 };
@@ -25,6 +26,7 @@ export default function AdminActions(p: Props) {
   const [delOpen, setDelOpen] = useState(false);
   const [typed, setTyped] = useState("");
   const [blockId, setBlockId] = useState(false);
+  const [vouch, setVouch] = useState(false);
 
   const run = (fn: () => Promise<{ ok: boolean; message: string }>) =>
     start(async () => {
@@ -120,6 +122,25 @@ export default function AdminActions(p: Props) {
               Make him redo ID
             </button>
           </div>
+          {p.viewerIsGod && !p.idPassed && (
+            <div className="row">
+              {!vouch ? (
+                <button className="btn btn-gold btn-small" disabled={pending} onClick={() => setVouch(true)}>
+                  Let him skip the ID check
+                </button>
+              ) : (
+                <>
+                  <span className="admin-sub">Only if you know he&apos;s 18 or older.</span>
+                  <button className="btn btn-gold btn-small" disabled={pending} onClick={() => run(() => vouchId(p.id))}>
+                    I vouch, he&apos;s 18+
+                  </button>
+                  <button className="btn btn-outline btn-small" disabled={pending} onClick={() => setVouch(false)}>
+                    Cancel
+                  </button>
+                </>
+              )}
+            </div>
+          )}
         </div>
       )}
 

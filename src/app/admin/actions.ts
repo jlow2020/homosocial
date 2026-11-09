@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { purgeAllMedia } from "@/lib/retention";
 import { getAdmin, logAdmin, UUID } from "@/lib/admin";
+import { FOUNDER_CAP } from "@/lib/season";
 
 
 type Result = { ok: boolean; message: string };
@@ -100,6 +101,22 @@ export async function redoCheck(id: string, kind: "realness" | "id"): Promise<Re
   }
   await logAdmin(a.me.userId, `sent back to ${kind} check`, id);
   return done(id, kind === "realness" ? "He'll redo his Realness Check next sign-in." : "He'll redo his ID check.");
+}
+
+// Daddy vouches for a guy's age in person and lets him past the ID check.
+// Logged, and the member page says it was vouched, not checked.
+export async function vouchId(id: string): Promise<Result> {
+  const a = await guard(id);
+  if (!a || a.role !== "god") return FORBIDDEN;
+  const { data: p } = await a.db.from("profiles").select("id_verified_at, verified_at").eq("id", id).maybeSingle();
+  if (!p) return { ok: false, message: "No profile yet." };
+  if (p.id_verified_at) return { ok: false, message: "He's already passed." };
+  const stamp = new Date().toISOString();
+  const { error } = await a.db.from("profiles").update({ id_verified_at: stamp, updated_at: stamp }).eq("id", id);
+  if (error) return { ok: false, message: error.message };
+  await a.db.rpc("claim_founder", { p_user: id, p_cap: FOUNDER_CAP });
+  await logAdmin(a.me.userId, "vouched ID", id, { realness: !!p.verified_at });
+  return done(id, p.verified_at ? "Done. He's past the ID check." : "Done. He still needs to pass his Realness Check to get in.");
 }
 
 export async function saveNotes(id: string, notes: string): Promise<Result> {

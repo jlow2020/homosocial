@@ -9,7 +9,9 @@ export default function CrashWatch() {
   useEffect(() => {
     const onError = (e: ErrorEvent) => {
       const err = e.error ?? e.message;
-      if (!err || /ResizeObserver loop/.test(String(e.message))) return;
+      // "Script error." is the browser hiding an error from someone else's script
+      // (an in-app browser, an extension). Nothing to fix on our side.
+      if (!err || /ResizeObserver loop|^Script error\.?$/.test(String(e.message))) return;
       const stale = looksStale(err);
       reportCrash(err, stale);
       if (stale) reloadOnce();
